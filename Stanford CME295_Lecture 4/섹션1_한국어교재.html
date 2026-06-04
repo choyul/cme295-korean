@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CME295 Lecture 4 · 섹션 1. 전이학습과 사전학습 — LLM 학습의 시작</title>
+
+<!-- 폰트: Pretendard (CDN, 없으면 시스템 폰트 폴백) -->
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<!-- 수식: KaTeX -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
+
+<style>
+  :root{
+    --bg:#FBF9F6;
+    --paper:#ffffff;
+    --ink:#1a1a1a;
+    --ink-soft:#4a4744;
+    --muted:#7a756f;
+    --accent:#8C1515;          /* Stanford 카디널 */
+    --accent-soft:#b9554f;
+    --tint:#f6ebe9;            /* 카디널 옅은 틴트 */
+    --tint-2:#f3efe9;          /* 따뜻한 회색 */
+    --line:#e7e1d9;
+    --line-strong:#d8d0c5;
+    --radius:10px;
+    --maxw:760px;
+    --sidew:268px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Pretendard","Pretendard Variable",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    line-height:1.78;
+    font-size:16.5px;
+    -webkit-font-smoothing:antialiased;
+    word-break:keep-all;
+  }
+
+  /* ===== 레이아웃 ===== */
+  .layout{display:flex; align-items:flex-start;}
+  .sidebar{
+    width:var(--sidew); flex:0 0 var(--sidew);
+    position:sticky; top:0; height:100vh; overflow-y:auto;
+    padding:28px 18px 40px; border-right:1px solid var(--line);
+    background:rgba(251,249,246,.85); backdrop-filter:saturate(120%) blur(2px);
+  }
+  .content{flex:1 1 auto; min-width:0; display:flex; justify-content:center; padding:0 24px;}
+  .doc{width:100%; max-width:var(--maxw); padding:48px 0 120px;}
+
+  /* ===== 사이드바 목차 ===== */
+  .toc-brand{font-size:12px; letter-spacing:.04em; color:var(--accent); font-weight:700; text-transform:uppercase; margin-bottom:4px;}
+  .toc-title{font-size:15px; font-weight:700; margin:0 0 18px; line-height:1.4; color:var(--ink);}
+  .toc{list-style:none; margin:0; padding:0; font-size:13.5px;}
+  .toc li{margin:1px 0;}
+  .toc a{display:block; padding:5px 10px; border-radius:7px; color:var(--ink-soft); text-decoration:none; border-left:2px solid transparent;}
+  .toc a:hover{background:var(--tint-2); color:var(--ink);}
+  .toc a.sub{padding-left:22px; font-size:13px; color:var(--muted);}
+  .toc a.active{color:var(--accent); background:var(--tint); border-left-color:var(--accent); font-weight:600;}
+
+  /* ===== 타이포 ===== */
+  h1{font-size:27px; line-height:1.32; font-weight:800; letter-spacing:-.01em; margin:0 0 6px;}
+  .subtitle{font-size:18px; font-weight:700; color:var(--accent); margin:0 0 22px;}
+  h2{font-size:21px; font-weight:800; letter-spacing:-.01em; margin:46px 0 14px; padding-bottom:9px; border-bottom:2px solid var(--line-strong);}
+  h3{font-size:17.5px; font-weight:700; margin:34px 0 12px; color:var(--ink);}
+  h3 .badge{display:inline-block; font-size:12px; font-weight:700; color:#fff; background:var(--accent); border-radius:6px; padding:2px 8px; margin-right:8px; vertical-align:middle;}
+  p{margin:12px 0;}
+  strong{font-weight:700;}
+  a{color:var(--accent);}
+  ul,ol{margin:12px 0; padding-left:22px;}
+  li{margin:6px 0;}
+  hr{display:none;}
+
+  /* ===== 출처 배너 ===== */
+  .source-banner{
+    display:flex; gap:10px; align-items:baseline;
+    background:var(--tint); border-left:4px solid var(--accent);
+    border-radius:0 var(--radius) var(--radius) 0;
+    padding:12px 16px; margin:0 0 8px; font-size:13.5px; color:var(--ink-soft);
+  }
+  .source-banner b{color:var(--accent);}
+
+  /* ===== 한국어 번역 카드 ===== */
+  .ko{
+    background:var(--paper); border:1px solid var(--line);
+    border-left:4px solid var(--accent); border-radius:var(--radius);
+    padding:6px 22px; margin:16px 0;
+    box-shadow:0 1px 2px rgba(60,40,20,.04);
+  }
+  .ko > .label, .terms > .label{
+    display:inline-block; font-size:11.5px; font-weight:800; letter-spacing:.06em;
+    color:var(--accent); text-transform:uppercase; margin:14px 0 -4px;
+  }
+
+  /* ===== 영문 원문 토글 ===== */
+  details.en{
+    background:var(--tint-2); border:1px solid var(--line); border-radius:var(--radius);
+    margin:14px 0; overflow:hidden;
+  }
+  details.en > summary{
+    cursor:pointer; list-style:none; padding:11px 16px;
+    font-size:13.5px; font-weight:700; color:var(--muted);
+    display:flex; align-items:center; gap:8px; user-select:none;
+  }
+  details.en > summary::-webkit-details-marker{display:none;}
+  details.en > summary .chev{transition:transform .2s; color:var(--accent-soft);}
+  details.en[open] > summary .chev{transform:rotate(90deg);}
+  details.en[open] > summary{border-bottom:1px solid var(--line);}
+  .en-body{padding:4px 18px 14px; font-size:14px; line-height:1.7; color:#5c574f; font-style:normal;}
+  .en-body p{margin:10px 0;}
+  .ts{
+    display:inline-block; font-family:"SFMono-Regular",ui-monospace,Menlo,Consolas,monospace;
+    font-size:11.5px; font-style:normal; color:var(--accent);
+    background:var(--tint); border:1px solid #e6cfcc; border-radius:5px;
+    padding:0 5px; margin:0 2px; vertical-align:baseline;
+  }
+
+  /* ===== 용어 설명 ===== */
+  .terms{
+    border:1px solid var(--line); border-left:3px solid var(--accent-soft);
+    border-radius:var(--radius); background:#fffdfb; padding:4px 20px 8px; margin:16px 0;
+  }
+  .terms dl{margin:8px 0;}
+  .terms dt{font-weight:700; color:var(--ink); margin-top:8px;}
+  .terms dt .en-term{color:var(--accent); font-weight:600;}
+  .terms dd{margin:1px 0 6px; color:var(--ink-soft); font-size:15px;}
+
+  /* ===== 표 ===== */
+  .table-wrap{overflow-x:auto; margin:16px 0; border:1px solid var(--line); border-radius:var(--radius);}
+  table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:520px;}
+  thead th{background:var(--accent); color:#fff; font-weight:700; text-align:left; padding:11px 14px; white-space:nowrap;}
+  tbody td{padding:9px 14px; border-top:1px solid var(--line);}
+  tbody tr:nth-child(even){background:var(--tint-2);}
+  tbody td:first-child{font-family:ui-monospace,Menlo,monospace; font-size:13px; color:var(--accent);}
+
+  /* ===== 콜아웃 ===== */
+  .callout{border-radius:var(--radius); padding:14px 20px 6px; margin:18px 0;}
+  .callout .c-title{font-weight:800; margin:6px 0 2px; display:flex; align-items:center; gap:8px;}
+  .callout.review{background:#fff; border:1px solid var(--line-strong);}
+  .callout.review ol{counter-reset:none;}
+  .callout.note{background:var(--tint-2); border-left:4px solid var(--muted); border-radius:0 var(--radius) var(--radius) 0; padding-bottom:12px;}
+  .callout.practice{background:var(--tint); border:1px solid #e6cfcc; padding-bottom:14px;}
+  .callout.practice li{margin:12px 0;}
+  .next{margin-top:40px; padding:14px 18px; background:var(--tint-2); border-radius:var(--radius); font-size:14px; color:var(--ink-soft);}
+
+  /* 수식 / 도식 */
+  .katex-display{margin:14px 0; overflow-x:auto; overflow-y:hidden; padding:6px 0;}
+  .diagram{background:#fffdfb; border:1px solid var(--line); border-radius:var(--radius); padding:14px; margin:16px 0; text-align:center;}
+  .diagram .cap{font-size:12.5px; color:var(--muted); margin-top:6px;}
+  .mermaid{display:flex; justify-content:center;}
+
+  /* ===== 모바일 ===== */
+  .menu-btn{display:none;}
+  .overlay{display:none;}
+  @media (max-width:900px){
+    .menu-btn{
+      display:flex; align-items:center; justify-content:center;
+      position:fixed; top:14px; left:14px; z-index:50;
+      width:42px; height:42px; border-radius:10px; border:1px solid var(--line-strong);
+      background:var(--paper); color:var(--accent); font-size:20px; cursor:pointer;
+      box-shadow:0 2px 8px rgba(60,40,20,.12);
+    }
+    .sidebar{
+      position:fixed; left:0; top:0; z-index:60; height:100vh;
+      transform:translateX(-105%); transition:transform .25s ease;
+      box-shadow:4px 0 24px rgba(0,0,0,.12); background:var(--bg);
+    }
+    .sidebar.open{transform:translateX(0);}
+    .overlay.show{display:block; position:fixed; inset:0; background:rgba(0,0,0,.32); z-index:55;}
+    .content{padding:0 16px;}
+    .doc{padding:64px 0 100px;}
+    body{font-size:16px;}
+    h1{font-size:23px;}
+    .ko,.terms{padding-left:16px; padding-right:16px;}
+  }
+
+  /* ===== 인쇄 ===== */
+  @media print{
+    .sidebar,.menu-btn,.overlay{display:none !important;}
+    .content{padding:0;}
+    body{background:#fff; font-size:11pt;}
+    details.en{display:none;}          /* 인쇄본은 한국어 위주 */
+    .ko,.terms,.callout,.table-wrap{break-inside:avoid; box-shadow:none;}
+    a{color:var(--ink);}
+  }
+  .home-btn{position:fixed; top:16px; right:18px; z-index:70;
+    display:inline-flex; align-items:center; gap:6px; text-decoration:none;
+    background:var(--paper); color:var(--accent); border:1px solid var(--line-strong);
+    border-radius:999px; padding:8px 14px; font-size:13.5px; font-weight:700;
+    box-shadow:0 2px 8px rgba(60,40,20,.12); transition:background .12s,color .12s;}
+  .home-btn:hover{background:var(--accent); color:#fff; border-color:var(--accent);}
+  @media (max-width:900px){ .home-btn{top:14px; right:14px; padding:8px 12px; font-size:12.5px;} }
+  @media print{ .home-btn{display:none !important;} }
+</style>
+</head>
+<body>
+<a class="home-btn" href="../index.html" title="전체 목차로 돌아가기">← 전체 목차</a>
+
+<button class="menu-btn" id="menuBtn" aria-label="목차 열기">☰</button>
+<div class="overlay" id="overlay"></div>
+
+<div class="layout">
+  <nav class="sidebar" id="sidebar"><div class="toc-brand">Stanford CME295 · Lecture 4</div><p class="toc-title">섹션 1. 전이학습과 사전학습 — LLM 학습의 시작</p><ul class="toc"><li><a href="#overview">1. 강의 개요</a></li><li><a href="#goals">2. 학습 목표</a></li><li><a href="#body">3. 본문</a></li><li><a class="sub" href="#block1">블록 1 · 전이학습(transfer learning) 패러다임</a></li><li><a class="sub" href="#block2">블록 2 · 사전학습(pre-training)이란</a></li><li><a class="sub" href="#block3">블록 3 · 사전학습 데이터셋과 규모</a></li><li><a class="sub" href="#block4">블록 4 · 연산량 단위: FLOPs와 FLOPS</a></li><li><a href="#glossary">4. 핵심 용어집</a></li><li><a href="#review">5. 복습 문제</a></li><li><a href="#appendix">부록. 실무 적용 포인트 (NLP·LLM 기술 내용 한정)</a></li></ul></nav>
+  <main class="content"><article class="doc"><h1>CME295 Transformers &amp; LLMs — Lecture 4 한국어 교재</h1><p class="subtitle">섹션 1. 전이학습과 사전학습 — LLM 학습의 시작</p><div class="source-banner"><span>📄</span><span><b>원문 출처</b>: Stanford CME295, Autumn 2025, Lecture 4 (LLM Training), 타임스탬프 <span class="ts">00:07</span>~<span class="ts">16:21</span></span></div><section id="overview"><h2>1. 강의 개요</h2><ul><li>Lecture 1~3(self-attention·트랜스포머·LLM 정의)을 복습한 뒤, 드디어 LLM을 '어떻게 학습시키는지'로 들어간다.</li><li>과제마다 모델을 새로 만들던 과거와 달리, 미리 학습한 모델을 재활용하는 전이학습(transfer learning) 패러다임을 소개한다.</li><li>가장 비싼 단계인 사전학습(pre-training)의 의미, 사용 데이터셋, 그리고 연산량 단위(FLOPs/FLOPS)를 다룬다.</li></ul></section><section id="goals"><h2>2. 학습 목표</h2><ol><li>전이학습(사전학습 → 튜닝)이 과제별 학습과 어떻게 다른지 설명할 수 있다.</li><li>사전학습이 무엇이며(대량 데이터로 다음 토큰 예측), 어떤 데이터셋을 쓰는지 안다.</li><li>FLOPs(연산량)와 FLOPS(연산 속도)의 차이를 구분할 수 있다.</li></ol></section><section id="body"><h2>3. 본문</h2><div id="block1"><h3><span class="badge">블록 1</span>전이학습(transfer learning) 패러다임</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">07:23</span> today we're going to focus on LLM training. (...) <span class="ts">07:56</span> 10 years ago (...) a task which was around detecting spam. You would train a model specifically to detect spam(s) (...) sentiment extraction, you would train a model specifically (...) <span class="ts">08:29</span> these tasks (...) they're all involving just understanding the text. (...) <span class="ts">08:59</span> the goal of transfer learning is to not always start from scratch. If you have a new task, it's to start with some pre-trained model (...) and then tune it for your task. (...) <span class="ts">09:30</span> a pre-training stage, which involves training your LLM on vast amounts of data to just understand what language (...) is and then have a second stage of (...) tuning.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>오늘은 LLM 학습에 집중합니다. 10년 전이라면, 스팸 탐지 과제가 있으면 그 일만을 위한 모델을 따로 학습시켰습니다(학습셋으로 훈련, 검증셋으로 평가, 테스트셋으로 시험). 감성 추출이면 또 그것만을 위한 모델을 따로 만들고요. 하지만 이 과제들은 완전히 별개가 아닙니다 — 모두 '텍스트 이해'를 포함합니다. 그래서 한 과제에서 얻은 지식을 다른 과제에 재활용할 수 있다는 발상이 나옵니다.</p>
+<p>이를 전이학습(transfer learning)이라 합니다. 새 과제마다 맨바닥에서 시작하지 않고, 미리 학습된(pre-trained) 모델에서 출발해 그 과제에 맞게 튜닝(tuning)하는 것입니다. 이것이 바로 LLM 학습의 패러다임입니다. 두 단계로 나뉩니다.</p>
+<ol><li><strong>사전학습(pre-training)</strong>: 방대한 데이터로 LLM에게 언어·코드가 무엇인지 이해시킴.</li><li><strong>튜닝(tuning)</strong>: 사전학습된 모델의 가중치를 특정 과제에 맞게 조정.</li></ol></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>전이학습<span class="en-term">(transfer learning)</span></dt><dd>한 곳에서 학습한 지식을 다른 과제에 재활용하는 방식. 맨바닥에서 시작하지 않음.</dd><dt>사전학습<span class="en-term">(pre-training)</span></dt><dd>대량 데이터로 언어 일반을 이해시키는 1단계.</dd><dt>튜닝<span class="en-term">(tuning)</span></dt><dd>사전학습 모델을 특정 과제에 맞게 조정하는 2단계. (섹션 5의 파인튜닝)</dd></dl></div>
+</div>
+<div id="block2"><h3><span class="badge">블록 2</span>사전학습(pre-training)이란</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">10:34</span> pre-training is by far the most expensive (...) in terms of compute cost (...) taking a huge amount of data and training your LLM to just predict the next token. (...) <span class="ts">11:04</span> it can be text in English, can be text in other languages, it can be even code(s) (...) basically the whole internet. (...) <span class="ts">11:37</span> our LLM is a text(-to-)text model and most likely a decoder only model in more than 90% of the cases. (...) it takes some input text and it tries to always predict the next token.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>사전학습은 학습 전체에서 단연 가장 비쌉니다(연산 비용 등). 하는 일은 — 방대한 데이터로 LLM이 다음 토큰을 예측하도록 훈련하는 것입니다. 여기서 데이터란 사실상 찾을 수 있는 모든 것입니다. 영어 텍스트, 다른 언어 텍스트, 코드(여러 프로그래밍 언어), 거의 인터넷 전체입니다. 모델에게 무엇이든 예측하게 훈련시킨다고 보면 됩니다.</p>
+<p>목표는 다음 토큰 예측입니다. LLM은 텍스트→텍스트 모델이고 90% 이상이 decoder-only이므로, 입력 텍스트를 받아 늘 다음 토큰을 차례로 예측합니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>다음 토큰 예측<span class="en-term">(next token prediction)</span></dt><dd>사전학습의 목표. 입력 뒤에 올 토큰을 맞히기.</dd></dl></div>
+</div>
+<div id="block3"><h3><span class="badge">블록 3</span>사전학습 데이터셋과 규모</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">11:37</span> you will see the term common crawl a lot (...) a data set composed of anything you can find on the internet (...) three billion pages per month. (...) Wikipedia articles (...) Reddit (...) you have a lot of code(s) (...) GitHub (...) stack overflow. (...) <span class="ts">12:39</span> measured in terms of (...) number of tokens (...) hundreds of billions or even trillions or even tens of trillions of tokens. (...) GPT3 was trained on 300 billion tokens (...) Llama 3 (...) was trained on 15 trillion tokens.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>사전학습 데이터셋으로는 Common Crawl이라는 용어가 논문에 자주 등장합니다. 인터넷에서 찾을 수 있는 모든 것으로 구성된 데이터셋으로, 월 약 30억 페이지의 거대한 아카이브입니다. 그 외에 위키피디아 문서, 소셜미디어(Reddit 대화 다수), 코드(GitHub·Stack Overflow 같은 포럼)도 많이 들어갑니다. 이 모두가 모델에게 언어·코드의 구조를 이해시키기 위한 것입니다.</p>
+<p>규모는 토큰 수로 잽니다. 기억할 규모는 — 수천억(hundreds of billions), 수조(trillions), 심지어 수십조(tens of trillions) 토큰입니다. 예: GPT-3는 3,000억(300 billion) 토큰, Llama 3(작년 발표)는 15조(15 trillion) 토큰으로 학습됐습니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>Common Crawl</dt><dd>인터넷 전체를 긁어모은 대표 사전학습 데이터셋.</dd><dt>토큰 수<span class="en-term">(number of tokens)</span></dt><dd>학습 데이터 양의 척도. 수천억~수십조 규모.</dd></dl></div>
+</div>
+<div id="block4"><h3><span class="badge">블록 4</span>연산량 단위: FLOPs와 FLOPS</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">13:43</span> the first notation is flops which stands for floating (point) operations (...) a unit of compute. So the higher the flops the more operations (...) <span class="ts">14:15</span> training an LLM is on the order of 10 ^ of 25 flops (...) a function of the size of your data (...) the number of tokens (...) and the number of parameters (...) O of the product between the two more or less. (...) <span class="ts">15:19</span> a second notation (...) also flops but it's different (...) floating point operations per (second) (...) a measure of compute speed(s). (...) <span class="ts">15:47</span> in the description of GPUs, they always indicate flops.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>혼동하기 쉬운 두 표기를 구분합니다.</p>
+<ul><li><strong>FLOPs(Floating Point Operations, 부동소수점 연산 수)</strong>: 연산'량'의 단위. 부동소수점(소수점 있는 수) 연산이 몇 번 들어가는지로, 높을수록 연산이 많습니다. LLM 학습은 대략 10²⁵ FLOPs 규모입니다. 정확한 공식은 복잡하고 아키텍처에 따라 다르지만, 대략 데이터 양(토큰 수)과 파라미터 수의 곱에 비례한다고 보면 됩니다. (MoE는 일부만 활성화하므로 같은 크기의 dense 모델보다 연산이 적음)</li><li><strong>FLOPS(Floating Point Operations Per Second, 초당 부동소수점 연산)</strong>: 연산'속도'의 단위. 연산을 얼마나 빨리 하는지입니다. GPU 사양에 늘 표기됩니다.</li></ul></div>
+<div class="callout note"><div class="c-title">⚠️ 참고</div><p>주의: 둘 다 발음이 같고, 일부 논문은 표기를 바꿔 쓰기도 해 혼동을 줍니다. 문장 맥락으로 어느 쪽인지 판단하는 게 안전합니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>FLOPs<span class="en-term">(부동소수점 연산 수)</span></dt><dd>연산량. ≈ 토큰 수 × 파라미터 수.</dd><dt>FLOPS<span class="en-term">(초당 부동소수점 연산)</span></dt><dd>연산 속도. GPU 사양 표기.</dd><dt>부동소수점<span class="en-term">(floating point)</span></dt><dd>소수점이 있는 수의 컴퓨터 표현.</dd></dl></div>
+</div></section><section id="glossary"><h2>4. 핵심 용어집</h2><div class="table-wrap"><table><thead><tr><th>영문</th><th>한국어</th><th>발음</th><th>뜻</th></tr></thead><tbody><tr><td>transfer learning</td><td>전이학습</td><td>트랜스퍼 러닝</td><td>학습 지식을 다른 과제에 재활용</td></tr><tr><td>pre-training</td><td>사전학습</td><td>프리트레이닝</td><td>대량 데이터로 언어 이해(1단계)</td></tr><tr><td>tuning / fine-tuning</td><td>튜닝/파인튜닝</td><td>—</td><td>특정 과제에 맞게 조정(2단계)</td></tr><tr><td>next token prediction</td><td>다음 토큰 예측</td><td>—</td><td>사전학습 목표</td></tr><tr><td>Common Crawl</td><td>커먼 크롤</td><td>—</td><td>인터넷 전체 사전학습 데이터셋</td></tr><tr><td>FLOPs</td><td>플롭스</td><td>플롭스</td><td>부동소수점 연산 수(연산량)</td></tr><tr><td>FLOPS</td><td>플롭스</td><td>플롭스</td><td>초당 연산(연산 속도)</td></tr><tr><td>floating point</td><td>부동소수점</td><td>—</td><td>소수점 있는 수 표현</td></tr></tbody></table></div></section><section id="review"><h2>5. 복습 문제</h2><div class="callout review"><div class="c-title">✏️ 스스로 점검</div><ol><li>전이학습은 과제마다 모델을 새로 만드는 방식과 어떻게 다른가? 두 단계(사전학습/튜닝)를 설명하라.</li><li>사전학습의 목표와, 사용하는 데이터의 종류·규모(토큰 수)는?</li><li>FLOPs와 FLOPS의 차이는 무엇인가?</li></ol></div></section><section id="appendix"><h2>부록. 실무 적용 포인트 <span style="font-size:14px;font-weight:500;color:var(--muted);">(NLP·LLM 기술 내용 한정)</span></h2><div class="callout practice"><div class="c-title">💡 현장에서 써먹기</div><ul><li><strong>전이학습은 "왜 우리 업무용 AI를 맨바닥에서 안 만들어도 되는가"의 답이다.</strong> 거대 모델이 사전학습으로 언어 일반을 이미 익혔기 때문에, 우리는 그 위에 소량의 업무 데이터로 튜닝만 하면 된다. 봉화군 고유 과제(민원 분류 등) 맞춤화도 '0부터'가 아니라 '기성 모델 위에서' 가능하다는 의미다(Lecture 2 부록과 연결).</li><li><strong>사전학습 비용·데이터 규모는 "왜 거대 모델을 직접 만들지 않고 빌려 쓰는가"를 설명한다.</strong> 수조 토큰·수백만 달러 규모라 기관이 자체 사전학습을 하긴 비현실적이다. 기성 LLM을 활용(API·파인튜닝)하는 것이 합리적이라는 판단의 근거다.</li><li><strong>FLOPs/FLOPS 구분은 AI 인프라 견적을 읽는 기본 안목이다.</strong> 도입·계약 시 'GPU가 얼마나 빠른가(FLOPS)'와 '작업이 얼마나 무거운가(FLOPs)'는 다른 축이다. 둘을 구분하면 성능·비용 자료를 정확히 해석할 수 있다.</li></ul></div><div class="next"><strong><strong>다음 섹션 예고</strong>·&lt;/strong&gt; · 모델·데이터를 키울수록 성능이 오른다는 스케일링 법칙(Chinchilla)과, 사전학습의 도전과제(비용·지식 컷오프). <span class="ts">16:21</span> 이후.</div></section></article></main>
+</div>
+
+<!-- KaTeX 자동 렌더 -->
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}],throwOnError:false});"></script>
+
+<!-- Mermaid -->
+<script type="module">
+  try{
+    const m = await import('https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs');
+    m.default.initialize({startOnLoad:true, theme:'base', themeVariables:{
+      fontFamily:'Pretendard, sans-serif', primaryColor:'#fffdfb', primaryBorderColor:'#d8d0c5',
+      primaryTextColor:'#1a1a1a', lineColor:'#b9554f', fontSize:'14px'
+    }});
+  }catch(e){ /* 오프라인이면 도식은 코드로 표시 */ }
+</script>
+
+<!-- 목차 활성표시 + 모바일 드로어 -->
+<script>
+  // 모바일 드로어
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('overlay');
+  const btn = document.getElementById('menuBtn');
+  const toggle = (on)=>{ sb.classList.toggle('open',on); ov.classList.toggle('show',on); };
+  btn.addEventListener('click',()=>toggle(!sb.classList.contains('open')));
+  ov.addEventListener('click',()=>toggle(false));
+  document.querySelectorAll('.toc a').forEach(a=>a.addEventListener('click',()=>{ if(window.innerWidth<=900) toggle(false); }));
+
+  // 현재 위치 강조
+  const links = [...document.querySelectorAll('.toc a')];
+  const map = {}; links.forEach(a=>{ const id=a.getAttribute('href').slice(1); map[id]=a; });
+  const targets = Object.keys(map).map(id=>document.getElementById(id)).filter(Boolean);
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(en=>{
+      if(en.isIntersecting){
+        links.forEach(l=>l.classList.remove('active'));
+        const a = map[en.target.id]; if(a) a.classList.add('active');
+      }
+    });
+  },{rootMargin:'-15% 0px -75% 0px', threshold:0});
+  targets.forEach(t=>io.observe(t));
+</script>
+
+</body>
+</html>

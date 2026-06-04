@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CME295 Lecture 6 · 섹션 1. 복습과 vanilla LLM의 약점</title>
+
+<!-- 폰트: Pretendard (CDN, 없으면 시스템 폰트 폴백) -->
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<!-- 수식: KaTeX -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
+
+<style>
+  :root{
+    --bg:#FBF9F6;
+    --paper:#ffffff;
+    --ink:#1a1a1a;
+    --ink-soft:#4a4744;
+    --muted:#7a756f;
+    --accent:#8C1515;          /* Stanford 카디널 */
+    --accent-soft:#b9554f;
+    --tint:#f6ebe9;            /* 카디널 옅은 틴트 */
+    --tint-2:#f3efe9;          /* 따뜻한 회색 */
+    --line:#e7e1d9;
+    --line-strong:#d8d0c5;
+    --radius:10px;
+    --maxw:760px;
+    --sidew:268px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Pretendard","Pretendard Variable",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    line-height:1.78;
+    font-size:16.5px;
+    -webkit-font-smoothing:antialiased;
+    word-break:keep-all;
+  }
+
+  /* ===== 레이아웃 ===== */
+  .layout{display:flex; align-items:flex-start;}
+  .sidebar{
+    width:var(--sidew); flex:0 0 var(--sidew);
+    position:sticky; top:0; height:100vh; overflow-y:auto;
+    padding:28px 18px 40px; border-right:1px solid var(--line);
+    background:rgba(251,249,246,.85); backdrop-filter:saturate(120%) blur(2px);
+  }
+  .content{flex:1 1 auto; min-width:0; display:flex; justify-content:center; padding:0 24px;}
+  .doc{width:100%; max-width:var(--maxw); padding:48px 0 120px;}
+
+  /* ===== 사이드바 목차 ===== */
+  .toc-brand{font-size:12px; letter-spacing:.04em; color:var(--accent); font-weight:700; text-transform:uppercase; margin-bottom:4px;}
+  .toc-title{font-size:15px; font-weight:700; margin:0 0 18px; line-height:1.4; color:var(--ink);}
+  .toc{list-style:none; margin:0; padding:0; font-size:13.5px;}
+  .toc li{margin:1px 0;}
+  .toc a{display:block; padding:5px 10px; border-radius:7px; color:var(--ink-soft); text-decoration:none; border-left:2px solid transparent;}
+  .toc a:hover{background:var(--tint-2); color:var(--ink);}
+  .toc a.sub{padding-left:22px; font-size:13px; color:var(--muted);}
+  .toc a.active{color:var(--accent); background:var(--tint); border-left-color:var(--accent); font-weight:600;}
+
+  /* ===== 타이포 ===== */
+  h1{font-size:27px; line-height:1.32; font-weight:800; letter-spacing:-.01em; margin:0 0 6px;}
+  .subtitle{font-size:18px; font-weight:700; color:var(--accent); margin:0 0 22px;}
+  h2{font-size:21px; font-weight:800; letter-spacing:-.01em; margin:46px 0 14px; padding-bottom:9px; border-bottom:2px solid var(--line-strong);}
+  h3{font-size:17.5px; font-weight:700; margin:34px 0 12px; color:var(--ink);}
+  h3 .badge{display:inline-block; font-size:12px; font-weight:700; color:#fff; background:var(--accent); border-radius:6px; padding:2px 8px; margin-right:8px; vertical-align:middle;}
+  p{margin:12px 0;}
+  strong{font-weight:700;}
+  a{color:var(--accent);}
+  ul,ol{margin:12px 0; padding-left:22px;}
+  li{margin:6px 0;}
+  hr{display:none;}
+
+  /* ===== 출처 배너 ===== */
+  .source-banner{
+    display:flex; gap:10px; align-items:baseline;
+    background:var(--tint); border-left:4px solid var(--accent);
+    border-radius:0 var(--radius) var(--radius) 0;
+    padding:12px 16px; margin:0 0 8px; font-size:13.5px; color:var(--ink-soft);
+  }
+  .source-banner b{color:var(--accent);}
+
+  /* ===== 한국어 번역 카드 ===== */
+  .ko{
+    background:var(--paper); border:1px solid var(--line);
+    border-left:4px solid var(--accent); border-radius:var(--radius);
+    padding:6px 22px; margin:16px 0;
+    box-shadow:0 1px 2px rgba(60,40,20,.04);
+  }
+  .ko > .label, .terms > .label{
+    display:inline-block; font-size:11.5px; font-weight:800; letter-spacing:.06em;
+    color:var(--accent); text-transform:uppercase; margin:14px 0 -4px;
+  }
+
+  /* ===== 영문 원문 토글 ===== */
+  details.en{
+    background:var(--tint-2); border:1px solid var(--line); border-radius:var(--radius);
+    margin:14px 0; overflow:hidden;
+  }
+  details.en > summary{
+    cursor:pointer; list-style:none; padding:11px 16px;
+    font-size:13.5px; font-weight:700; color:var(--muted);
+    display:flex; align-items:center; gap:8px; user-select:none;
+  }
+  details.en > summary::-webkit-details-marker{display:none;}
+  details.en > summary .chev{transition:transform .2s; color:var(--accent-soft);}
+  details.en[open] > summary .chev{transform:rotate(90deg);}
+  details.en[open] > summary{border-bottom:1px solid var(--line);}
+  .en-body{padding:4px 18px 14px; font-size:14px; line-height:1.7; color:#5c574f; font-style:normal;}
+  .en-body p{margin:10px 0;}
+  .ts{
+    display:inline-block; font-family:"SFMono-Regular",ui-monospace,Menlo,Consolas,monospace;
+    font-size:11.5px; font-style:normal; color:var(--accent);
+    background:var(--tint); border:1px solid #e6cfcc; border-radius:5px;
+    padding:0 5px; margin:0 2px; vertical-align:baseline;
+  }
+
+  /* ===== 용어 설명 ===== */
+  .terms{
+    border:1px solid var(--line); border-left:3px solid var(--accent-soft);
+    border-radius:var(--radius); background:#fffdfb; padding:4px 20px 8px; margin:16px 0;
+  }
+  .terms dl{margin:8px 0;}
+  .terms dt{font-weight:700; color:var(--ink); margin-top:8px;}
+  .terms dt .en-term{color:var(--accent); font-weight:600;}
+  .terms dd{margin:1px 0 6px; color:var(--ink-soft); font-size:15px;}
+
+  /* ===== 표 ===== */
+  .table-wrap{overflow-x:auto; margin:16px 0; border:1px solid var(--line); border-radius:var(--radius);}
+  table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:520px;}
+  thead th{background:var(--accent); color:#fff; font-weight:700; text-align:left; padding:11px 14px; white-space:nowrap;}
+  tbody td{padding:9px 14px; border-top:1px solid var(--line);}
+  tbody tr:nth-child(even){background:var(--tint-2);}
+  tbody td:first-child{font-family:ui-monospace,Menlo,monospace; font-size:13px; color:var(--accent);}
+
+  /* ===== 콜아웃 ===== */
+  .callout{border-radius:var(--radius); padding:14px 20px 6px; margin:18px 0;}
+  .callout .c-title{font-weight:800; margin:6px 0 2px; display:flex; align-items:center; gap:8px;}
+  .callout.review{background:#fff; border:1px solid var(--line-strong);}
+  .callout.review ol{counter-reset:none;}
+  .callout.note{background:var(--tint-2); border-left:4px solid var(--muted); border-radius:0 var(--radius) var(--radius) 0; padding-bottom:12px;}
+  .callout.practice{background:var(--tint); border:1px solid #e6cfcc; padding-bottom:14px;}
+  .callout.practice li{margin:12px 0;}
+  .next{margin-top:40px; padding:14px 18px; background:var(--tint-2); border-radius:var(--radius); font-size:14px; color:var(--ink-soft);}
+
+  /* 수식 / 도식 */
+  .katex-display{margin:14px 0; overflow-x:auto; overflow-y:hidden; padding:6px 0;}
+  .diagram{background:#fffdfb; border:1px solid var(--line); border-radius:var(--radius); padding:14px; margin:16px 0; text-align:center;}
+  .diagram .cap{font-size:12.5px; color:var(--muted); margin-top:6px;}
+  .mermaid{display:flex; justify-content:center;}
+
+  /* ===== 모바일 ===== */
+  .menu-btn{display:none;}
+  .overlay{display:none;}
+  @media (max-width:900px){
+    .menu-btn{
+      display:flex; align-items:center; justify-content:center;
+      position:fixed; top:14px; left:14px; z-index:50;
+      width:42px; height:42px; border-radius:10px; border:1px solid var(--line-strong);
+      background:var(--paper); color:var(--accent); font-size:20px; cursor:pointer;
+      box-shadow:0 2px 8px rgba(60,40,20,.12);
+    }
+    .sidebar{
+      position:fixed; left:0; top:0; z-index:60; height:100vh;
+      transform:translateX(-105%); transition:transform .25s ease;
+      box-shadow:4px 0 24px rgba(0,0,0,.12); background:var(--bg);
+    }
+    .sidebar.open{transform:translateX(0);}
+    .overlay.show{display:block; position:fixed; inset:0; background:rgba(0,0,0,.32); z-index:55;}
+    .content{padding:0 16px;}
+    .doc{padding:64px 0 100px;}
+    body{font-size:16px;}
+    h1{font-size:23px;}
+    .ko,.terms{padding-left:16px; padding-right:16px;}
+  }
+
+  /* ===== 인쇄 ===== */
+  @media print{
+    .sidebar,.menu-btn,.overlay{display:none !important;}
+    .content{padding:0;}
+    body{background:#fff; font-size:11pt;}
+    details.en{display:none;}          /* 인쇄본은 한국어 위주 */
+    .ko,.terms,.callout,.table-wrap{break-inside:avoid; box-shadow:none;}
+    a{color:var(--ink);}
+  }
+  .home-btn{position:fixed; top:16px; right:18px; z-index:70;
+    display:inline-flex; align-items:center; gap:6px; text-decoration:none;
+    background:var(--paper); color:var(--accent); border:1px solid var(--line-strong);
+    border-radius:999px; padding:8px 14px; font-size:13.5px; font-weight:700;
+    box-shadow:0 2px 8px rgba(60,40,20,.12); transition:background .12s,color .12s;}
+  .home-btn:hover{background:var(--accent); color:#fff; border-color:var(--accent);}
+  @media (max-width:900px){ .home-btn{top:14px; right:14px; padding:8px 12px; font-size:12.5px;} }
+  @media print{ .home-btn{display:none !important;} }
+</style>
+</head>
+<body>
+<a class="home-btn" href="../index.html" title="전체 목차로 돌아가기">← 전체 목차</a>
+
+<button class="menu-btn" id="menuBtn" aria-label="목차 열기">☰</button>
+<div class="overlay" id="overlay"></div>
+
+<div class="layout">
+  <nav class="sidebar" id="sidebar"><div class="toc-brand">Stanford CME295 · Lecture 6</div><p class="toc-title">섹션 1. 복습과 vanilla LLM의 약점</p><ul class="toc"><li><a href="#overview">1. 강의 개요</a></li><li><a href="#goals">2. 학습 목표</a></li><li><a href="#body">3. 본문</a></li><li><a class="sub" href="#block1">블록 1 · 복습: RLHF와 PPO</a></li><li><a class="sub" href="#block2">블록 2 · vanilla LLM의 강점과 약점</a></li><li><a href="#glossary">4. 핵심 용어집</a></li><li><a href="#review">5. 복습 문제</a></li><li><a href="#appendix">부록. 실무 적용 포인트 (NLP·LLM 기술 내용 한정)</a></li></ul></nav>
+  <main class="content"><article class="doc"><h1>CME295 Transformers &amp; LLMs — Lecture 6 한국어 교재</h1><p class="subtitle">섹션 1. 복습과 vanilla LLM의 약점</p><div class="source-banner"><span>📄</span><span><b>원문 출처</b>: Stanford CME295, Autumn 2025, Lecture 6 (LLM Reasoning), 타임스탬프 <span class="ts">00:05</span>~<span class="ts">12:48</span></span></div><section id="overview"><h2>1. 강의 개요</h2><ul><li>Lecture 4~5(사전학습·SFT·선호 튜닝·RLHF·PPO)을 복습하고, 오늘의 주제인 LLM 추론(reasoning)으로 들어간다.</li><li>지금까지 다룬 '평범한(vanilla) LLM'의 네 가지 약점 — 제한된 추론력·지식 컷오프·행동 불가·평가 어려움 — 을 정리한다.</li><li>그중 추론력 약점이 오늘의 초점이고, 나머지 셋은 다음 강의들로 이어짐을 안내한다.</li></ul></section><section id="goals"><h2>2. 학습 목표</h2><ol><li>RLHF의 두 단계와 PPO(PPO-clip, KL penalty)의 핵심을 다시 설명할 수 있다.</li><li>vanilla LLM의 강점과 네 가지 약점을 구분할 수 있다.</li><li>오늘 다룰 약점(추론력)과 이후 강의로 미뤄진 약점(지식·행동·평가)을 안다.</li></ol></section><section id="body"><h2>3. 본문</h2><div id="block1"><h3><span class="badge">블록 1</span>복습: RLHF와 PPO</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">02:17</span> the preference tuning step (...) align our model with human preferences (...) RHF (...) two steps (...) learning to distinguish good from bad (...) and then (...) this RL stage. (...) <span class="ts">04:59</span> the loss function during the RL stage is composed of two (parts) (...) this advantage (...) based on the rewards (...) has some baseline to (...) reduce the variance (...) we don't want our model to deviate too much from either the previous iteration (...) (or) our base model (...) the SFT model. (...) <span class="ts">06:30</span> PO (...) proximal policy (...) PO clip (...) clips the updates (...) PPO kale penalty (...) uses the kale divergence.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>지난 강의 복습입니다. 선호 튜닝은 모델을 사람 선호에 맞추는 단계로, RLHF가 대표 방법입니다. 두 단계 — ① 좋고 나쁨을 구분하는 보상 모델 학습, ② RL 정렬 — 으로 이뤄집니다. RL 단계의 손실은 두 부분입니다.</p>
+<ol><li><strong>어드밴티지(advantage)</strong>: 보상 기반이며, 분산을 줄이는 기준선(baseline)을 둠.</li><li><strong>벗어남 억제</strong>: 직전 반복에서도, 기본 모델(SFT 모델)에서도 너무 벗어나지 않게 함. (이미 많이 배운 모델이라 선호 정렬만 하면 되지 완전히 바꿀 이유가 없음)</li></ol>
+<p>대표 알고리즘 PPO(근접 정책 최적화)에는 PPO-clip(갱신 비율을 자름)과 KL penalty(KL 발산으로 벌점) 변형이 있고, 요즘 RLHF는 이 둘을 섞어 쓰며 KL은 기본(SFT) 모델 기준으로 적용합니다. (Lecture 5 참고)</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>RLHF / PPO / 어드밴티지 / KL 발산</dt><dd>Lecture 5 섹션 3~5 참고.</dd><dt>기준선<span class="en-term">(baseline)</span></dt><dd>어드밴티지에서 분산을 줄이려 빼는 기준값.</dd></dl></div>
+</div>
+<div id="block2"><h3><span class="badge">블록 2</span>vanilla LLM의 강점과 약점</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">08:40</span> vanilla LLMs (...) take something as an input (...) and just respond. (...) <span class="ts">09:09</span> they know a lot about structure of the text (...) codes (...) great to generate (...) essays or poems. (...) <span class="ts">09:41</span> limited (reasoning) (...) sophisticated (...) math problem it will not really come up with (...) the solution. (...) <span class="ts">10:11</span> pre-trained on a huge amount of data which is static (...) bound to the cutoff date. (...) <span class="ts">11:12</span> all talk no action (...) if you want to (...) place an order (...) you just cannot do it. (...) <span class="ts">11:45</span> LLMs (...) generate free form text and it's hard to evaluate them.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>지금까지 다룬 것은 '평범한(vanilla) LLM' — 프롬프트를 받아 응답만 하는 모델입니다. 강점이 많습니다. 텍스트·코드 구조를 잘 알아서 디버깅·코드 생성·에세이·시 작성에 뛰어납니다. 하지만 약점도 있습니다(완전한 목록은 아님).</p>
+<ol><li><strong>제한된 추론력(limited reasoning)</strong>: 정교한 수학 문제 등은 잘 못 풉니다. 지금까지는 '다음 토큰 예측'으로만 응답하도록 학습돼, 복잡한 문제를 풀어낼 뚜렷한 근거가 없습니다.</li><li><strong>지식 컷오프(static knowledge)</strong>: 사전학습 데이터의 컷오프 날짜 이후 지식은 모릅니다. (예: 선거 후 당선자를 모름)</li><li><strong>말만 하고 행동 못 함(all talk, no action)</strong>: 주문하기 같은 실제 행동은 못 합니다.</li><li><strong>평가 어려움</strong>: 자유 형식 텍스트를 생성하므로, 번역의 BLEU·요약의 ROUGE 같은 규칙 기반 지표로 평가하기 어렵습니다.</li></ol>
+<p>이 중 ①추론력이 오늘의 주제이고, ②지식 ③행동은 다음 강의(7강), ④평가는 8강에서 다룹니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>vanilla LLM<span class="en-term">(평범한 LLM)</span></dt><dd>프롬프트→응답만 하는 기본 모델.</dd><dt>제한된 추론력</dt><dd>복잡한 다단계 문제를 잘 못 푸는 약점. (오늘 주제)</dd><dt>정적 지식<span class="en-term">(static knowledge)</span></dt><dd>컷오프 이후를 모름. (7강: 검색·RAG)</dd><dt>행동 불가<span class="en-term">(all talk, no action)</span></dt><dd>실제 작업 수행 불가. (7강: 에이전트·도구)</dd><dt>평가 어려움</dt><dd>자유 형식이라 전통 지표로 재기 어려움. (8강)</dd></dl></div>
+</div></section><section id="glossary"><h2>4. 핵심 용어집</h2><div class="table-wrap"><table><thead><tr><th>영문</th><th>한국어</th><th>발음</th><th>뜻</th></tr></thead><tbody><tr><td>RLHF</td><td>사람 피드백 강화학습</td><td>—</td><td>①보상 모델 ②RL 정렬</td></tr><tr><td>PPO</td><td>근접 정책 최적화</td><td>—</td><td>정책 변화 제한 RL</td></tr><tr><td>advantage / baseline</td><td>어드밴티지/기준선</td><td>—</td><td>기대보다 나은 정도 / 분산 감소 기준</td></tr><tr><td>vanilla LLM</td><td>평범한 LLM</td><td>—</td><td>프롬프트→응답만 하는 모델</td></tr><tr><td>limited reasoning</td><td>제한된 추론력</td><td>—</td><td>복잡한 문제를 잘 못 풂</td></tr><tr><td>static knowledge</td><td>정적 지식</td><td>—</td><td>컷오프 이후 모름</td></tr><tr><td>free form text</td><td>자유 형식 텍스트</td><td>—</td><td>평가가 어려운 출력</td></tr></tbody></table></div></section><section id="review"><h2>5. 복습 문제</h2><div class="callout review"><div class="c-title">✏️ 스스로 점검</div><ol><li>RLHF의 두 단계와 PPO의 두 변형(PPO-clip·KL penalty)을 설명하라.</li><li>vanilla LLM의 강점 두 가지와 약점 네 가지를 들어라.</li><li>네 약점 중 어느 것이 오늘(추론) 주제이고, 나머지는 어느 강의에서 다루는가?</li></ol></div></section><section id="appendix"><h2>부록. 실무 적용 포인트 <span style="font-size:14px;font-weight:500;color:var(--muted);">(NLP·LLM 기술 내용 한정)</span></h2><div class="callout practice"><div class="c-title">💡 현장에서 써먹기</div><ul><li><strong>vanilla LLM의 네 약점은 "LLM을 그냥 쓸 때 조심할 점" 목록이다.</strong> 복잡한 추론은 틀릴 수 있고(추론력), 최신 정보는 모르며(지식 컷오프), 실제 작업은 못 하고(행동 불가), 출력 품질은 객관 측정이 어렵다(평가). 업무에 LLM을 붙일 때 이 네 한계를 전제로 보완책(검증·최신 자료 제공·사람 확인)을 설계해야 한다.</li><li><strong>"추론이 약하다"는 점은 계산·논리가 걸린 업무에서 특히 유의점이다.</strong> 단순 작성은 잘해도, 다단계 계산·논리(예: 조건이 얽힌 보조금 산정)는 틀릴 수 있다. 오늘 배울 추론 모델·사고연쇄가 이를 보완하는 방향이다.</li></ul></div><div class="next"><strong><strong>다음 섹션 예고</strong>·&lt;/strong&gt; · 추론이란 무엇이며 추론 모델은 어떻게 작동하나 — 사고연쇄(CoT)의 대규모화, 타임라인(o1·DeepSeek R1), UI·가격. <span class="ts">12:48</span> 이후.</div></section></article></main>
+</div>
+
+<!-- KaTeX 자동 렌더 -->
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}],throwOnError:false});"></script>
+
+<!-- Mermaid -->
+<script type="module">
+  try{
+    const m = await import('https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs');
+    m.default.initialize({startOnLoad:true, theme:'base', themeVariables:{
+      fontFamily:'Pretendard, sans-serif', primaryColor:'#fffdfb', primaryBorderColor:'#d8d0c5',
+      primaryTextColor:'#1a1a1a', lineColor:'#b9554f', fontSize:'14px'
+    }});
+  }catch(e){ /* 오프라인이면 도식은 코드로 표시 */ }
+</script>
+
+<!-- 목차 활성표시 + 모바일 드로어 -->
+<script>
+  // 모바일 드로어
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('overlay');
+  const btn = document.getElementById('menuBtn');
+  const toggle = (on)=>{ sb.classList.toggle('open',on); ov.classList.toggle('show',on); };
+  btn.addEventListener('click',()=>toggle(!sb.classList.contains('open')));
+  ov.addEventListener('click',()=>toggle(false));
+  document.querySelectorAll('.toc a').forEach(a=>a.addEventListener('click',()=>{ if(window.innerWidth<=900) toggle(false); }));
+
+  // 현재 위치 강조
+  const links = [...document.querySelectorAll('.toc a')];
+  const map = {}; links.forEach(a=>{ const id=a.getAttribute('href').slice(1); map[id]=a; });
+  const targets = Object.keys(map).map(id=>document.getElementById(id)).filter(Boolean);
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(en=>{
+      if(en.isIntersecting){
+        links.forEach(l=>l.classList.remove('active'));
+        const a = map[en.target.id]; if(a) a.classList.add('active');
+      }
+    });
+  },{rootMargin:'-15% 0px -75% 0px', threshold:0});
+  targets.forEach(t=>io.observe(t));
+</script>
+
+</body>
+</html>

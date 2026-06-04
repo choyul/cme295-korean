@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CME295 Lecture 7 · 섹션 5. 도구의 종류·도구 선택·MCP</title>
+
+<!-- 폰트: Pretendard (CDN, 없으면 시스템 폰트 폴백) -->
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<!-- 수식: KaTeX -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
+
+<style>
+  :root{
+    --bg:#FBF9F6;
+    --paper:#ffffff;
+    --ink:#1a1a1a;
+    --ink-soft:#4a4744;
+    --muted:#7a756f;
+    --accent:#8C1515;          /* Stanford 카디널 */
+    --accent-soft:#b9554f;
+    --tint:#f6ebe9;            /* 카디널 옅은 틴트 */
+    --tint-2:#f3efe9;          /* 따뜻한 회색 */
+    --line:#e7e1d9;
+    --line-strong:#d8d0c5;
+    --radius:10px;
+    --maxw:760px;
+    --sidew:268px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Pretendard","Pretendard Variable",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    line-height:1.78;
+    font-size:16.5px;
+    -webkit-font-smoothing:antialiased;
+    word-break:keep-all;
+  }
+
+  /* ===== 레이아웃 ===== */
+  .layout{display:flex; align-items:flex-start;}
+  .sidebar{
+    width:var(--sidew); flex:0 0 var(--sidew);
+    position:sticky; top:0; height:100vh; overflow-y:auto;
+    padding:28px 18px 40px; border-right:1px solid var(--line);
+    background:rgba(251,249,246,.85); backdrop-filter:saturate(120%) blur(2px);
+  }
+  .content{flex:1 1 auto; min-width:0; display:flex; justify-content:center; padding:0 24px;}
+  .doc{width:100%; max-width:var(--maxw); padding:48px 0 120px;}
+
+  /* ===== 사이드바 목차 ===== */
+  .toc-brand{font-size:12px; letter-spacing:.04em; color:var(--accent); font-weight:700; text-transform:uppercase; margin-bottom:4px;}
+  .toc-title{font-size:15px; font-weight:700; margin:0 0 18px; line-height:1.4; color:var(--ink);}
+  .toc{list-style:none; margin:0; padding:0; font-size:13.5px;}
+  .toc li{margin:1px 0;}
+  .toc a{display:block; padding:5px 10px; border-radius:7px; color:var(--ink-soft); text-decoration:none; border-left:2px solid transparent;}
+  .toc a:hover{background:var(--tint-2); color:var(--ink);}
+  .toc a.sub{padding-left:22px; font-size:13px; color:var(--muted);}
+  .toc a.active{color:var(--accent); background:var(--tint); border-left-color:var(--accent); font-weight:600;}
+
+  /* ===== 타이포 ===== */
+  h1{font-size:27px; line-height:1.32; font-weight:800; letter-spacing:-.01em; margin:0 0 6px;}
+  .subtitle{font-size:18px; font-weight:700; color:var(--accent); margin:0 0 22px;}
+  h2{font-size:21px; font-weight:800; letter-spacing:-.01em; margin:46px 0 14px; padding-bottom:9px; border-bottom:2px solid var(--line-strong);}
+  h3{font-size:17.5px; font-weight:700; margin:34px 0 12px; color:var(--ink);}
+  h3 .badge{display:inline-block; font-size:12px; font-weight:700; color:#fff; background:var(--accent); border-radius:6px; padding:2px 8px; margin-right:8px; vertical-align:middle;}
+  p{margin:12px 0;}
+  strong{font-weight:700;}
+  a{color:var(--accent);}
+  ul,ol{margin:12px 0; padding-left:22px;}
+  li{margin:6px 0;}
+  hr{display:none;}
+
+  /* ===== 출처 배너 ===== */
+  .source-banner{
+    display:flex; gap:10px; align-items:baseline;
+    background:var(--tint); border-left:4px solid var(--accent);
+    border-radius:0 var(--radius) var(--radius) 0;
+    padding:12px 16px; margin:0 0 8px; font-size:13.5px; color:var(--ink-soft);
+  }
+  .source-banner b{color:var(--accent);}
+
+  /* ===== 한국어 번역 카드 ===== */
+  .ko{
+    background:var(--paper); border:1px solid var(--line);
+    border-left:4px solid var(--accent); border-radius:var(--radius);
+    padding:6px 22px; margin:16px 0;
+    box-shadow:0 1px 2px rgba(60,40,20,.04);
+  }
+  .ko > .label, .terms > .label{
+    display:inline-block; font-size:11.5px; font-weight:800; letter-spacing:.06em;
+    color:var(--accent); text-transform:uppercase; margin:14px 0 -4px;
+  }
+
+  /* ===== 영문 원문 토글 ===== */
+  details.en{
+    background:var(--tint-2); border:1px solid var(--line); border-radius:var(--radius);
+    margin:14px 0; overflow:hidden;
+  }
+  details.en > summary{
+    cursor:pointer; list-style:none; padding:11px 16px;
+    font-size:13.5px; font-weight:700; color:var(--muted);
+    display:flex; align-items:center; gap:8px; user-select:none;
+  }
+  details.en > summary::-webkit-details-marker{display:none;}
+  details.en > summary .chev{transition:transform .2s; color:var(--accent-soft);}
+  details.en[open] > summary .chev{transform:rotate(90deg);}
+  details.en[open] > summary{border-bottom:1px solid var(--line);}
+  .en-body{padding:4px 18px 14px; font-size:14px; line-height:1.7; color:#5c574f; font-style:normal;}
+  .en-body p{margin:10px 0;}
+  .ts{
+    display:inline-block; font-family:"SFMono-Regular",ui-monospace,Menlo,Consolas,monospace;
+    font-size:11.5px; font-style:normal; color:var(--accent);
+    background:var(--tint); border:1px solid #e6cfcc; border-radius:5px;
+    padding:0 5px; margin:0 2px; vertical-align:baseline;
+  }
+
+  /* ===== 용어 설명 ===== */
+  .terms{
+    border:1px solid var(--line); border-left:3px solid var(--accent-soft);
+    border-radius:var(--radius); background:#fffdfb; padding:4px 20px 8px; margin:16px 0;
+  }
+  .terms dl{margin:8px 0;}
+  .terms dt{font-weight:700; color:var(--ink); margin-top:8px;}
+  .terms dt .en-term{color:var(--accent); font-weight:600;}
+  .terms dd{margin:1px 0 6px; color:var(--ink-soft); font-size:15px;}
+
+  /* ===== 표 ===== */
+  .table-wrap{overflow-x:auto; margin:16px 0; border:1px solid var(--line); border-radius:var(--radius);}
+  table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:520px;}
+  thead th{background:var(--accent); color:#fff; font-weight:700; text-align:left; padding:11px 14px; white-space:nowrap;}
+  tbody td{padding:9px 14px; border-top:1px solid var(--line);}
+  tbody tr:nth-child(even){background:var(--tint-2);}
+  tbody td:first-child{font-family:ui-monospace,Menlo,monospace; font-size:13px; color:var(--accent);}
+
+  /* ===== 콜아웃 ===== */
+  .callout{border-radius:var(--radius); padding:14px 20px 6px; margin:18px 0;}
+  .callout .c-title{font-weight:800; margin:6px 0 2px; display:flex; align-items:center; gap:8px;}
+  .callout.review{background:#fff; border:1px solid var(--line-strong);}
+  .callout.review ol{counter-reset:none;}
+  .callout.note{background:var(--tint-2); border-left:4px solid var(--muted); border-radius:0 var(--radius) var(--radius) 0; padding-bottom:12px;}
+  .callout.practice{background:var(--tint); border:1px solid #e6cfcc; padding-bottom:14px;}
+  .callout.practice li{margin:12px 0;}
+  .next{margin-top:40px; padding:14px 18px; background:var(--tint-2); border-radius:var(--radius); font-size:14px; color:var(--ink-soft);}
+
+  /* 수식 / 도식 */
+  .katex-display{margin:14px 0; overflow-x:auto; overflow-y:hidden; padding:6px 0;}
+  .diagram{background:#fffdfb; border:1px solid var(--line); border-radius:var(--radius); padding:14px; margin:16px 0; text-align:center;}
+  .diagram .cap{font-size:12.5px; color:var(--muted); margin-top:6px;}
+  .mermaid{display:flex; justify-content:center;}
+
+  /* ===== 모바일 ===== */
+  .menu-btn{display:none;}
+  .overlay{display:none;}
+  @media (max-width:900px){
+    .menu-btn{
+      display:flex; align-items:center; justify-content:center;
+      position:fixed; top:14px; left:14px; z-index:50;
+      width:42px; height:42px; border-radius:10px; border:1px solid var(--line-strong);
+      background:var(--paper); color:var(--accent); font-size:20px; cursor:pointer;
+      box-shadow:0 2px 8px rgba(60,40,20,.12);
+    }
+    .sidebar{
+      position:fixed; left:0; top:0; z-index:60; height:100vh;
+      transform:translateX(-105%); transition:transform .25s ease;
+      box-shadow:4px 0 24px rgba(0,0,0,.12); background:var(--bg);
+    }
+    .sidebar.open{transform:translateX(0);}
+    .overlay.show{display:block; position:fixed; inset:0; background:rgba(0,0,0,.32); z-index:55;}
+    .content{padding:0 16px;}
+    .doc{padding:64px 0 100px;}
+    body{font-size:16px;}
+    h1{font-size:23px;}
+    .ko,.terms{padding-left:16px; padding-right:16px;}
+  }
+
+  /* ===== 인쇄 ===== */
+  @media print{
+    .sidebar,.menu-btn,.overlay{display:none !important;}
+    .content{padding:0;}
+    body{background:#fff; font-size:11pt;}
+    details.en{display:none;}          /* 인쇄본은 한국어 위주 */
+    .ko,.terms,.callout,.table-wrap{break-inside:avoid; box-shadow:none;}
+    a{color:var(--ink);}
+  }
+  .home-btn{position:fixed; top:16px; right:18px; z-index:70;
+    display:inline-flex; align-items:center; gap:6px; text-decoration:none;
+    background:var(--paper); color:var(--accent); border:1px solid var(--line-strong);
+    border-radius:999px; padding:8px 14px; font-size:13.5px; font-weight:700;
+    box-shadow:0 2px 8px rgba(60,40,20,.12); transition:background .12s,color .12s;}
+  .home-btn:hover{background:var(--accent); color:#fff; border-color:var(--accent);}
+  @media (max-width:900px){ .home-btn{top:14px; right:14px; padding:8px 12px; font-size:12.5px;} }
+  @media print{ .home-btn{display:none !important;} }
+</style>
+</head>
+<body>
+<a class="home-btn" href="../index.html" title="전체 목차로 돌아가기">← 전체 목차</a>
+
+<button class="menu-btn" id="menuBtn" aria-label="목차 열기">☰</button>
+<div class="overlay" id="overlay"></div>
+
+<div class="layout">
+  <nav class="sidebar" id="sidebar"><div class="toc-brand">Stanford CME295 · Lecture 7</div><p class="toc-title">섹션 5. 도구의 종류·도구 선택·MCP</p><ul class="toc"><li><a href="#overview">1. 강의 개요</a></li><li><a href="#goals">2. 학습 목표</a></li><li><a href="#body">3. 본문</a></li><li><a class="sub" href="#block1">블록 1 · 도구의 세 범주</a></li><li><a class="sub" href="#block2">블록 2 · 도구가 많을 때의 문제</a></li><li><a class="sub" href="#block3">블록 3 · 도구 선택 (tool selection / routing)</a></li><li><a class="sub" href="#block4">블록 4 · MCP (Model Context Protocol)</a></li><li><a href="#glossary">4. 핵심 용어집</a></li><li><a href="#review">5. 복습 문제</a></li><li><a href="#appendix">부록. 실무 적용 포인트 (NLP·LLM 기술 내용 한정)</a></li></ul></nav>
+  <main class="content"><article class="doc"><h1>CME295 Transformers &amp; LLMs — Lecture 7 한국어 교재</h1><p class="subtitle">섹션 5. 도구의 종류·도구 선택·MCP</p><div class="source-banner"><span>📄</span><span><b>원문 출처</b>: Stanford CME295, Autumn 2025, Lecture 7, 타임스탬프 <span class="ts">1:20:38</span>~<span class="ts">1:32:11</span></span></div><section id="overview"><h2>1. 강의 개요</h2><ul><li>도구의 세 가지 범주 — 정보(검색·날씨·주식)·계산(코드 실행)·행동(이메일 전송 등) — 를 다룬다.</li><li>도구가 많아질 때의 문제(컨텍스트 한계·needle-in-haystack)와, 이를 푸는 도구 선택(tool selection/routing)을 본다.</li><li>도구 정의·사용을 표준화하는 MCP(Model Context Protocol)를 설명한다.</li></ul></section><section id="goals"><h2>2. 학습 목표</h2><ol><li>도구의 세 범주(정보·계산·행동)를 예와 함께 구분할 수 있다.</li><li>도구가 많을 때의 문제와, 도구 선택(routing)이 이를 어떻게 푸는지 안다.</li><li>MCP가 표준화하는 것(도구 노출 방식)과 구성요소(서버·도구·프롬프트·리소스)를 이해한다.</li></ol></section><section id="body"><h2>3. 본문</h2><div id="block1"><h3><span class="badge">블록 1</span>도구의 세 범주</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">1:20:38</span> information (...) you ask your LLM about news of the day (...) an API that fetches it (...) search (...) weather, stocks. (...) <span class="ts">1:21:41</span> calculation (...) transform the query into code, execute that code and then read out the answer. (...) <span class="ts">1:22:11</span> take actions on behalf of the user (...) a tool that sends emails (...) hit send for you.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>도구의 세 가지 범주:</p>
+<ol><li><strong>정보(information)</strong>: 모델이 모르는 정보를 외부에서 가져옴. 예: 오늘 뉴스(검색 도구), 날씨, 주식. (지식 컷오프를 RAG와 다른 방식으로 메움)</li><li><strong>계산(computation)</strong>: 추론 사슬로 풀게 둘 수도 있지만, 질의를 코드로 바꿔 실행하고 답을 읽어오는 게 더 확실. 계산 영역에 도구 호출이 두루 쓰임.</li><li><strong>행동(actions)</strong>: 사용자를 대신해 행동. 예: 이메일 전송 도구 — 모델이 제목·본문을 채우고 전송까지 함(외부 세계와 상호작용하는 구성요소가 있으므로).</li></ol>
+<p>도구 호출은 매우 강력해 사실상 무엇이든 할 수 있습니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>정보 도구</dt><dd>검색·날씨·주식 등 외부 정보 조회.</dd><dt>계산 도구</dt><dd>질의를 코드로 실행해 계산.</dd><dt>행동 도구</dt><dd>이메일 전송 등 실제 행동 수행.</dd></dl></div>
+</div>
+<div id="block2"><h3><span class="badge">블록 2</span>도구가 많을 때의 문제</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">1:22:45</span> you wouldn't have just a single tool API (...) you would have several ones (...) <span class="ts">1:23:46</span> too many tools (...) some tool API will get lost in the context (...) needle in a haststack (...) <span class="ts">1:25:21</span> you might end up being mediocre at all of them (...) the context window that is finite (...) you couldn't possibly fit all of such tools.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>실제로는 도구가 하나가 아닙니다. LLM은 곰인형 찾기만 하는 게 아니라, 안기·기분 확인·선물 보내기 등 여러 일을 할 수 있어, 무엇이 필요할지 모르니 관련 함수를 다 프리앰블에 넣어 둡니다.</p>
+<p>문제: 도구가 너무 많으면 —</p>
+<ul><li>needle-in-haystack 문제처럼, 어떤 도구 API가 긴 컨텍스트에 묻혀 무엇을 써야 할지 모르게 됩니다(API들이 충돌하기도).</li><li>모든 경우를 지원하려다 모든 것에 어중간(mediocre)해질 수 있습니다.</li><li>컨텍스트 창이 유한해, 수억 사용자의 모든 도구를 한 번에 다 담을 수 없습니다.</li><li>또 도구 정의 방식이 LLM마다 제각각이라 표준화가 필요합니다.</li></ul></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>도구 과다 문제</dt><dd>도구가 많으면 컨텍스트에 묻히고 충돌·어중간·용량 한계가 생김.</dd></dl></div>
+</div>
+<div id="block3"><h3><span class="badge">블록 3</span>도구 선택 (tool selection / routing)</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">1:26:26</span> a tool selector system (...) two steps (...) a list of tools (...) only contains the API name and (...) one or two words about what it does (...) ask the LLM to pick the tools that might be relevant (...) a tool selector (...) router. (...) <span class="ts">1:27:27</span> take all the selected tool APIs and feed only those to the context.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>도구 사용을 확장 가능하게 하려면 도구 선택(tool selection)을 합니다(구글 딥마인드 기술 논문). 두 단계:</p>
+<ol><li>질의와 함께, (이름·한두 단어 설명만 담은) 큰 도구 목록을 LLM에 주고 "관련 있을 만한 도구를 골라라"고 합니다. 이 시스템을 도구 선택기(tool selector), 또는 라우터(router)라 합니다.</li><li>고른 도구들의 전체 API만 컨텍스트에 넣어 질의와 함께 처리합니다.</li></ol>
+<p>이렇게 도구 수를 쓸 만한 것으로 제한합니다. (RAG로 구현할 수도 있지만 꼭 그럴 필요는 없음)</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>도구 선택/라우팅<span class="en-term">(tool selection/routing)</span></dt><dd>많은 도구 중 관련된 것만 골라 컨텍스트에 넣는 것.</dd><dt>도구 선택기/라우터<span class="en-term">(tool selector/router)</span></dt><dd>관련 도구를 고르는 시스템.</dd></dl></div>
+</div>
+<div id="block4"><h3><span class="badge">블록 4</span>MCP (Model Context Protocol)</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">1:29:02</span> every tools implementation (...) can be bespoke to a given LLM (...) duplication (...) <span class="ts">1:29:33</span> MCP (...) from the anthropic team (...) standardizes the way tools are exposed to models (...) the model context protocol. (...) <span class="ts">1:30:06</span> an MCP server which is the instance that serves tools (...) tools (...) prompts (...) resources (...) MCP clients.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>도구 구현 방식이 LLM마다 제각각이면 같은 도구를 LLM마다 다시 구현해야 해 중복이 생깁니다. 그래서 표준 MCP(Model Context Protocol, 모델 컨텍스트 프로토콜)가 나왔습니다(Anthropic). 도구를 모델에 노출하는 방식을 표준화하는 프로토콜입니다. 핵심 용어:</p>
+<ul><li><strong>MCP 서버(server)</strong>: 도구를 제공하는 인스턴스.</li><li><strong>도구(tools)</strong>: 사용자가 쓰게 할 함수 구현.</li><li><strong>프롬프트(prompts)</strong>: 도구 사용법을 보여주는 템플릿.</li><li><strong>리소스(resources)</strong>: 과제 수행에 쓰는 외부 DB 등.</li><li><strong>MCP 클라이언트(clients)</strong>: LLM 호스트 쪽에서 서버와 1:1로 연결되는 부분.</li></ul>
+<p>예: 곰인형이 시를 좋아해 시집을 추천하려면 — LLM 호스트(예: Claude), 책 제공자가 구현한 MCP 서버(책 찾기·추천 도구), 사용법 프롬프트, 리소스(곰인형의 소장 목록·베스트셀러)로 구성할 수 있습니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>MCP<span class="en-term">(Model Context Protocol)</span></dt><dd>도구 노출 방식을 표준화한 프로토콜(Anthropic).</dd><dt>MCP 서버/클라이언트</dt><dd>도구 제공 인스턴스 / LLM 호스트 쪽 연결부.</dd><dt>tools/prompts/resources</dt><dd>도구 / 사용법 템플릿 / 외부 자원.</dd></dl></div>
+</div></section><section id="glossary"><h2>4. 핵심 용어집</h2><div class="table-wrap"><table><thead><tr><th>영문</th><th>한국어</th><th>발음</th><th>뜻</th></tr></thead><tbody><tr><td>information / computation / action tool</td><td>정보/계산/행동 도구</td><td>—</td><td>조회 / 코드 실행 / 행동 수행</td></tr><tr><td>도구 과다 문제</td><td>too many tools</td><td>—</td><td>컨텍스트에 묻힘·충돌·용량 한계</td></tr><tr><td>tool selection / routing</td><td>도구 선택/라우팅</td><td>—</td><td>관련 도구만 고르기</td></tr><tr><td>tool selector / router</td><td>도구 선택기/라우터</td><td>—</td><td>관련 도구 고르는 시스템</td></tr><tr><td>MCP (Model Context Protocol)</td><td>모델 컨텍스트 프로토콜</td><td>—</td><td>도구 노출 표준(Anthropic)</td></tr><tr><td>MCP server / client</td><td>MCP 서버/클라이언트</td><td>—</td><td>도구 제공 / 호스트 연결부</td></tr><tr><td>resources</td><td>리소스</td><td>—</td><td>과제용 외부 DB 등</td></tr></tbody></table></div></section><section id="review"><h2>5. 복습 문제</h2><div class="callout review"><div class="c-title">✏️ 스스로 점검</div><ol><li>도구의 세 범주(정보·계산·행동)를 각각 예와 함께 설명하라.</li><li>도구가 너무 많을 때 생기는 문제와, 도구 선택(routing)이 이를 푸는 방식은?</li><li>MCP가 표준화하는 것은 무엇이며, 서버·도구·프롬프트·리소스는 각각 무엇인가?</li></ol></div></section><section id="appendix"><h2>부록. 실무 적용 포인트 <span style="font-size:14px;font-weight:500;color:var(--muted);">(NLP·LLM 기술 내용 한정)</span></h2><div class="callout practice"><div class="c-title">💡 현장에서 써먹기</div><ul><li><strong>도구의 세 범주는 "AI로 무엇을 자동화할 수 있나"의 지도다.</strong> 정보 조회(실시간 통계·날씨), 계산(보조금 산정 코드 실행), 행동(공문 발송·일정 등록)으로 나눠 보면, 어떤 업무를 도구 호출로 자동화할지 구상하기 쉽다.</li><li><strong>도구 선택(routing)은 "기능이 많아질수록 골라 쓰는 구조가 필요하다"를 보여준다.</strong> 업무 자동화 도구가 늘면 한 번에 다 넣을 수 없어, 상황에 맞는 것만 고르는 단계가 필요하다. 복잡한 업무 자동화를 설계할 때의 구조적 고려사항이다.</li><li><strong>MCP는 "도구를 표준 방식으로 한 번 만들어 여러 AI에서 쓰는" 길이다.</strong> 표준 프로토콜 덕에 기관이 만든 도구(내부 시스템 연동 등)를 특정 AI에 종속되지 않고 재사용할 수 있다. 장기적으로 도구를 MCP로 노출하면 도구별 중복 구현을 줄일 수 있다.</li></ul></div><div class="next"><strong><strong>다음 섹션 예고</strong>·&lt;/strong&gt; · 도구에서 한 단계 위 — 에이전트(ReAct: 관찰·계획·행동), 멀티 에이전트(A2A), 그리고 안전(safety). <span class="ts">1:32:11</span> 이후.</div></section></article></main>
+</div>
+
+<!-- KaTeX 자동 렌더 -->
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}],throwOnError:false});"></script>
+
+<!-- Mermaid -->
+<script type="module">
+  try{
+    const m = await import('https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs');
+    m.default.initialize({startOnLoad:true, theme:'base', themeVariables:{
+      fontFamily:'Pretendard, sans-serif', primaryColor:'#fffdfb', primaryBorderColor:'#d8d0c5',
+      primaryTextColor:'#1a1a1a', lineColor:'#b9554f', fontSize:'14px'
+    }});
+  }catch(e){ /* 오프라인이면 도식은 코드로 표시 */ }
+</script>
+
+<!-- 목차 활성표시 + 모바일 드로어 -->
+<script>
+  // 모바일 드로어
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('overlay');
+  const btn = document.getElementById('menuBtn');
+  const toggle = (on)=>{ sb.classList.toggle('open',on); ov.classList.toggle('show',on); };
+  btn.addEventListener('click',()=>toggle(!sb.classList.contains('open')));
+  ov.addEventListener('click',()=>toggle(false));
+  document.querySelectorAll('.toc a').forEach(a=>a.addEventListener('click',()=>{ if(window.innerWidth<=900) toggle(false); }));
+
+  // 현재 위치 강조
+  const links = [...document.querySelectorAll('.toc a')];
+  const map = {}; links.forEach(a=>{ const id=a.getAttribute('href').slice(1); map[id]=a; });
+  const targets = Object.keys(map).map(id=>document.getElementById(id)).filter(Boolean);
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(en=>{
+      if(en.isIntersecting){
+        links.forEach(l=>l.classList.remove('active'));
+        const a = map[en.target.id]; if(a) a.classList.add('active');
+      }
+    });
+  },{rootMargin:'-15% 0px -75% 0px', threshold:0});
+  targets.forEach(t=>io.observe(t));
+</script>
+
+</body>
+</html>

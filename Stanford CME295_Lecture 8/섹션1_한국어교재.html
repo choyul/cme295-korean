@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CME295 Lecture 8 · 섹션 1. 평가의 정의와 사람 평가</title>
+
+<!-- 폰트: Pretendard (CDN, 없으면 시스템 폰트 폴백) -->
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<!-- 수식: KaTeX -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
+
+<style>
+  :root{
+    --bg:#FBF9F6;
+    --paper:#ffffff;
+    --ink:#1a1a1a;
+    --ink-soft:#4a4744;
+    --muted:#7a756f;
+    --accent:#8C1515;          /* Stanford 카디널 */
+    --accent-soft:#b9554f;
+    --tint:#f6ebe9;            /* 카디널 옅은 틴트 */
+    --tint-2:#f3efe9;          /* 따뜻한 회색 */
+    --line:#e7e1d9;
+    --line-strong:#d8d0c5;
+    --radius:10px;
+    --maxw:760px;
+    --sidew:268px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Pretendard","Pretendard Variable",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    line-height:1.78;
+    font-size:16.5px;
+    -webkit-font-smoothing:antialiased;
+    word-break:keep-all;
+  }
+
+  /* ===== 레이아웃 ===== */
+  .layout{display:flex; align-items:flex-start;}
+  .sidebar{
+    width:var(--sidew); flex:0 0 var(--sidew);
+    position:sticky; top:0; height:100vh; overflow-y:auto;
+    padding:28px 18px 40px; border-right:1px solid var(--line);
+    background:rgba(251,249,246,.85); backdrop-filter:saturate(120%) blur(2px);
+  }
+  .content{flex:1 1 auto; min-width:0; display:flex; justify-content:center; padding:0 24px;}
+  .doc{width:100%; max-width:var(--maxw); padding:48px 0 120px;}
+
+  /* ===== 사이드바 목차 ===== */
+  .toc-brand{font-size:12px; letter-spacing:.04em; color:var(--accent); font-weight:700; text-transform:uppercase; margin-bottom:4px;}
+  .toc-title{font-size:15px; font-weight:700; margin:0 0 18px; line-height:1.4; color:var(--ink);}
+  .toc{list-style:none; margin:0; padding:0; font-size:13.5px;}
+  .toc li{margin:1px 0;}
+  .toc a{display:block; padding:5px 10px; border-radius:7px; color:var(--ink-soft); text-decoration:none; border-left:2px solid transparent;}
+  .toc a:hover{background:var(--tint-2); color:var(--ink);}
+  .toc a.sub{padding-left:22px; font-size:13px; color:var(--muted);}
+  .toc a.active{color:var(--accent); background:var(--tint); border-left-color:var(--accent); font-weight:600;}
+
+  /* ===== 타이포 ===== */
+  h1{font-size:27px; line-height:1.32; font-weight:800; letter-spacing:-.01em; margin:0 0 6px;}
+  .subtitle{font-size:18px; font-weight:700; color:var(--accent); margin:0 0 22px;}
+  h2{font-size:21px; font-weight:800; letter-spacing:-.01em; margin:46px 0 14px; padding-bottom:9px; border-bottom:2px solid var(--line-strong);}
+  h3{font-size:17.5px; font-weight:700; margin:34px 0 12px; color:var(--ink);}
+  h3 .badge{display:inline-block; font-size:12px; font-weight:700; color:#fff; background:var(--accent); border-radius:6px; padding:2px 8px; margin-right:8px; vertical-align:middle;}
+  p{margin:12px 0;}
+  strong{font-weight:700;}
+  a{color:var(--accent);}
+  ul,ol{margin:12px 0; padding-left:22px;}
+  li{margin:6px 0;}
+  hr{display:none;}
+
+  /* ===== 출처 배너 ===== */
+  .source-banner{
+    display:flex; gap:10px; align-items:baseline;
+    background:var(--tint); border-left:4px solid var(--accent);
+    border-radius:0 var(--radius) var(--radius) 0;
+    padding:12px 16px; margin:0 0 8px; font-size:13.5px; color:var(--ink-soft);
+  }
+  .source-banner b{color:var(--accent);}
+
+  /* ===== 한국어 번역 카드 ===== */
+  .ko{
+    background:var(--paper); border:1px solid var(--line);
+    border-left:4px solid var(--accent); border-radius:var(--radius);
+    padding:6px 22px; margin:16px 0;
+    box-shadow:0 1px 2px rgba(60,40,20,.04);
+  }
+  .ko > .label, .terms > .label{
+    display:inline-block; font-size:11.5px; font-weight:800; letter-spacing:.06em;
+    color:var(--accent); text-transform:uppercase; margin:14px 0 -4px;
+  }
+
+  /* ===== 영문 원문 토글 ===== */
+  details.en{
+    background:var(--tint-2); border:1px solid var(--line); border-radius:var(--radius);
+    margin:14px 0; overflow:hidden;
+  }
+  details.en > summary{
+    cursor:pointer; list-style:none; padding:11px 16px;
+    font-size:13.5px; font-weight:700; color:var(--muted);
+    display:flex; align-items:center; gap:8px; user-select:none;
+  }
+  details.en > summary::-webkit-details-marker{display:none;}
+  details.en > summary .chev{transition:transform .2s; color:var(--accent-soft);}
+  details.en[open] > summary .chev{transform:rotate(90deg);}
+  details.en[open] > summary{border-bottom:1px solid var(--line);}
+  .en-body{padding:4px 18px 14px; font-size:14px; line-height:1.7; color:#5c574f; font-style:normal;}
+  .en-body p{margin:10px 0;}
+  .ts{
+    display:inline-block; font-family:"SFMono-Regular",ui-monospace,Menlo,Consolas,monospace;
+    font-size:11.5px; font-style:normal; color:var(--accent);
+    background:var(--tint); border:1px solid #e6cfcc; border-radius:5px;
+    padding:0 5px; margin:0 2px; vertical-align:baseline;
+  }
+
+  /* ===== 용어 설명 ===== */
+  .terms{
+    border:1px solid var(--line); border-left:3px solid var(--accent-soft);
+    border-radius:var(--radius); background:#fffdfb; padding:4px 20px 8px; margin:16px 0;
+  }
+  .terms dl{margin:8px 0;}
+  .terms dt{font-weight:700; color:var(--ink); margin-top:8px;}
+  .terms dt .en-term{color:var(--accent); font-weight:600;}
+  .terms dd{margin:1px 0 6px; color:var(--ink-soft); font-size:15px;}
+
+  /* ===== 표 ===== */
+  .table-wrap{overflow-x:auto; margin:16px 0; border:1px solid var(--line); border-radius:var(--radius);}
+  table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:520px;}
+  thead th{background:var(--accent); color:#fff; font-weight:700; text-align:left; padding:11px 14px; white-space:nowrap;}
+  tbody td{padding:9px 14px; border-top:1px solid var(--line);}
+  tbody tr:nth-child(even){background:var(--tint-2);}
+  tbody td:first-child{font-family:ui-monospace,Menlo,monospace; font-size:13px; color:var(--accent);}
+
+  /* ===== 콜아웃 ===== */
+  .callout{border-radius:var(--radius); padding:14px 20px 6px; margin:18px 0;}
+  .callout .c-title{font-weight:800; margin:6px 0 2px; display:flex; align-items:center; gap:8px;}
+  .callout.review{background:#fff; border:1px solid var(--line-strong);}
+  .callout.review ol{counter-reset:none;}
+  .callout.note{background:var(--tint-2); border-left:4px solid var(--muted); border-radius:0 var(--radius) var(--radius) 0; padding-bottom:12px;}
+  .callout.practice{background:var(--tint); border:1px solid #e6cfcc; padding-bottom:14px;}
+  .callout.practice li{margin:12px 0;}
+  .next{margin-top:40px; padding:14px 18px; background:var(--tint-2); border-radius:var(--radius); font-size:14px; color:var(--ink-soft);}
+
+  /* 수식 / 도식 */
+  .katex-display{margin:14px 0; overflow-x:auto; overflow-y:hidden; padding:6px 0;}
+  .diagram{background:#fffdfb; border:1px solid var(--line); border-radius:var(--radius); padding:14px; margin:16px 0; text-align:center;}
+  .diagram .cap{font-size:12.5px; color:var(--muted); margin-top:6px;}
+  .mermaid{display:flex; justify-content:center;}
+
+  /* ===== 모바일 ===== */
+  .menu-btn{display:none;}
+  .overlay{display:none;}
+  @media (max-width:900px){
+    .menu-btn{
+      display:flex; align-items:center; justify-content:center;
+      position:fixed; top:14px; left:14px; z-index:50;
+      width:42px; height:42px; border-radius:10px; border:1px solid var(--line-strong);
+      background:var(--paper); color:var(--accent); font-size:20px; cursor:pointer;
+      box-shadow:0 2px 8px rgba(60,40,20,.12);
+    }
+    .sidebar{
+      position:fixed; left:0; top:0; z-index:60; height:100vh;
+      transform:translateX(-105%); transition:transform .25s ease;
+      box-shadow:4px 0 24px rgba(0,0,0,.12); background:var(--bg);
+    }
+    .sidebar.open{transform:translateX(0);}
+    .overlay.show{display:block; position:fixed; inset:0; background:rgba(0,0,0,.32); z-index:55;}
+    .content{padding:0 16px;}
+    .doc{padding:64px 0 100px;}
+    body{font-size:16px;}
+    h1{font-size:23px;}
+    .ko,.terms{padding-left:16px; padding-right:16px;}
+  }
+
+  /* ===== 인쇄 ===== */
+  @media print{
+    .sidebar,.menu-btn,.overlay{display:none !important;}
+    .content{padding:0;}
+    body{background:#fff; font-size:11pt;}
+    details.en{display:none;}          /* 인쇄본은 한국어 위주 */
+    .ko,.terms,.callout,.table-wrap{break-inside:avoid; box-shadow:none;}
+    a{color:var(--ink);}
+  }
+  .home-btn{position:fixed; top:16px; right:18px; z-index:70;
+    display:inline-flex; align-items:center; gap:6px; text-decoration:none;
+    background:var(--paper); color:var(--accent); border:1px solid var(--line-strong);
+    border-radius:999px; padding:8px 14px; font-size:13.5px; font-weight:700;
+    box-shadow:0 2px 8px rgba(60,40,20,.12); transition:background .12s,color .12s;}
+  .home-btn:hover{background:var(--accent); color:#fff; border-color:var(--accent);}
+  @media (max-width:900px){ .home-btn{top:14px; right:14px; padding:8px 12px; font-size:12.5px;} }
+  @media print{ .home-btn{display:none !important;} }
+</style>
+</head>
+<body>
+<a class="home-btn" href="../index.html" title="전체 목차로 돌아가기">← 전체 목차</a>
+
+<button class="menu-btn" id="menuBtn" aria-label="목차 열기">☰</button>
+<div class="overlay" id="overlay"></div>
+
+<div class="layout">
+  <nav class="sidebar" id="sidebar"><div class="toc-brand">Stanford CME295 · Lecture 8</div><p class="toc-title">섹션 1. 평가의 정의와 사람 평가</p><ul class="toc"><li><a href="#overview">1. 강의 개요</a></li><li><a href="#goals">2. 학습 목표</a></li><li><a href="#body">3. 본문</a></li><li><a class="sub" href="#block1">블록 1 · 평가란 무엇인가 (이 강의의 범위)</a></li><li><a class="sub" href="#block2">블록 2 · 사람 평가: 이상적이나 주관적·비싸다</a></li><li><a class="sub" href="#block3">블록 3 · 우연 일치 문제와 Cohen's kappa</a></li><li><a href="#glossary">4. 핵심 용어집</a></li><li><a href="#review">5. 복습 문제</a></li><li><a href="#appendix">부록. 실무 적용 포인트 (NLP·LLM 기술 내용 한정)</a></li></ul></nav>
+  <main class="content"><article class="doc"><h1>CME295 Transformers &amp; LLMs — Lecture 8 한국어 교재</h1><p class="subtitle">섹션 1. 평가의 정의와 사람 평가</p><div class="source-banner"><span>📄</span><span><b>원문 출처</b>: Stanford CME295, Autumn 2025, Lecture 8 (LLM Evaluation), 타임스탬프 <span class="ts">00:05</span>~<span class="ts">17:43</span></span></div><section id="overview"><h2>1. 강의 개요</h2><ul><li>Lecture 7(RAG·도구 호출·에이전트)을 복습하고, 측정 없이는 개선도 없다는 문제의식으로 LLM 평가를 다룬다.</li><li>'평가'의 여러 의미 중 이 강의가 다루는 것(출력 품질)을 정의하고, 자유 형식 출력 평가의 어려움을 본다.</li><li>이상적이지만 비싸고 주관적인 사람 평가와, 평가자 간 일치(inter-rater agreement)·Cohen's kappa를 설명한다.</li></ul></section><section id="goals"><h2>2. 학습 목표</h2><ol><li>이 강의의 '평가'가 무엇을 뜻하는지(출력 품질)와, 자유 형식 출력 평가가 왜 어려운지 설명할 수 있다.</li><li>사람 평가의 한계(주관성·비용·느림)를 안다.</li><li>평가자 간 일치를 왜 그냥 '일치율'로 재면 안 되는지(우연 일치)와, Cohen's kappa의 발상을 이해한다.</li></ol></section><section id="body"><h2>3. 본문</h2><div id="block1"><h3><span class="badge">블록 1</span>평가란 무엇인가 (이 강의의 범위)</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">04:24</span> given a response that the model is giving, how can we quantify how well the LLM is giving its response? (...) <span class="ts">04:53</span> it can mean (...) evaluate the performance (...) coherence, factuality (...) latency (...) pricing (...) <span class="ts">05:22</span> this lecture will mostly focus on the output quality (...) <span class="ts">05:56</span> our LLM (...) can output basically (anything) (...) very hard to come up with universal metrics.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>오늘 주제는 LLM 평가입니다. 측정할 줄 모르면 무엇을 개선할지도 모르므로, 이 강의가 분기에서 가장 중요한 축 중 하나입니다. '평가(evaluation)'는 여러 뜻일 수 있습니다 — 출력 품질(일관성·사실성), 지연시간, 가격, 가동률 등. 이 강의는 주로 출력 품질, 특히 응답이 실제로 얼마나 좋은지를 정량화하는 데 집중합니다.</p>
+<p>이는 어려운 문제입니다. LLM은 텍스트→텍스트 모델이라 자연어·코드·수학 추론 등 사실상 무엇이든 출력하므로, 이를 잴 보편 지표를 만들기가 매우 어렵습니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>평가<span class="en-term">(evaluation)</span></dt><dd>여러 뜻이 있으나 이 강의는 '출력 품질' 정량화에 집중.</dd><dt>자유 형식<span class="en-term">(free form)</span> 출력</dt><dd>LLM이 다양한 형태를 출력해 평가가 어려움.</dd></dl></div>
+</div>
+<div id="block2"><h3><span class="badge">블록 2</span>사람 평가: 이상적이나 주관적·비싸다</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">06:31</span> ask a human to rate the response (...) the main problem is that such a system would be very cost(ly). (...) <span class="ts">07:33</span> what birthday gift should I get? (...) a teddy bear is almost always a sweet gift (...) one human (rater) (...) it's pretty useful (...) another (rater) (...) it's not useful because (...) didn't specify exactly which teddy bear (...) <span class="ts">08:34</span> inter(-)rater agreement.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>자유 형식 출력을 평가하는 이상적 시나리오는, 매번 사람이 응답을 평가하는 것입니다. 프롬프트→응답→사람 평가를 반복해 전체 성능을 정량화합니다. 문제는 — 비용이 매우 큽니다.</p>
+<p>게다가 평가 과제 자체가 주관적이라 사람 판단도 모호할 수 있습니다. 예: "생일 선물 뭘 살까?"에 LLM이 "곰인형은 거의 항상 좋은 선물이에요, 맘에 드는 걸 고르세요"라고 답했을 때, '유용성' 기준으로 — 한 평가자는 "유용하다(선물 방향을 알려줌)", 다른 평가자는 "유용하지 않다(어떤 인형인지 안 정해줌)"라 할 수 있습니다. 그래서 평가자 간 일치(inter-rater agreement)를 신경 써야 합니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>사람 평가<span class="en-term">(human ratings)</span></dt><dd>이상적이나 비싸고 느림.</dd><dt>주관성<span class="en-term">(subjectivity)</span></dt><dd>평가 기준이 주관적이면 평가자마다 다름.</dd><dt>평가자 간 일치<span class="en-term">(inter-rater agreement)</span></dt><dd>평가자들이 얼마나 일관되게 평가하는지.</dd></dl></div>
+</div>
+<div id="block3"><h3><span class="badge">블록 3</span>우연 일치 문제와 Cohen's kappa</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">09:09</span> the agreement (...) measure the proportion of the time that the two raiders give the same response (...) <span class="ts">13:29</span> we would already have an agreement rate of 50% (...) just by pure random chance (...) <span class="ts">14:31</span> metrics that try to make it more relative to this baseline (...) <span class="ts">15:01</span> cohen(') s (kappa) (...) if our observed agreement rate is greater than the by chance agreement then our coefficient is positive.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>평가자 간 일치를 잴 때, 단순히 '두 평가자가 같은 답을 준 비율(일치율)'을 쓰면 될까요? 문제가 있습니다. 두 평가자(Alice·Bob)가 이진(좋음/나쁨)으로, 각각 확률 0.5로 무작위 답한다고 합시다. 그러면 둘이 우연히 같을 확률 = (0.5×0.5) + (0.5×0.5) = 0.5입니다. 즉 완전히 무작위로 찍어도 일치율이 50%나 됩니다. 이 우연 일치율은 각자가 답하는 확률에 따라 달라지기도 합니다.</p>
+<p>그래서 일치율만으로는 "좋은 수치인지" 판단하기 어렵습니다. 사람들은 이 우연 일치(baseline)에 상대적으로 만든 지표를 씁니다 — Cohen's kappa(코헨의 카파)가 대표입니다. 관측 일치율을 우연 일치율과 비교해, 관측이 우연보다 높으면 계수가 양수가 됩니다(완전 일치면 1, 우연보다 낮으면 음수). 평가자가 셋 이상이면 Fleiss' kappa, Krippendorff's alpha 같은 확장을 씁니다.</p></div>
+<div class="callout note"><div class="c-title">⚠️ 참고</div><p>활용: 일치 지표를 추적하다 만족스럽지 않으면, 평가자들이 모여 '어떻게 평가할지' 기준을 맞추는 정렬 세션을 엽니다. 평가 일관성을 보는 건강 지표인 셈입니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>일치율<span class="en-term">(agreement rate)</span></dt><dd>두 평가자가 같은 답을 준 비율. 우연 일치 때문에 그대로 쓰면 부족.</dd><dt>우연 일치<span class="en-term">(chance agreement)</span></dt><dd>무작위로 찍어도 생기는 일치. 보정해야 함.</dd><dt>Cohen's kappa<span class="en-term">(코헨의 카파)</span></dt><dd>우연 일치 대비 관측 일치를 보정한 지표(완전 일치 1).</dd><dt>Fleiss' kappa / Krippendorff's alpha</dt><dd>평가자 3인 이상용 확장 지표.</dd></dl></div>
+</div></section><section id="glossary"><h2>4. 핵심 용어집</h2><div class="table-wrap"><table><thead><tr><th>영문</th><th>한국어</th><th>발음</th><th>뜻</th></tr></thead><tbody><tr><td>evaluation</td><td>평가</td><td>—</td><td>(이 강의)출력 품질 정량화</td></tr><tr><td>free form output</td><td>자유 형식 출력</td><td>—</td><td>다양한 형태라 평가 어려움</td></tr><tr><td>human ratings</td><td>사람 평가</td><td>—</td><td>이상적이나 비싸고 느림</td></tr><tr><td>subjectivity</td><td>주관성</td><td>—</td><td>기준이 주관적</td></tr><tr><td>inter-rater agreement</td><td>평가자 간 일치</td><td>—</td><td>평가자 일관성</td></tr><tr><td>agreement rate</td><td>일치율</td><td>—</td><td>같은 답 비율(우연 일치 미보정)</td></tr><tr><td>chance agreement</td><td>우연 일치</td><td>—</td><td>무작위로 생기는 일치</td></tr><tr><td>Cohen's kappa</td><td>코헨의 카파</td><td>—</td><td>우연 대비 보정한 일치 지표</td></tr><tr><td>Fleiss' kappa / Krippendorff's alpha</td><td>플라이스 카파/크리펜도르프 알파</td><td>—</td><td>다수 평가자용 확장</td></tr></tbody></table></div></section><section id="review"><h2>5. 복습 문제</h2><div class="callout review"><div class="c-title">✏️ 스스로 점검</div><ol><li>이 강의의 '평가'는 무엇을 뜻하며, 자유 형식 출력 평가가 어려운 이유는?</li><li>사람 평가의 세 가지 한계는?</li><li>평가자 간 일치를 '일치율'로만 재면 왜 안 되는가? Cohen's kappa는 이를 어떻게 보정하는가?</li></ol></div></section><section id="appendix"><h2>부록. 실무 적용 포인트 <span style="font-size:14px;font-weight:500;color:var(--muted);">(NLP·LLM 기술 내용 한정)</span></h2><div class="callout practice"><div class="c-title">💡 현장에서 써먹기</div><ul><li><strong>"측정 없이 개선 없다"는 명제는 AI 도입의 출발점이다.</strong> AI 도구를 업무에 쓰기 전, '무엇을 어떻게 평가할지'를 먼저 정해야 한다. 출력 품질·속도·비용 등 어느 축을 볼지 명확히 해야 도입 효과를 판단할 수 있다.</li><li><strong>우연 일치 보정(kappa)은 "평가가 진짜 신뢰할 만한지 점검하라"는 교훈이다.</strong> 사람이 AI 출력을 검수·등급화할 때, 평가자들이 우연 이상으로 일관되게 판단하는지 확인해야 한다. 기준이 모호하면 합의 세션으로 정렬하는 것이 품질을 좌우한다(Lecture 5 부록과 연결).</li></ul></div><div class="next"><strong><strong>다음 섹션 예고</strong>·&lt;/strong&gt; · 사람 평가를 줄이는 규칙 기반 지표(METEOR·BLEU·ROUGE)와 그 한계. <span class="ts">17:43</span> 이후.</div></section></article></main>
+</div>
+
+<!-- KaTeX 자동 렌더 -->
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}],throwOnError:false});"></script>
+
+<!-- Mermaid -->
+<script type="module">
+  try{
+    const m = await import('https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs');
+    m.default.initialize({startOnLoad:true, theme:'base', themeVariables:{
+      fontFamily:'Pretendard, sans-serif', primaryColor:'#fffdfb', primaryBorderColor:'#d8d0c5',
+      primaryTextColor:'#1a1a1a', lineColor:'#b9554f', fontSize:'14px'
+    }});
+  }catch(e){ /* 오프라인이면 도식은 코드로 표시 */ }
+</script>
+
+<!-- 목차 활성표시 + 모바일 드로어 -->
+<script>
+  // 모바일 드로어
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('overlay');
+  const btn = document.getElementById('menuBtn');
+  const toggle = (on)=>{ sb.classList.toggle('open',on); ov.classList.toggle('show',on); };
+  btn.addEventListener('click',()=>toggle(!sb.classList.contains('open')));
+  ov.addEventListener('click',()=>toggle(false));
+  document.querySelectorAll('.toc a').forEach(a=>a.addEventListener('click',()=>{ if(window.innerWidth<=900) toggle(false); }));
+
+  // 현재 위치 강조
+  const links = [...document.querySelectorAll('.toc a')];
+  const map = {}; links.forEach(a=>{ const id=a.getAttribute('href').slice(1); map[id]=a; });
+  const targets = Object.keys(map).map(id=>document.getElementById(id)).filter(Boolean);
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(en=>{
+      if(en.isIntersecting){
+        links.forEach(l=>l.classList.remove('active'));
+        const a = map[en.target.id]; if(a) a.classList.add('active');
+      }
+    });
+  },{rootMargin:'-15% 0px -75% 0px', threshold:0});
+  targets.forEach(t=>io.observe(t));
+</script>
+
+</body>
+</html>

@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CME295 Lecture 6 · 섹션 5. GRPO vs PPO와 길이 편향 보정</title>
+
+<!-- 폰트: Pretendard (CDN, 없으면 시스템 폰트 폴백) -->
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<!-- 수식: KaTeX -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
+
+<style>
+  :root{
+    --bg:#FBF9F6;
+    --paper:#ffffff;
+    --ink:#1a1a1a;
+    --ink-soft:#4a4744;
+    --muted:#7a756f;
+    --accent:#8C1515;          /* Stanford 카디널 */
+    --accent-soft:#b9554f;
+    --tint:#f6ebe9;            /* 카디널 옅은 틴트 */
+    --tint-2:#f3efe9;          /* 따뜻한 회색 */
+    --line:#e7e1d9;
+    --line-strong:#d8d0c5;
+    --radius:10px;
+    --maxw:760px;
+    --sidew:268px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Pretendard","Pretendard Variable",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    line-height:1.78;
+    font-size:16.5px;
+    -webkit-font-smoothing:antialiased;
+    word-break:keep-all;
+  }
+
+  /* ===== 레이아웃 ===== */
+  .layout{display:flex; align-items:flex-start;}
+  .sidebar{
+    width:var(--sidew); flex:0 0 var(--sidew);
+    position:sticky; top:0; height:100vh; overflow-y:auto;
+    padding:28px 18px 40px; border-right:1px solid var(--line);
+    background:rgba(251,249,246,.85); backdrop-filter:saturate(120%) blur(2px);
+  }
+  .content{flex:1 1 auto; min-width:0; display:flex; justify-content:center; padding:0 24px;}
+  .doc{width:100%; max-width:var(--maxw); padding:48px 0 120px;}
+
+  /* ===== 사이드바 목차 ===== */
+  .toc-brand{font-size:12px; letter-spacing:.04em; color:var(--accent); font-weight:700; text-transform:uppercase; margin-bottom:4px;}
+  .toc-title{font-size:15px; font-weight:700; margin:0 0 18px; line-height:1.4; color:var(--ink);}
+  .toc{list-style:none; margin:0; padding:0; font-size:13.5px;}
+  .toc li{margin:1px 0;}
+  .toc a{display:block; padding:5px 10px; border-radius:7px; color:var(--ink-soft); text-decoration:none; border-left:2px solid transparent;}
+  .toc a:hover{background:var(--tint-2); color:var(--ink);}
+  .toc a.sub{padding-left:22px; font-size:13px; color:var(--muted);}
+  .toc a.active{color:var(--accent); background:var(--tint); border-left-color:var(--accent); font-weight:600;}
+
+  /* ===== 타이포 ===== */
+  h1{font-size:27px; line-height:1.32; font-weight:800; letter-spacing:-.01em; margin:0 0 6px;}
+  .subtitle{font-size:18px; font-weight:700; color:var(--accent); margin:0 0 22px;}
+  h2{font-size:21px; font-weight:800; letter-spacing:-.01em; margin:46px 0 14px; padding-bottom:9px; border-bottom:2px solid var(--line-strong);}
+  h3{font-size:17.5px; font-weight:700; margin:34px 0 12px; color:var(--ink);}
+  h3 .badge{display:inline-block; font-size:12px; font-weight:700; color:#fff; background:var(--accent); border-radius:6px; padding:2px 8px; margin-right:8px; vertical-align:middle;}
+  p{margin:12px 0;}
+  strong{font-weight:700;}
+  a{color:var(--accent);}
+  ul,ol{margin:12px 0; padding-left:22px;}
+  li{margin:6px 0;}
+  hr{display:none;}
+
+  /* ===== 출처 배너 ===== */
+  .source-banner{
+    display:flex; gap:10px; align-items:baseline;
+    background:var(--tint); border-left:4px solid var(--accent);
+    border-radius:0 var(--radius) var(--radius) 0;
+    padding:12px 16px; margin:0 0 8px; font-size:13.5px; color:var(--ink-soft);
+  }
+  .source-banner b{color:var(--accent);}
+
+  /* ===== 한국어 번역 카드 ===== */
+  .ko{
+    background:var(--paper); border:1px solid var(--line);
+    border-left:4px solid var(--accent); border-radius:var(--radius);
+    padding:6px 22px; margin:16px 0;
+    box-shadow:0 1px 2px rgba(60,40,20,.04);
+  }
+  .ko > .label, .terms > .label{
+    display:inline-block; font-size:11.5px; font-weight:800; letter-spacing:.06em;
+    color:var(--accent); text-transform:uppercase; margin:14px 0 -4px;
+  }
+
+  /* ===== 영문 원문 토글 ===== */
+  details.en{
+    background:var(--tint-2); border:1px solid var(--line); border-radius:var(--radius);
+    margin:14px 0; overflow:hidden;
+  }
+  details.en > summary{
+    cursor:pointer; list-style:none; padding:11px 16px;
+    font-size:13.5px; font-weight:700; color:var(--muted);
+    display:flex; align-items:center; gap:8px; user-select:none;
+  }
+  details.en > summary::-webkit-details-marker{display:none;}
+  details.en > summary .chev{transition:transform .2s; color:var(--accent-soft);}
+  details.en[open] > summary .chev{transform:rotate(90deg);}
+  details.en[open] > summary{border-bottom:1px solid var(--line);}
+  .en-body{padding:4px 18px 14px; font-size:14px; line-height:1.7; color:#5c574f; font-style:normal;}
+  .en-body p{margin:10px 0;}
+  .ts{
+    display:inline-block; font-family:"SFMono-Regular",ui-monospace,Menlo,Consolas,monospace;
+    font-size:11.5px; font-style:normal; color:var(--accent);
+    background:var(--tint); border:1px solid #e6cfcc; border-radius:5px;
+    padding:0 5px; margin:0 2px; vertical-align:baseline;
+  }
+
+  /* ===== 용어 설명 ===== */
+  .terms{
+    border:1px solid var(--line); border-left:3px solid var(--accent-soft);
+    border-radius:var(--radius); background:#fffdfb; padding:4px 20px 8px; margin:16px 0;
+  }
+  .terms dl{margin:8px 0;}
+  .terms dt{font-weight:700; color:var(--ink); margin-top:8px;}
+  .terms dt .en-term{color:var(--accent); font-weight:600;}
+  .terms dd{margin:1px 0 6px; color:var(--ink-soft); font-size:15px;}
+
+  /* ===== 표 ===== */
+  .table-wrap{overflow-x:auto; margin:16px 0; border:1px solid var(--line); border-radius:var(--radius);}
+  table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:520px;}
+  thead th{background:var(--accent); color:#fff; font-weight:700; text-align:left; padding:11px 14px; white-space:nowrap;}
+  tbody td{padding:9px 14px; border-top:1px solid var(--line);}
+  tbody tr:nth-child(even){background:var(--tint-2);}
+  tbody td:first-child{font-family:ui-monospace,Menlo,monospace; font-size:13px; color:var(--accent);}
+
+  /* ===== 콜아웃 ===== */
+  .callout{border-radius:var(--radius); padding:14px 20px 6px; margin:18px 0;}
+  .callout .c-title{font-weight:800; margin:6px 0 2px; display:flex; align-items:center; gap:8px;}
+  .callout.review{background:#fff; border:1px solid var(--line-strong);}
+  .callout.review ol{counter-reset:none;}
+  .callout.note{background:var(--tint-2); border-left:4px solid var(--muted); border-radius:0 var(--radius) var(--radius) 0; padding-bottom:12px;}
+  .callout.practice{background:var(--tint); border:1px solid #e6cfcc; padding-bottom:14px;}
+  .callout.practice li{margin:12px 0;}
+  .next{margin-top:40px; padding:14px 18px; background:var(--tint-2); border-radius:var(--radius); font-size:14px; color:var(--ink-soft);}
+
+  /* 수식 / 도식 */
+  .katex-display{margin:14px 0; overflow-x:auto; overflow-y:hidden; padding:6px 0;}
+  .diagram{background:#fffdfb; border:1px solid var(--line); border-radius:var(--radius); padding:14px; margin:16px 0; text-align:center;}
+  .diagram .cap{font-size:12.5px; color:var(--muted); margin-top:6px;}
+  .mermaid{display:flex; justify-content:center;}
+
+  /* ===== 모바일 ===== */
+  .menu-btn{display:none;}
+  .overlay{display:none;}
+  @media (max-width:900px){
+    .menu-btn{
+      display:flex; align-items:center; justify-content:center;
+      position:fixed; top:14px; left:14px; z-index:50;
+      width:42px; height:42px; border-radius:10px; border:1px solid var(--line-strong);
+      background:var(--paper); color:var(--accent); font-size:20px; cursor:pointer;
+      box-shadow:0 2px 8px rgba(60,40,20,.12);
+    }
+    .sidebar{
+      position:fixed; left:0; top:0; z-index:60; height:100vh;
+      transform:translateX(-105%); transition:transform .25s ease;
+      box-shadow:4px 0 24px rgba(0,0,0,.12); background:var(--bg);
+    }
+    .sidebar.open{transform:translateX(0);}
+    .overlay.show{display:block; position:fixed; inset:0; background:rgba(0,0,0,.32); z-index:55;}
+    .content{padding:0 16px;}
+    .doc{padding:64px 0 100px;}
+    body{font-size:16px;}
+    h1{font-size:23px;}
+    .ko,.terms{padding-left:16px; padding-right:16px;}
+  }
+
+  /* ===== 인쇄 ===== */
+  @media print{
+    .sidebar,.menu-btn,.overlay{display:none !important;}
+    .content{padding:0;}
+    body{background:#fff; font-size:11pt;}
+    details.en{display:none;}          /* 인쇄본은 한국어 위주 */
+    .ko,.terms,.callout,.table-wrap{break-inside:avoid; box-shadow:none;}
+    a{color:var(--ink);}
+  }
+  .home-btn{position:fixed; top:16px; right:18px; z-index:70;
+    display:inline-flex; align-items:center; gap:6px; text-decoration:none;
+    background:var(--paper); color:var(--accent); border:1px solid var(--line-strong);
+    border-radius:999px; padding:8px 14px; font-size:13.5px; font-weight:700;
+    box-shadow:0 2px 8px rgba(60,40,20,.12); transition:background .12s,color .12s;}
+  .home-btn:hover{background:var(--accent); color:#fff; border-color:var(--accent);}
+  @media (max-width:900px){ .home-btn{top:14px; right:14px; padding:8px 12px; font-size:12.5px;} }
+  @media print{ .home-btn{display:none !important;} }
+</style>
+</head>
+<body>
+<a class="home-btn" href="../index.html" title="전체 목차로 돌아가기">← 전체 목차</a>
+
+<button class="menu-btn" id="menuBtn" aria-label="목차 열기">☰</button>
+<div class="overlay" id="overlay"></div>
+
+<div class="layout">
+  <nav class="sidebar" id="sidebar"><div class="toc-brand">Stanford CME295 · Lecture 6</div><p class="toc-title">섹션 5. GRPO vs PPO와 길이 편향 보정</p><ul class="toc"><li><a href="#overview">1. 강의 개요</a></li><li><a href="#goals">2. 학습 목표</a></li><li><a href="#body">3. 본문</a></li><li><a class="sub" href="#block1">블록 1 · GRPO와 PPO 비교 (그림)</a></li><li><a class="sub" href="#block2">블록 2 · GRPO와 PPO 비교 (수식)</a></li><li><a class="sub" href="#block3">블록 3 · 출력이 길어지는 편향 문제</a></li><li><a class="sub" href="#block4">블록 4 · 보정: DAPO·Dr.GRPO와 추가 수정</a></li><li><a href="#glossary">4. 핵심 용어집</a></li><li><a href="#review">5. 복습 문제</a></li><li><a href="#appendix">부록. 실무 적용 포인트 (NLP·LLM 기술 내용 한정)</a></li></ul></nav>
+  <main class="content"><article class="doc"><h1>CME295 Transformers &amp; LLMs — Lecture 6 한국어 교재</h1><p class="subtitle">섹션 5. GRPO vs PPO와 길이 편향 보정</p><div class="source-banner"><span>📄</span><span><b>원문 출처</b>: Stanford CME295, Autumn 2025, Lecture 6, 타임스탬프 <span class="ts">1:05:53</span>~<span class="ts">1:29:43</span></span></div><section id="overview"><h2>1. 강의 개요</h2><ul><li>GRPO와 PPO를 그림·수식으로 비교한다 — 공통점(비율·클리핑)과 차이(어드밴티지 계산·KL 위치, 가치 함수 유무).</li><li>학습 중 출력이 점점 길어지는(그러나 성능은 정체되는) 현상과, 그 원인을 GRPO 손실의 길이 정규화에서 찾는다.</li><li>이를 보정하는 후속 연구(DAPO·Dr.GRPO)와, 표준편차·비대칭 epsilon 같은 추가 수정을 본다.</li></ul></section><section id="goals"><h2>2. 학습 목표</h2><ol><li>GRPO와 PPO의 공통점(비율·클리핑)과 차이(어드밴티지·KL·가치 함수)를 설명할 수 있다.</li><li>출력이 길어지는 편향이 GRPO 손실의 '길이로 나누기'에서 비롯됨을 이해한다.</li><li>DAPO·Dr.GRPO 등 보정의 발상을 안다.</li></ol></section><section id="body"><h2>3. 본문</h2><div id="block1"><h3><span class="badge">블록 1</span>GRPO와 PPO 비교 (그림)</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">1:06:24</span> generate (...) G g completions (...) G rewards (...) the advantage (...) reward minus the average (...) over the standard deviation. (...) <span class="ts">1:07:34</span> GRPO (...) the (KL) divergence term as well. (...) <span class="ts">1:08:08</span> PO (...) only have one completion (...) a value function (...) per token (...) generalized advantage estimation. (...) <span class="ts">1:10:47</span> in the reasoning case we are actually not training a reward model (...) we have a verifiable reward. (...) <span class="ts">1:11:16</span> in the gRPO case we only train the policy model whereas (...) PO (...) train the policy model and the value (model).</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p><strong>GRPO(그림)</strong>: 프롬프트 하나를 정책 모델(학습 중인 LLM)에 넣어 여러(G개) 완성을 생성합니다. 각 (프롬프트+완성)을 보상 모델에 넣어 G개 보상을 얻고, 어드밴티지를 계산합니다 — 보상에서 그룹 평균을 빼고 표준편차로 나눈 값입니다(이 정의는 뒤에서 최선이 아닐 수 있음을 봄). 이 어드밴티지로 정책을 튜닝하되, 기준 모델에서 벗어나지 않게 KL 발산 항을 둡니다.</p>
+<p><strong>PPO(그림)</strong>: 프롬프트 하나에 완성 하나만 생성합니다. (프롬프트+완성)을 보상 모델에 넣어 전체 완성에 대한 보상 하나를 얻고, 토큰별 가치 함수(앞으로 받을 보상 추정)와 함께 GAE로 어드밴티지를 계산합니다.</p>
+<p><strong>핵심 차이</strong>:</p>
+<ul><li>추론의 경우 정답이 검증 가능하므로 보상 모델을 아예 학습하지 않습니다(검증 가능한 보상 사용) — GRPO·PPO 공통.</li><li>학습하는 모델: GRPO는 정책 모델만, PPO는 정책 모델 + 가치 모델(value model). 이것이 핵심 차이입니다.</li></ul></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>G개 완성<span class="en-term">(completions)</span></dt><dd>GRPO가 같은 프롬프트로 여러 개 생성하는 응답.</dd><dt>표준편차로 정규화</dt><dd>어드밴티지 = (보상 − 그룹평균) / 표준편차.</dd><dt>가치 모델<span class="en-term">(value model)</span></dt><dd>PPO만 추가로 학습. GRPO엔 없음.</dd></dl></div>
+</div>
+<div id="block2"><h3><span class="badge">블록 2</span>GRPO와 PPO 비교 (수식)</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">1:11:50</span> the GRPO loss (...) and the PO loss (...) both of them they operate on the ratio of the probability of the current policy and (...) the old policy (...) <span class="ts">1:12:50</span> both (...) keep the updates within some region (...) clipping (...) <span class="ts">1:13:24</span> in the gRPO case the (KL) divergence is (...) explicitly part of the objective (...) whereas for the PO case the (KL) divergence is typically part of the (reward) (...) the way we compute (advantages differs).</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>수식으로 비교하면 — 둘 다 위협적이지만 공통점과 차이가 있습니다.</p>
+<p><strong>공통점</strong>:</p>
+<ol><li>둘 다 현재 정책과 직전 정책의 확률 비(ratio)에 작동합니다.</li><li>둘 다 클리핑(clipping)으로 갱신이 너무 커지지 않게 합니다(어드밴티지가 양수/음수일 때의 그래프는 Lecture 5 참고).</li></ol>
+<p><strong>차이</strong>:</p>
+<ol><li><strong>KL 발산 위치</strong>: GRPO는 KL을 목적함수에 명시적으로 둡니다. PPO는 보통 KL을 보상 안에 넣습니다(구현 디테일 — 토큰별 보상에 KL 항을 포함, 마지막 토큰에만 완성 보상을 둠).</li><li><strong>어드밴티지 계산</strong>: GRPO는 그룹 내 다른 완성들과 비교해 계산, PPO는 보상 + 가치 함수로 계산.</li></ol></div>
+<div class="callout note"><div class="c-title">⚠️ 참고</div><p>강사: "아마 수업 전체에서 가장 어려운 부분"이라며, 녹화를 여러 번 다시 보길 권함. 핵심 두 가지만 기억하면 됨 — ① 이 알고리즘들은 RL 단계에서 모델을 튜닝하는 도구(PPO=선호 튜닝, GRPO=추론 학습), ② GRPO는 가치 함수 없이 그룹 비교로 어드밴티지를 구함.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>비율<span class="en-term">(ratio)</span></dt><dd>현재/직전 정책의 확률 비. GRPO·PPO 공통.</dd><dt>클리핑<span class="en-term">(clipping)</span></dt><dd>갱신 폭 제한. 공통.</dd><dt>KL 위치 차이</dt><dd>GRPO는 목적함수에 명시, PPO는 보상에 포함.</dd></dl></div>
+</div>
+<div id="block3"><h3><span class="badge">블록 3</span>출력이 길어지는 편향 문제</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">1:17:35</span> as you train it in the RL stage, the output increases in length (...) <span class="ts">1:18:38</span> the performance (...) tends to stabili(ze), but then your output length still continues increasing. (...) <span class="ts">1:21:17</span> the contribution of a token (...) depends on the output that it is in (...) <span class="ts">1:23:24</span> if the advantage is positive (...) upweight (...) much more for short sentences (...) <span class="ts">1:23:59</span> a bad incentive (...) you're telling your model (...) a short bad sentence (...) is worse than (...) a long bad sentence (...) prefer longer bad outputs.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>RL 학습 중 관찰되는 현상: 학습이 진행될수록 출력 길이가 늘어납니다(주로 추론 사슬이 정교해지면서). 처음엔 길이 증가가 성능 향상과 상관됩니다. 그런데 어느 지점부터 성능은 정체되는데 출력 길이는 계속 늘어납니다. 왜일까요?</p>
+<p>원인은 GRPO 손실의 '출력 길이로 나누기' 항에 있습니다. 손실은 그룹의 모든 완성, 각 완성의 모든 토큰에 걸쳐 합산되는데, 토큰 기여도에 (1/출력 길이) 인자가 곱해집니다. 그러면 짧은 출력의 토큰은 큰 가중치, 긴 출력의 토큰은 작은 가중치를 받습니다. 즉 같은 토큰이라도 짧은 문장 안에 있으면 영향이 큽니다.</p>
+<p>이것이 나쁜 유인을 만듭니다. 어드밴티지가 음수인(나쁜) 토큰을 생각하면 — 짧은 나쁜 출력의 토큰이 긴 나쁜 출력의 토큰보다 더 강하게 억제됩니다. 즉 모델에게 "짧은 나쁜 문장이 긴 나쁜 문장보다 더 나쁘다"고 말하는 셈이라, 긴 나쁜 출력을 선호하게 됩니다. 이것이 출력이 계속 길어지는 원인으로 가설됩니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>길이 정규화<span class="en-term">(1/출력 길이)</span></dt><dd>GRPO 손실에서 토큰 기여도에 곱하는 인자. 길이 편향의 원인.</dd><dt>길이 편향</dt><dd>성능 정체 후에도 출력이 계속 길어지는 현상. 나쁜 유인에서 비롯.</dd></dl></div>
+</div>
+<div id="block4"><h3><span class="badge">블록 4</span>보정: DAPO·Dr.GRPO와 추가 수정</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">1:24:30</span> one paper that came out in March (DAPO) (...) equalizes these token level (...) normalization factor is now common to all tokens (...) <span class="ts">1:25:00</span> Dr. GRPO (...) proposes to remove the factor (...) <span class="ts">1:25:32</span> your model will stop increasing its length (...) <span class="ts">1:27:06</span> a modification with respect to the standard deviation (...) biases towards (...) the difficulty of the problem (...) <span class="ts">1:27:38</span> different epsilons (...) introduce an asymmetry between the lower and the upper bounds.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>이 길이 편향을 보정하려는 후속 연구들:</p>
+<ul><li><strong>DAPO</strong>(2025년 3월, 인기 논문): 토큰 단위 기여를 균등화합니다 — 정규화 인자를 모든 토큰에 공통으로 둡니다. (※자막상 'DPO' → DAPO로 보정)</li><li><strong>Dr. GRPO</strong>(GRPO Done Right): 그 (1/길이) 인자를 아예 제거합니다.</li></ul>
+<p>이렇게 토큰 단위 기여를 균등화하면, 보상 대 출력 길이 그래프에서 모델이 더 이상 길이를 무한정 늘리지 않습니다. 특히 틀린(incorrect) 응답의 평균 길이가 원래 GRPO보다 훨씬 낮아집니다(정답 응답 길이는 비슷). 즉 쓸데없이 길어지던 나쁜 출력이 줄어듭니다 — 중요한 수정입니다.</p>
+<p>추가 수정 두 가지:</p>
+<ol><li><strong>표준편차 관련</strong>: 어드밴티지의 표준편차 나누기가 문제 난도에 편향을 줍니다. 아주 어려운 문제는 대부분 실패라 표준편차가 작아져 문제가 생길 수 있습니다.</li><li><strong>비대칭 epsilon</strong>: 클리핑의 ε(정책 변화 허용폭)을 위·아래 다르게 둡니다. 확률이 매우 낮은 토큰은 작은 ε로는 키우기 어려우니(ε이 곱해지므로), 하한·상한에 비대칭을 둡니다 — 낮은 확률은 더 키울 여지를 주되, 높은 확률이 갑자기 치솟지 않게.</li></ol></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>DAPO</dt><dd>토큰 단위 정규화를 균등화한 보정(2025.3).</dd><dt>Dr. GRPO<span class="en-term">(GRPO Done Right)</span></dt><dd>길이 인자를 제거한 보정.</dd><dt>표준편차 편향</dt><dd>어려운 문제에서 표준편차가 작아져 생기는 문제.</dd><dt>비대칭 epsilon</dt><dd>클리핑 상·하한을 다르게 둬 낮은 확률 토큰을 키울 여지를 줌.</dd></dl></div>
+</div></section><section id="glossary"><h2>4. 핵심 용어집</h2><div class="table-wrap"><table><thead><tr><th>영문</th><th>한국어</th><th>발음</th><th>뜻</th></tr></thead><tbody><tr><td>ratio / clipping</td><td>비율/클리핑</td><td>—</td><td>정책 확률 비 / 갱신 폭 제한</td></tr><tr><td>value model</td><td>가치 모델</td><td>—</td><td>PPO만 학습(GRPO엔 없음)</td></tr><tr><td>length bias</td><td>길이 편향</td><td>—</td><td>성능 정체 후 출력만 길어짐</td></tr><tr><td>length normalization</td><td>길이 정규화</td><td>—</td><td>1/출력 길이 인자(편향 원인)</td></tr><tr><td>DAPO</td><td>다포</td><td>—</td><td>토큰 정규화 균등화 보정</td></tr><tr><td>Dr. GRPO</td><td>닥터 GRPO</td><td>—</td><td>길이 인자 제거 보정</td></tr><tr><td>asymmetric epsilon</td><td>비대칭 epsilon</td><td>—</td><td>클리핑 상·하한 다르게</td></tr></tbody></table></div></section><section id="review"><h2>5. 복습 문제</h2><div class="callout review"><div class="c-title">✏️ 스스로 점검</div><ol><li>GRPO와 PPO의 공통점 두 가지와 차이 두 가지(어드밴티지·KL 위치)는?</li><li>출력이 계속 길어지는 편향은 GRPO 손실의 어느 부분에서 비롯되는가?</li><li>DAPO와 Dr. GRPO는 길이 편향을 각각 어떻게 보정하는가?</li></ol></div></section><section id="appendix"><h2>부록. 실무 적용 포인트 <span style="font-size:14px;font-weight:500;color:var(--muted);">(NLP·LLM 기술 내용 한정)</span></h2><div class="callout practice"><div class="c-title">💡 현장에서 써먹기</div><ul><li><strong>길이 편향은 "AI가 쓸데없이 장황해지는 데는 학습상 이유가 있다"를 보여준다.</strong> 추론 모델이 불필요하게 길게 답하는 경향은 학습 손실 설계의 부작용일 수 있다. 간결한 답을 원하면 명시적으로 "간단히"를 요청하는 것이 실효적이라는 점을 뒷받침한다.</li><li><strong>GRPO가 PPO보다 단순(가치 함수 없음)하다는 점은 "효율적 대안이 빠르게 표준이 된다"를 보여준다.</strong> 더 적은 모델로 비슷한 효과를 내는 GRPO가 추론 학습의 표준이 됐다. 기술 선택에서 '단순하면서 충분히 좋은' 방법이 확산된다는 흐름을 읽는 사례다.</li></ul></div><div class="next"><strong><strong>다음 섹션 예고</strong>·&lt;/strong&gt; · 이 기법들이 어떻게 모이나 — DeepSeek-R1-Zero/R1의 전체 학습 파이프라인과, 작은 모델로 능력을 옮기는 distillation. <span class="ts">1:29:43</span> 이후.</div></section></article></main>
+</div>
+
+<!-- KaTeX 자동 렌더 -->
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}],throwOnError:false});"></script>
+
+<!-- Mermaid -->
+<script type="module">
+  try{
+    const m = await import('https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs');
+    m.default.initialize({startOnLoad:true, theme:'base', themeVariables:{
+      fontFamily:'Pretendard, sans-serif', primaryColor:'#fffdfb', primaryBorderColor:'#d8d0c5',
+      primaryTextColor:'#1a1a1a', lineColor:'#b9554f', fontSize:'14px'
+    }});
+  }catch(e){ /* 오프라인이면 도식은 코드로 표시 */ }
+</script>
+
+<!-- 목차 활성표시 + 모바일 드로어 -->
+<script>
+  // 모바일 드로어
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('overlay');
+  const btn = document.getElementById('menuBtn');
+  const toggle = (on)=>{ sb.classList.toggle('open',on); ov.classList.toggle('show',on); };
+  btn.addEventListener('click',()=>toggle(!sb.classList.contains('open')));
+  ov.addEventListener('click',()=>toggle(false));
+  document.querySelectorAll('.toc a').forEach(a=>a.addEventListener('click',()=>{ if(window.innerWidth<=900) toggle(false); }));
+
+  // 현재 위치 강조
+  const links = [...document.querySelectorAll('.toc a')];
+  const map = {}; links.forEach(a=>{ const id=a.getAttribute('href').slice(1); map[id]=a; });
+  const targets = Object.keys(map).map(id=>document.getElementById(id)).filter(Boolean);
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(en=>{
+      if(en.isIntersecting){
+        links.forEach(l=>l.classList.remove('active'));
+        const a = map[en.target.id]; if(a) a.classList.add('active');
+      }
+    });
+  },{rootMargin:'-15% 0px -75% 0px', threshold:0});
+  targets.forEach(t=>io.observe(t));
+</script>
+
+</body>
+</html>

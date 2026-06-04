@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CME295 Lecture 7 · 섹션 6. 에이전트 — ReAct·멀티 에이전트·안전</title>
+
+<!-- 폰트: Pretendard (CDN, 없으면 시스템 폰트 폴백) -->
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<!-- 수식: KaTeX -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
+
+<style>
+  :root{
+    --bg:#FBF9F6;
+    --paper:#ffffff;
+    --ink:#1a1a1a;
+    --ink-soft:#4a4744;
+    --muted:#7a756f;
+    --accent:#8C1515;          /* Stanford 카디널 */
+    --accent-soft:#b9554f;
+    --tint:#f6ebe9;            /* 카디널 옅은 틴트 */
+    --tint-2:#f3efe9;          /* 따뜻한 회색 */
+    --line:#e7e1d9;
+    --line-strong:#d8d0c5;
+    --radius:10px;
+    --maxw:760px;
+    --sidew:268px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Pretendard","Pretendard Variable",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    line-height:1.78;
+    font-size:16.5px;
+    -webkit-font-smoothing:antialiased;
+    word-break:keep-all;
+  }
+
+  /* ===== 레이아웃 ===== */
+  .layout{display:flex; align-items:flex-start;}
+  .sidebar{
+    width:var(--sidew); flex:0 0 var(--sidew);
+    position:sticky; top:0; height:100vh; overflow-y:auto;
+    padding:28px 18px 40px; border-right:1px solid var(--line);
+    background:rgba(251,249,246,.85); backdrop-filter:saturate(120%) blur(2px);
+  }
+  .content{flex:1 1 auto; min-width:0; display:flex; justify-content:center; padding:0 24px;}
+  .doc{width:100%; max-width:var(--maxw); padding:48px 0 120px;}
+
+  /* ===== 사이드바 목차 ===== */
+  .toc-brand{font-size:12px; letter-spacing:.04em; color:var(--accent); font-weight:700; text-transform:uppercase; margin-bottom:4px;}
+  .toc-title{font-size:15px; font-weight:700; margin:0 0 18px; line-height:1.4; color:var(--ink);}
+  .toc{list-style:none; margin:0; padding:0; font-size:13.5px;}
+  .toc li{margin:1px 0;}
+  .toc a{display:block; padding:5px 10px; border-radius:7px; color:var(--ink-soft); text-decoration:none; border-left:2px solid transparent;}
+  .toc a:hover{background:var(--tint-2); color:var(--ink);}
+  .toc a.sub{padding-left:22px; font-size:13px; color:var(--muted);}
+  .toc a.active{color:var(--accent); background:var(--tint); border-left-color:var(--accent); font-weight:600;}
+
+  /* ===== 타이포 ===== */
+  h1{font-size:27px; line-height:1.32; font-weight:800; letter-spacing:-.01em; margin:0 0 6px;}
+  .subtitle{font-size:18px; font-weight:700; color:var(--accent); margin:0 0 22px;}
+  h2{font-size:21px; font-weight:800; letter-spacing:-.01em; margin:46px 0 14px; padding-bottom:9px; border-bottom:2px solid var(--line-strong);}
+  h3{font-size:17.5px; font-weight:700; margin:34px 0 12px; color:var(--ink);}
+  h3 .badge{display:inline-block; font-size:12px; font-weight:700; color:#fff; background:var(--accent); border-radius:6px; padding:2px 8px; margin-right:8px; vertical-align:middle;}
+  p{margin:12px 0;}
+  strong{font-weight:700;}
+  a{color:var(--accent);}
+  ul,ol{margin:12px 0; padding-left:22px;}
+  li{margin:6px 0;}
+  hr{display:none;}
+
+  /* ===== 출처 배너 ===== */
+  .source-banner{
+    display:flex; gap:10px; align-items:baseline;
+    background:var(--tint); border-left:4px solid var(--accent);
+    border-radius:0 var(--radius) var(--radius) 0;
+    padding:12px 16px; margin:0 0 8px; font-size:13.5px; color:var(--ink-soft);
+  }
+  .source-banner b{color:var(--accent);}
+
+  /* ===== 한국어 번역 카드 ===== */
+  .ko{
+    background:var(--paper); border:1px solid var(--line);
+    border-left:4px solid var(--accent); border-radius:var(--radius);
+    padding:6px 22px; margin:16px 0;
+    box-shadow:0 1px 2px rgba(60,40,20,.04);
+  }
+  .ko > .label, .terms > .label{
+    display:inline-block; font-size:11.5px; font-weight:800; letter-spacing:.06em;
+    color:var(--accent); text-transform:uppercase; margin:14px 0 -4px;
+  }
+
+  /* ===== 영문 원문 토글 ===== */
+  details.en{
+    background:var(--tint-2); border:1px solid var(--line); border-radius:var(--radius);
+    margin:14px 0; overflow:hidden;
+  }
+  details.en > summary{
+    cursor:pointer; list-style:none; padding:11px 16px;
+    font-size:13.5px; font-weight:700; color:var(--muted);
+    display:flex; align-items:center; gap:8px; user-select:none;
+  }
+  details.en > summary::-webkit-details-marker{display:none;}
+  details.en > summary .chev{transition:transform .2s; color:var(--accent-soft);}
+  details.en[open] > summary .chev{transform:rotate(90deg);}
+  details.en[open] > summary{border-bottom:1px solid var(--line);}
+  .en-body{padding:4px 18px 14px; font-size:14px; line-height:1.7; color:#5c574f; font-style:normal;}
+  .en-body p{margin:10px 0;}
+  .ts{
+    display:inline-block; font-family:"SFMono-Regular",ui-monospace,Menlo,Consolas,monospace;
+    font-size:11.5px; font-style:normal; color:var(--accent);
+    background:var(--tint); border:1px solid #e6cfcc; border-radius:5px;
+    padding:0 5px; margin:0 2px; vertical-align:baseline;
+  }
+
+  /* ===== 용어 설명 ===== */
+  .terms{
+    border:1px solid var(--line); border-left:3px solid var(--accent-soft);
+    border-radius:var(--radius); background:#fffdfb; padding:4px 20px 8px; margin:16px 0;
+  }
+  .terms dl{margin:8px 0;}
+  .terms dt{font-weight:700; color:var(--ink); margin-top:8px;}
+  .terms dt .en-term{color:var(--accent); font-weight:600;}
+  .terms dd{margin:1px 0 6px; color:var(--ink-soft); font-size:15px;}
+
+  /* ===== 표 ===== */
+  .table-wrap{overflow-x:auto; margin:16px 0; border:1px solid var(--line); border-radius:var(--radius);}
+  table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:520px;}
+  thead th{background:var(--accent); color:#fff; font-weight:700; text-align:left; padding:11px 14px; white-space:nowrap;}
+  tbody td{padding:9px 14px; border-top:1px solid var(--line);}
+  tbody tr:nth-child(even){background:var(--tint-2);}
+  tbody td:first-child{font-family:ui-monospace,Menlo,monospace; font-size:13px; color:var(--accent);}
+
+  /* ===== 콜아웃 ===== */
+  .callout{border-radius:var(--radius); padding:14px 20px 6px; margin:18px 0;}
+  .callout .c-title{font-weight:800; margin:6px 0 2px; display:flex; align-items:center; gap:8px;}
+  .callout.review{background:#fff; border:1px solid var(--line-strong);}
+  .callout.review ol{counter-reset:none;}
+  .callout.note{background:var(--tint-2); border-left:4px solid var(--muted); border-radius:0 var(--radius) var(--radius) 0; padding-bottom:12px;}
+  .callout.practice{background:var(--tint); border:1px solid #e6cfcc; padding-bottom:14px;}
+  .callout.practice li{margin:12px 0;}
+  .next{margin-top:40px; padding:14px 18px; background:var(--tint-2); border-radius:var(--radius); font-size:14px; color:var(--ink-soft);}
+
+  /* 수식 / 도식 */
+  .katex-display{margin:14px 0; overflow-x:auto; overflow-y:hidden; padding:6px 0;}
+  .diagram{background:#fffdfb; border:1px solid var(--line); border-radius:var(--radius); padding:14px; margin:16px 0; text-align:center;}
+  .diagram .cap{font-size:12.5px; color:var(--muted); margin-top:6px;}
+  .mermaid{display:flex; justify-content:center;}
+
+  /* ===== 모바일 ===== */
+  .menu-btn{display:none;}
+  .overlay{display:none;}
+  @media (max-width:900px){
+    .menu-btn{
+      display:flex; align-items:center; justify-content:center;
+      position:fixed; top:14px; left:14px; z-index:50;
+      width:42px; height:42px; border-radius:10px; border:1px solid var(--line-strong);
+      background:var(--paper); color:var(--accent); font-size:20px; cursor:pointer;
+      box-shadow:0 2px 8px rgba(60,40,20,.12);
+    }
+    .sidebar{
+      position:fixed; left:0; top:0; z-index:60; height:100vh;
+      transform:translateX(-105%); transition:transform .25s ease;
+      box-shadow:4px 0 24px rgba(0,0,0,.12); background:var(--bg);
+    }
+    .sidebar.open{transform:translateX(0);}
+    .overlay.show{display:block; position:fixed; inset:0; background:rgba(0,0,0,.32); z-index:55;}
+    .content{padding:0 16px;}
+    .doc{padding:64px 0 100px;}
+    body{font-size:16px;}
+    h1{font-size:23px;}
+    .ko,.terms{padding-left:16px; padding-right:16px;}
+  }
+
+  /* ===== 인쇄 ===== */
+  @media print{
+    .sidebar,.menu-btn,.overlay{display:none !important;}
+    .content{padding:0;}
+    body{background:#fff; font-size:11pt;}
+    details.en{display:none;}          /* 인쇄본은 한국어 위주 */
+    .ko,.terms,.callout,.table-wrap{break-inside:avoid; box-shadow:none;}
+    a{color:var(--ink);}
+  }
+  .home-btn{position:fixed; top:16px; right:18px; z-index:70;
+    display:inline-flex; align-items:center; gap:6px; text-decoration:none;
+    background:var(--paper); color:var(--accent); border:1px solid var(--line-strong);
+    border-radius:999px; padding:8px 14px; font-size:13.5px; font-weight:700;
+    box-shadow:0 2px 8px rgba(60,40,20,.12); transition:background .12s,color .12s;}
+  .home-btn:hover{background:var(--accent); color:#fff; border-color:var(--accent);}
+  @media (max-width:900px){ .home-btn{top:14px; right:14px; padding:8px 12px; font-size:12.5px;} }
+  @media print{ .home-btn{display:none !important;} }
+</style>
+</head>
+<body>
+<a class="home-btn" href="../index.html" title="전체 목차로 돌아가기">← 전체 목차</a>
+
+<button class="menu-btn" id="menuBtn" aria-label="목차 열기">☰</button>
+<div class="overlay" id="overlay"></div>
+
+<div class="layout">
+  <nav class="sidebar" id="sidebar"><div class="toc-brand">Stanford CME295 · Lecture 7</div><p class="toc-title">섹션 6. 에이전트 — ReAct·멀티 에이전트·안전</p><ul class="toc"><li><a href="#overview">1. 강의 개요</a></li><li><a href="#goals">2. 학습 목표</a></li><li><a href="#body">3. 본문</a></li><li><a class="sub" href="#block1">블록 1 · 에이전트란: 도구와의 차이</a></li><li><a class="sub" href="#block2">블록 2 · ReAct: 관찰·계획·행동</a></li><li><a class="sub" href="#block3">블록 3 · 멀티 에이전트와 A2A 프로토콜</a></li><li><a class="sub" href="#block4">블록 4 · 안전(safety)과 실무 조언</a></li><li><a href="#glossary">4. 핵심 용어집</a></li><li><a href="#review">5. 복습 문제</a></li><li><a href="#appendix">부록. 실무 적용 포인트 (NLP·LLM 기술 내용 한정)</a></li></ul></nav>
+  <main class="content"><article class="doc"><h1>CME295 Transformers &amp; LLMs — Lecture 7 한국어 교재</h1><p class="subtitle">섹션 6. 에이전트 — ReAct·멀티 에이전트·안전</p><div class="source-banner"><span>📄</span><span><b>원문 출처</b>: Stanford CME295, Autumn 2025, Lecture 7, 타임스탬프 <span class="ts">1:32:11</span>~(1:48:44, 끝)</span></div><section id="overview"><h2>1. 강의 개요</h2><ul><li>도구에서 한 단계 위인 에이전트(agent)를 정의하고, 관찰·계획·행동 루프를 도는 ReAct를 다룬다.</li><li>여러 에이전트가 협업하는 멀티 에이전트와 그 표준 A2A(Agent-to-Agent) 프로토콜을 본다.</li><li>에이전트의 안전(safety) 위험(데이터 유출 등)과 대응(학습 단계·추론 단계 안전장치), 그리고 실무 조언을 정리한다.</li></ul></section><section id="goals"><h2>2. 학습 목표</h2><ol><li>에이전트가 도구와 무엇이 다른지(반복·추론 루프), ReAct의 관찰·계획·행동 루프를 설명할 수 있다.</li><li>멀티 에이전트와 A2A 프로토콜의 필요성을 안다.</li><li>에이전트의 안전 위험과 대응(학습·추론 안전장치)을 이해한다.</li></ol></section><section id="body"><h2>3. 본문</h2><div id="block1"><h3><span class="badge">블록 1</span>에이전트란: 도구와의 차이</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">1:32:11</span> agents (...) one layer up from (tools) (...) a system that autonomously pursues goal(s) and completes tasks on a user's behalf (...) some reasoning (...) involved (...) multiple loops of iterations (...) <span class="ts">1:32:45</span> that recurrence or (...) higher level of reasoning baked into it.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>도구로 LLM이 훨씬 강력해졌습니다. 에이전트(agent)는 그보다 한 단계 위입니다. 정의: 사용자를 대신해 자율적으로 목표를 추구하고 과제를 완수하는 시스템입니다.</p>
+<p>도구와의 차이: 도구는 과제를 수행할 뿐이지만, 에이전트는 추론(reasoning)이 개입돼 여러 번 반복 루프를 돕니다. 즉 '반복(recurrence)' 또는 '상위 수준 추론'이 내장된 것이 에이전트입니다. (도구 호출·추론 사슬과 배타적이지 않고, 그 위에 루프 구조를 얹은 것)</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>에이전트<span class="en-term">(agent)</span></dt><dd>자율적으로 목표를 추구하며 반복 추론 루프를 도는 시스템. 도구보다 한 단계 위.</dd><dt>반복 루프<span class="en-term">(iteration loop)</span></dt><dd>목표 달성까지 관찰·계획·행동을 반복.</dd></dl></div>
+</div>
+<div id="block2"><h3><span class="badge">블록 2</span>ReAct: 관찰·계획·행동</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">1:33:48</span> react (...) reason plus act (...) decomposes (...) complex tasks into (...) loops (...) <span class="ts">1:34:19</span> observe, plan and act (...) <span class="ts">1:35:22</span> my teddy bear is (cold) (...) observe (...) translates the user query into an actionable formulation (...) <span class="ts">1:36:24</span> plan (...) determine the temperature of the room (...) act (...) get current room temperature (...) <span class="ts">1:37:59</span> exit the loop and return the response.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>대표 논문 ReAct(Reason + Act, 추론 + 행동)입니다. 복잡한 과제는 한 번에 못 풀고, 실행 가능한 하위 단계로 분해해 각각 수행한 뒤 답에 이릅니다. 단계를 관찰(observe)·계획(plan)·행동(act)으로 나눕니다(명칭·순서는 논문마다 다를 수 있음).</p>
+<p>예: "곰인형이 추워해, 뭔가 해줘."</p>
+<ol><li><strong>관찰</strong>: 사용자 질의를 실행 가능한 형태로 번역 — "곰인형이 춥다 = 방 온도와 관련, 현재 온도는 모름."</li><li><strong>계획</strong>: 모르는 것을 찾도록 명시 — "방 온도를 알아내야 함."</li><li><strong>행동</strong>: 도구 사용 — <code>get_current_room_temperature</code> 호출.</li><li>(다시) <strong>관찰</strong>: 결과 해석 — "온도가 15.5도(65℉)로 예상보다 춥다."</li><li><strong>계획</strong>: "온도를 올려야 함." → <strong>행동</strong>: <code>increase_temperature</code> 호출.</li><li><strong>관찰</strong>: 목표 달성 확인 → 루프 종료, 사용자에게 응답("온도를 5도 올렸습니다").</li></ol>
+<p>이 루프 안에서 매 단계 LLM이 목표 도달 여부를 점검하고, 도달하면 출력, 아니면 더 추론합니다. 이것이 워크플로를 '에이전트적(agentic)'으로 만드는 것입니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>ReAct<span class="en-term">(Reason + Act)</span></dt><dd>과제를 관찰·계획·행동 루프로 분해해 푸는 대표 에이전트 기법.</dd><dt>관찰·계획·행동<span class="en-term">(observe·plan·act)</span></dt><dd>상황 파악 / 할 일 결정 / 도구 실행. 목표 도달까지 반복.</dd></dl></div>
+</div>
+<div id="block3"><h3><span class="badge">블록 3</span>멀티 에이전트와 A2A 프로토콜</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">1:39:03</span> more than one agent (...) an agent for setting the thermostat (...) energy (...) air quality (...) have all of them communicate together. (...) <span class="ts">1:39:33</span> standardization of communications (...) between agents (...) the agentto agent protocol (...) Google (...) <span class="ts">1:40:04</span> exposes a set of skills (...) how (...) the agent executes a given request.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>에이전트는 하나에 그치지 않습니다. 온도 조절 에이전트, 에너지 분배 에이전트, 공기질 에이전트 등 여러 에이전트를 두고, 사용자가 한 에이전트에 말하면 이들이 서로 소통하게 할 수 있습니다.</p>
+<p>그러려면 에이전트 간 소통의 표준이 필요합니다 — 구글이 올해 공개한 A2A(Agent-to-Agent, 에이전트 간) 프로토콜입니다. 핵심:</p>
+<ul><li>에이전트가 노출하는 기술(skill) 집합을 표준화 — 무엇을 할 수 있는지 예시와 함께 알려, 다른 에이전트가 알 수 있게 함.</li><li>요청 실행 방식 표준화 — 질의 실행 시 다른 에이전트에 알리는 상태(status), 작업을 멈추는 취소(cancel) 방법 등을 정의.</li></ul></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>멀티 에이전트<span class="en-term">(multi-agent)</span></dt><dd>여러 에이전트가 협업.</dd><dt>A2A<span class="en-term">(Agent-to-Agent)</span> 프로토콜</dt><dd>에이전트 간 소통 표준(구글). 기술 노출·실행·취소 방식 정의.</dd></dl></div>
+</div>
+<div id="block4"><h3><span class="badge">블록 4</span>안전(safety)과 실무 조언</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">1:42:26</span> data exfiltration (...) an email agent (...) write my password (...) to an email to that address (...) <span class="ts">1:43:28</span> two classes of remediations (...) the training stage (...) harmlessness component (...) inference (...) a safety classifier. (...) <span class="ts">1:45:03</span> anthropic revealed (...) a large scale cyber attack launched from (Claude) (...) <span class="ts">1:47:40</span> start small (...) start smart (...) <span class="ts">1:48:12</span> judging whether a code is correct (...) is the hard part.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>새 능력(행동 수행)에는 새 위험이 따릅니다. 예: 데이터 유출(data exfiltration) — 외부에 글을 쓸 수 있는 이메일 에이전트가 있다면, "내 비밀번호를 이 주소로 메일 보내"라는 악의적 프롬프트로 사용자 데이터를 빼낼 수 있습니다.</p>
+<p>대응은 두 부류:</p>
+<ol><li><strong>학습 단계</strong>: R1 등에서 본 무해함(harmlessness) 요소 — SFT·RL 데이터 혼합에 안전 데이터를 넣어 방어선을 만듦.</li><li><strong>추론 단계 안전장치</strong>: 학습 방어선을 넘은 질의에 대해, 대화를 보고 LLM 출력이 안전한지 판정하는 안전 분류기(safety classifier)를 둠.</li></ol>
+<p>(평가용으로 AgentSafetyBench 같은 벤치마크가 있음. 실제로 Anthropic이 Claude를 악용한 대규모 사이버 공격의 피해를 보고하고 상세 대응을 공개한 사례도 있음 — 안전의 중요성을 보여줌)</p>
+<p><strong>실무 조언</strong>(마무리):</p>
+<ul><li>에이전트는 각 단계에서 길을 잘못 들 수 있어(엉뚱한 인자 예측 등) 아직 대규모 자율 에이전트가 세상을 지배하지 못함.</li><li><strong>작게 시작(start small)</strong>: 아주 단순한 사례부터(예: 가장 가까운 곰인형 찾기). 현재 구현·프롬프트가 작동하는지 보고 확장.</li><li><strong>강력한 모델부터(start smart)</strong>: 가장 유능한 모델로 한계(headroom)를 본 뒤, 지연·비용을 최적화.</li><li><strong>디버깅</strong>: LLM은 추론 사슬을 출력하니, 무엇이 잘못됐는지 사슬을 보고 추적.</li><li>강사가 꼽은 최고 활용처는 코딩 보조(AI assisted coding). 단, 코드 생성은 싸지만 그 코드가 옳은지 판단하는 것이 어려우므로, 기초를 익혀 '판단하는 안목(taste)'을 갖추는 것이 가장 중요합니다.</li></ul></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>데이터 유출<span class="en-term">(data exfiltration)</span></dt><dd>악의적 프롬프트로 민감 데이터를 외부로 빼내는 위험.</dd><dt>무해함<span class="en-term">(harmlessness)</span> 학습</dt><dd>안전 데이터로 방어선을 만드는 학습 단계 대응.</dd><dt>안전 분류기<span class="en-term">(safety classifier)</span></dt><dd>출력의 안전성을 판정하는 추론 단계 안전장치.</dd><dt>start small/smart</dt><dd>단순하게·강력한 모델로 시작하라는 실무 원칙.</dd></dl></div>
+</div></section><section id="glossary"><h2>4. 핵심 용어집</h2><div class="table-wrap"><table><thead><tr><th>영문</th><th>한국어</th><th>발음</th><th>뜻</th></tr></thead><tbody><tr><td>agent</td><td>에이전트</td><td>—</td><td>자율 목표 추구·반복 추론 시스템</td></tr><tr><td>ReAct</td><td>리액트</td><td>—</td><td>관찰·계획·행동 루프(추론+행동)</td></tr><tr><td>observe/plan/act</td><td>관찰/계획/행동</td><td>—</td><td>상황 파악/할 일/도구 실행</td></tr><tr><td>multi-agent</td><td>멀티 에이전트</td><td>—</td><td>여러 에이전트 협업</td></tr><tr><td>A2A protocol</td><td>에이전트 간 프로토콜</td><td>—</td><td>에이전트 소통 표준(구글)</td></tr><tr><td>data exfiltration</td><td>데이터 유출</td><td>—</td><td>민감 데이터 외부 유출 위험</td></tr><tr><td>harmlessness</td><td>무해함</td><td>—</td><td>안전 데이터 학습 대응</td></tr><tr><td>safety classifier</td><td>안전 분류기</td><td>—</td><td>출력 안전성 판정(추론 단계)</td></tr></tbody></table></div></section><section id="review"><h2>5. 복습 문제</h2><div class="callout review"><div class="c-title">✏️ 스스로 점검</div><ol><li>에이전트는 도구와 무엇이 다른가? ReAct의 관찰·계획·행동 루프를 곰인형 예로 설명하라.</li><li>멀티 에이전트에 A2A 프로토콜이 필요한 이유는?</li><li>에이전트의 안전 위험(예: 데이터 유출)과, 학습·추론 두 단계 대응은 각각 무엇인가?</li></ol></div></section><section id="appendix"><h2>부록. 실무 적용 포인트 <span style="font-size:14px;font-weight:500;color:var(--muted);">(NLP·LLM 기술 내용 한정)</span></h2><div class="callout practice"><div class="c-title">💡 현장에서 써먹기</div><ul><li><strong>에이전트(ReAct)는 "복잡한 다단계 업무를 AI가 스스로 처리하는" 방향이다.</strong> 관찰→계획→행동을 반복하며 목표에 이르는 구조는, 여러 시스템·단계가 얽힌 행정 업무(자료 조회→판단→처리)를 자동화하는 틀이 될 수 있다. 다만 단계마다 오류 누적 위험이 있어 아직 사람 감독이 필요하다.</li><li><strong>안전(데이터 유출 등)은 "행동하는 AI일수록 통제가 중요하다"는 경고다.</strong> 정보만 주는 챗봇과 달리, 행동(발송·기록·외부 접근)이 가능한 에이전트는 악용·실수 위험이 크다. 민감 데이터·외부 발송이 걸린 자동화는 권한 제한·사람 확인·안전장치를 반드시 함께 설계해야 한다.</li><li><strong>"작게·강력한 모델부터 시작하라"는 조언은 AI 도입의 실전 수칙이다.</strong> 처음부터 거창한 자동화를 노리지 말고, 단순 사례로 작동을 확인한 뒤 확장하라. 그리고 "AI가 만든 결과가 옳은지 판단하는 안목"이 가장 중요하다 — 생성은 싸지만 검증이 어렵다는 점은 모든 업무 적용에 통한다.</li></ul></div></section></article></main>
+</div>
+
+<!-- KaTeX 자동 렌더 -->
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}],throwOnError:false});"></script>
+
+<!-- Mermaid -->
+<script type="module">
+  try{
+    const m = await import('https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs');
+    m.default.initialize({startOnLoad:true, theme:'base', themeVariables:{
+      fontFamily:'Pretendard, sans-serif', primaryColor:'#fffdfb', primaryBorderColor:'#d8d0c5',
+      primaryTextColor:'#1a1a1a', lineColor:'#b9554f', fontSize:'14px'
+    }});
+  }catch(e){ /* 오프라인이면 도식은 코드로 표시 */ }
+</script>
+
+<!-- 목차 활성표시 + 모바일 드로어 -->
+<script>
+  // 모바일 드로어
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('overlay');
+  const btn = document.getElementById('menuBtn');
+  const toggle = (on)=>{ sb.classList.toggle('open',on); ov.classList.toggle('show',on); };
+  btn.addEventListener('click',()=>toggle(!sb.classList.contains('open')));
+  ov.addEventListener('click',()=>toggle(false));
+  document.querySelectorAll('.toc a').forEach(a=>a.addEventListener('click',()=>{ if(window.innerWidth<=900) toggle(false); }));
+
+  // 현재 위치 강조
+  const links = [...document.querySelectorAll('.toc a')];
+  const map = {}; links.forEach(a=>{ const id=a.getAttribute('href').slice(1); map[id]=a; });
+  const targets = Object.keys(map).map(id=>document.getElementById(id)).filter(Boolean);
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(en=>{
+      if(en.isIntersecting){
+        links.forEach(l=>l.classList.remove('active'));
+        const a = map[en.target.id]; if(a) a.classList.add('active');
+      }
+    });
+  },{rootMargin:'-15% 0px -75% 0px', threshold:0});
+  targets.forEach(t=>io.observe(t));
+</script>
+
+</body>
+</html>

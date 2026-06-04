@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CME295 Lecture 3 · 섹션 3 — 디코딩</title>
+
+<!-- 폰트: Pretendard (CDN, 없으면 시스템 폰트 폴백) -->
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<!-- 수식: KaTeX -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
+
+<style>
+  :root{
+    --bg:#FBF9F6;
+    --paper:#ffffff;
+    --ink:#1a1a1a;
+    --ink-soft:#4a4744;
+    --muted:#7a756f;
+    --accent:#8C1515;          /* Stanford 카디널 */
+    --accent-soft:#b9554f;
+    --tint:#f6ebe9;            /* 카디널 옅은 틴트 */
+    --tint-2:#f3efe9;          /* 따뜻한 회색 */
+    --line:#e7e1d9;
+    --line-strong:#d8d0c5;
+    --radius:10px;
+    --maxw:760px;
+    --sidew:268px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Pretendard","Pretendard Variable",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    line-height:1.78;
+    font-size:16.5px;
+    -webkit-font-smoothing:antialiased;
+    word-break:keep-all;
+  }
+
+  /* ===== 레이아웃 ===== */
+  .layout{display:flex; align-items:flex-start;}
+  .sidebar{
+    width:var(--sidew); flex:0 0 var(--sidew);
+    position:sticky; top:0; height:100vh; overflow-y:auto;
+    padding:28px 18px 40px; border-right:1px solid var(--line);
+    background:rgba(251,249,246,.85); backdrop-filter:saturate(120%) blur(2px);
+  }
+  .content{flex:1 1 auto; min-width:0; display:flex; justify-content:center; padding:0 24px;}
+  .doc{width:100%; max-width:var(--maxw); padding:48px 0 120px;}
+
+  /* ===== 사이드바 목차 ===== */
+  .toc-brand{font-size:12px; letter-spacing:.04em; color:var(--accent); font-weight:700; text-transform:uppercase; margin-bottom:4px;}
+  .toc-title{font-size:15px; font-weight:700; margin:0 0 18px; line-height:1.4; color:var(--ink);}
+  .toc{list-style:none; margin:0; padding:0; font-size:13.5px;}
+  .toc li{margin:1px 0;}
+  .toc a{display:block; padding:5px 10px; border-radius:7px; color:var(--ink-soft); text-decoration:none; border-left:2px solid transparent;}
+  .toc a:hover{background:var(--tint-2); color:var(--ink);}
+  .toc a.sub{padding-left:22px; font-size:13px; color:var(--muted);}
+  .toc a.active{color:var(--accent); background:var(--tint); border-left-color:var(--accent); font-weight:600;}
+
+  /* ===== 타이포 ===== */
+  h1{font-size:27px; line-height:1.32; font-weight:800; letter-spacing:-.01em; margin:0 0 6px;}
+  .subtitle{font-size:18px; font-weight:700; color:var(--accent); margin:0 0 22px;}
+  h2{font-size:21px; font-weight:800; letter-spacing:-.01em; margin:46px 0 14px; padding-bottom:9px; border-bottom:2px solid var(--line-strong);}
+  h3{font-size:17.5px; font-weight:700; margin:34px 0 12px; color:var(--ink);}
+  h3 .badge{display:inline-block; font-size:12px; font-weight:700; color:#fff; background:var(--accent); border-radius:6px; padding:2px 8px; margin-right:8px; vertical-align:middle;}
+  p{margin:12px 0;}
+  strong{font-weight:700;}
+  a{color:var(--accent);}
+  ul,ol{margin:12px 0; padding-left:22px;}
+  li{margin:6px 0;}
+  hr{display:none;}
+
+  /* ===== 출처 배너 ===== */
+  .source-banner{
+    display:flex; gap:10px; align-items:baseline;
+    background:var(--tint); border-left:4px solid var(--accent);
+    border-radius:0 var(--radius) var(--radius) 0;
+    padding:12px 16px; margin:0 0 8px; font-size:13.5px; color:var(--ink-soft);
+  }
+  .source-banner b{color:var(--accent);}
+
+  /* ===== 한국어 번역 카드 ===== */
+  .ko{
+    background:var(--paper); border:1px solid var(--line);
+    border-left:4px solid var(--accent); border-radius:var(--radius);
+    padding:6px 22px; margin:16px 0;
+    box-shadow:0 1px 2px rgba(60,40,20,.04);
+  }
+  .ko > .label, .terms > .label{
+    display:inline-block; font-size:11.5px; font-weight:800; letter-spacing:.06em;
+    color:var(--accent); text-transform:uppercase; margin:14px 0 -4px;
+  }
+
+  /* ===== 영문 원문 토글 ===== */
+  details.en{
+    background:var(--tint-2); border:1px solid var(--line); border-radius:var(--radius);
+    margin:14px 0; overflow:hidden;
+  }
+  details.en > summary{
+    cursor:pointer; list-style:none; padding:11px 16px;
+    font-size:13.5px; font-weight:700; color:var(--muted);
+    display:flex; align-items:center; gap:8px; user-select:none;
+  }
+  details.en > summary::-webkit-details-marker{display:none;}
+  details.en > summary .chev{transition:transform .2s; color:var(--accent-soft);}
+  details.en[open] > summary .chev{transform:rotate(90deg);}
+  details.en[open] > summary{border-bottom:1px solid var(--line);}
+  .en-body{padding:4px 18px 14px; font-size:14px; line-height:1.7; color:#5c574f; font-style:normal;}
+  .en-body p{margin:10px 0;}
+  .ts{
+    display:inline-block; font-family:"SFMono-Regular",ui-monospace,Menlo,Consolas,monospace;
+    font-size:11.5px; font-style:normal; color:var(--accent);
+    background:var(--tint); border:1px solid #e6cfcc; border-radius:5px;
+    padding:0 5px; margin:0 2px; vertical-align:baseline;
+  }
+
+  /* ===== 용어 설명 ===== */
+  .terms{
+    border:1px solid var(--line); border-left:3px solid var(--accent-soft);
+    border-radius:var(--radius); background:#fffdfb; padding:4px 20px 8px; margin:16px 0;
+  }
+  .terms dl{margin:8px 0;}
+  .terms dt{font-weight:700; color:var(--ink); margin-top:8px;}
+  .terms dt .en-term{color:var(--accent); font-weight:600;}
+  .terms dd{margin:1px 0 6px; color:var(--ink-soft); font-size:15px;}
+
+  /* ===== 표 ===== */
+  .table-wrap{overflow-x:auto; margin:16px 0; border:1px solid var(--line); border-radius:var(--radius);}
+  table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:520px;}
+  thead th{background:var(--accent); color:#fff; font-weight:700; text-align:left; padding:11px 14px; white-space:nowrap;}
+  tbody td{padding:9px 14px; border-top:1px solid var(--line);}
+  tbody tr:nth-child(even){background:var(--tint-2);}
+  tbody td:first-child{font-family:ui-monospace,Menlo,monospace; font-size:13px; color:var(--accent);}
+
+  /* ===== 콜아웃 ===== */
+  .callout{border-radius:var(--radius); padding:14px 20px 6px; margin:18px 0;}
+  .callout .c-title{font-weight:800; margin:6px 0 2px; display:flex; align-items:center; gap:8px;}
+  .callout.review{background:#fff; border:1px solid var(--line-strong);}
+  .callout.review ol{counter-reset:none;}
+  .callout.note{background:var(--tint-2); border-left:4px solid var(--muted); border-radius:0 var(--radius) var(--radius) 0; padding-bottom:12px;}
+  .callout.practice{background:var(--tint); border:1px solid #e6cfcc; padding-bottom:14px;}
+  .callout.practice li{margin:12px 0;}
+  .next{margin-top:40px; padding:14px 18px; background:var(--tint-2); border-radius:var(--radius); font-size:14px; color:var(--ink-soft);}
+
+  /* 수식 / 도식 */
+  .katex-display{margin:14px 0; overflow-x:auto; overflow-y:hidden; padding:6px 0;}
+  .diagram{background:#fffdfb; border:1px solid var(--line); border-radius:var(--radius); padding:14px; margin:16px 0; text-align:center;}
+  .diagram .cap{font-size:12.5px; color:var(--muted); margin-top:6px;}
+  .mermaid{display:flex; justify-content:center;}
+
+  /* ===== 모바일 ===== */
+  .menu-btn{display:none;}
+  .overlay{display:none;}
+  @media (max-width:900px){
+    .menu-btn{
+      display:flex; align-items:center; justify-content:center;
+      position:fixed; top:14px; left:14px; z-index:50;
+      width:42px; height:42px; border-radius:10px; border:1px solid var(--line-strong);
+      background:var(--paper); color:var(--accent); font-size:20px; cursor:pointer;
+      box-shadow:0 2px 8px rgba(60,40,20,.12);
+    }
+    .sidebar{
+      position:fixed; left:0; top:0; z-index:60; height:100vh;
+      transform:translateX(-105%); transition:transform .25s ease;
+      box-shadow:4px 0 24px rgba(0,0,0,.12); background:var(--bg);
+    }
+    .sidebar.open{transform:translateX(0);}
+    .overlay.show{display:block; position:fixed; inset:0; background:rgba(0,0,0,.32); z-index:55;}
+    .content{padding:0 16px;}
+    .doc{padding:64px 0 100px;}
+    body{font-size:16px;}
+    h1{font-size:23px;}
+    .ko,.terms{padding-left:16px; padding-right:16px;}
+  }
+
+  /* ===== 인쇄 ===== */
+  @media print{
+    .sidebar,.menu-btn,.overlay{display:none !important;}
+    .content{padding:0;}
+    body{background:#fff; font-size:11pt;}
+    details.en{display:none;}          /* 인쇄본은 한국어 위주 */
+    .ko,.terms,.callout,.table-wrap{break-inside:avoid; box-shadow:none;}
+    a{color:var(--ink);}
+  }
+  .home-btn{position:fixed; top:16px; right:18px; z-index:70;
+    display:inline-flex; align-items:center; gap:6px; text-decoration:none;
+    background:var(--paper); color:var(--accent); border:1px solid var(--line-strong);
+    border-radius:999px; padding:8px 14px; font-size:13.5px; font-weight:700;
+    box-shadow:0 2px 8px rgba(60,40,20,.12); transition:background .12s,color .12s;}
+  .home-btn:hover{background:var(--accent); color:#fff; border-color:var(--accent);}
+  @media (max-width:900px){ .home-btn{top:14px; right:14px; padding:8px 12px; font-size:12.5px;} }
+  @media print{ .home-btn{display:none !important;} }
+</style>
+</head>
+<body>
+<a class="home-btn" href="../index.html" title="전체 목차로 돌아가기">← 전체 목차</a>
+
+<button class="menu-btn" id="menuBtn" aria-label="목차 열기">☰</button>
+<div class="overlay" id="overlay"></div>
+
+<div class="layout">
+  <!-- ============ 사이드바 목차 ============ -->
+  <nav class="sidebar" id="sidebar">
+    <div class="toc-brand">Stanford CME295 · Lecture 3</div>
+    <p class="toc-title">섹션 3 — 디코딩: 다음 토큰을 고르는 법</p>
+    <ul class="toc">
+      <li><a href="#overview">1. 강의 개요</a></li>
+      <li><a href="#goals">2. 학습 목표</a></li>
+      <li><a href="#body">3. 본문</a></li>
+      <li><a class="sub" href="#block1">블록 1 · 그리디 디코딩의 한계</a></li>
+      <li><a class="sub" href="#block2">블록 2 · 빔 서치</a></li>
+      <li><a class="sub" href="#block3">블록 3 · 샘플링 / top-K·top-P</a></li>
+      <li><a class="sub" href="#block4">블록 4 · 선형 층 + softmax</a></li>
+      <li><a class="sub" href="#block5">블록 5 · 온도(temperature)</a></li>
+      <li><a class="sub" href="#block6">블록 6 · 가이드 디코딩</a></li>
+      <li><a href="#glossary">4. 핵심 용어집</a></li>
+      <li><a href="#review">5. 복습 문제</a></li>
+      <li><a href="#appendix">부록 · 실무 적용 포인트</a></li>
+    </ul>
+  </nav>
+
+  <!-- ============ 본문 ============ -->
+  <main class="content">
+    <article class="doc">
+
+      <h1>CME295 Transformers &amp; LLMs — Lecture 3 한국어 교재</h1>
+      <p class="subtitle">섹션 3. 디코딩 — 다음 토큰을 고르는 법</p>
+
+      <div class="source-banner">
+        <span>📄</span>
+        <span><b>원문 출처</b> · Stanford CME295, Autumn 2025, Lecture 3, 타임스탬프 <span class="ts">36:19</span>~<span class="ts">1:06:44</span></span>
+      </div>
+
+      <!-- ===== 1. 강의 개요 ===== -->
+      <section id="overview">
+        <h2>1. 강의 개요</h2>
+        <ul>
+          <li>학습된 LLM이 출력하는 '다음 토큰 확률 분포'에서 실제로 토큰을 고르는 방법(디코딩)을 다룬다.</li>
+          <li>그리디 디코딩의 한계, 빔 서치(전역 최적 근사), 샘플링(다양성·창의성)과 그 제약(top-K·top-P)을 본다.</li>
+          <li>확률을 만드는 마지막 층(선형+softmax)과, 출력의 결정성·창의성을 조절하는 온도(temperature)를 설명한다.</li>
+        </ul>
+      </section>
+
+      <!-- ===== 2. 학습 목표 ===== -->
+      <section id="goals">
+        <h2>2. 학습 목표</h2>
+        <ol>
+          <li>그리디 디코딩이 왜 '국소 최적이지 전역 최적이 아닌지', 빔 서치가 이를 어떻게 보완하는지 설명할 수 있다.</li>
+          <li>샘플링과 top-K·top-P의 차이, 그리고 언제 빔 서치/샘플링을 쓰는지 안다.</li>
+          <li>softmax의 온도(temperature)가 분포를 어떻게 바꾸는지(낮으면 뾰족, 높으면 균등) 설명할 수 있다.</li>
+        </ol>
+      </section>
+
+      <!-- ===== 3. 본문 ===== -->
+      <section id="body">
+        <h2>3. 본문</h2>
+
+        <!-- 블록 1 -->
+        <div id="block1">
+          <h3><span class="badge">블록 1</span>다음 토큰 확률 분포와 그리디 디코딩의 한계</h3>
+
+          <details class="en">
+            <summary><span class="chev">▸</span> 영문 원문 보기</summary>
+            <div class="en-body">
+              <p><span class="ts">37:18</span> our L(L)M is just a decoder only architecture (...) we're just obtaining output probabilities (...) <span class="ts">37:56</span> an output probability distribution that represents what the model thinks is the likelihood that there will be a next token. (...) <span class="ts">38:33</span> how would you choose the next token (...)? (...) take the token with highest probability. (...) <span class="ts">39:05</span> it always responds something that is slightly different (...) if you always choose the token with the highest probability (...) it's all deterministic (...) you're always going to generate the same thing (...) <span class="ts">39:50</span> You're locally optimal, but you're not necessarily globally optimal. (...) if you always choose the highest probability token, you will not necessarily obtain the highest probability sequence.</p>
+            </div>
+          </details>
+
+          <div class="ko">
+            <span class="label">한국어 번역</span>
+            <p>LLM은 decoder-only 구조이고, 중간 과정을 다 안다고 치면 결국 출력 확률 분포를 얻습니다. 입력 토큰(들)이 주어지면, 다음 토큰이 'a', 'airplane', 'fluffy' 등이 될 가능성을 나타내는 확률 분포가 나옵니다. 이 분포에서 다음 토큰을 어떻게 고를까요?</p>
+            <p><strong>그리디 디코딩(greedy decoding)</strong>: 가장 확률 높은 토큰을 고릅니다. 자연스러운 방법이지만 두 가지 한계가 있습니다.</p>
+            <ol>
+              <li><strong>다양성 부족</strong>: 이 계산은 모두 결정론적(deterministic)이라, 같은 입력이면 늘 같은 출력이 나옵니다. (그런데 ChatGPT·Gemini는 같은 질문에도 매번 조금씩 다르게 답하죠 — 그리디가 아니기 때문)</li>
+              <li><strong>국소 최적 ≠ 전역 최적</strong>: 매 단계 가장 확률 높은 토큰을 고른다고 해서, 가장 확률 높은 '시퀀스'가 나오는 건 아닙니다. 예를 들어 첫 토큰을 0.8짜리로 골랐는데 그 뒤가 다 낮은 확률이면, 첫 토큰이 0.2여도 그 뒤가 높은 경로보다 전체 확률이 낮을 수 있습니다.</li>
+            </ol>
+          </div>
+
+          <div class="terms">
+            <span class="label">용어 설명</span>
+            <dl>
+              <dt>디코딩 <span class="en-term">(decoding)</span></dt><dd>출력 확률 분포에서 실제 토큰을 고르는 과정(추론 시).</dd>
+              <dt>그리디 디코딩 <span class="en-term">(greedy decoding)</span></dt><dd>매 단계 최고 확률 토큰을 고름.</dd>
+              <dt>결정론적 <span class="en-term">(deterministic)</span></dt><dd>같은 입력이면 늘 같은 출력. 그리디의 성질.</dd>
+              <dt>국소 최적 / 전역 최적 <span class="en-term">(locally / globally optimal)</span></dt><dd>매 단계 최선 / 시퀀스 전체로 최선. 둘은 다를 수 있음.</dd>
+            </dl>
+          </div>
+        </div>
+
+        <!-- 블록 2 -->
+        <div id="block2">
+          <h3><span class="badge">블록 2</span>빔 서치 (beam search)</h3>
+
+          <details class="en">
+            <summary><span class="chev">▸</span> 영문 원문 보기</summary>
+            <div class="en-body">
+              <p><span class="ts">41:11</span> a second method that is about keeping track of the K most probable path. (...) beam search (...) K is sometimes called the beam size or the beam width (...) the number of path(s) that we keep track of. (...) <span class="ts">42:09</span> keep track of these two branches (...) always save the two most probable path(s). (...) <span class="ts">43:26</span> we pick the (...) sequence with the highest probability. (...) the log probability of the sequence is the sum of the log probability of each next token prediction. (...) <span class="ts">43:57</span> the more you generate tokens the lower your end sequence probability (...) this method (...) will prioritize sequences that are shorter (...) <span class="ts">45:51</span> beam search (...) requires a lot of computation. (...) <span class="ts">46:19</span> people use beam search for things like machine translation.</p>
+            </div>
+          </details>
+
+          <div class="ko">
+            <span class="label">한국어 번역</span>
+            <p>두 번째 방법은 가장 확률 높은 K개 경로를 추적하는 빔 서치(beam search)입니다. K는 빔 크기(beam size/width)라 불리며, 추적하는 경로 수입니다.</p>
+            <p>작동: BOS 토큰에서 시작해, 다음 토큰 후보 중 확률 상위 2개(K=2)를 골라 두 갈래를 유지합니다. 다음 단계에서 이 두 갈래 각각의 다음 토큰 확률을 보고, 다시 가장 확률 높은 2개 경로를 남깁니다. 이렇게 하면 그리디보다 더 전역 최적에 가까운 해를 찾습니다. 마지막에 후보 K개 중 시퀀스 확률이 가장 높은 것을 고릅니다.</p>
+            <p>시퀀스 확률은 보통 각 다음 토큰 확률의 로그를 더해서 잽니다(로그 확률의 합). 한 가지 한계 — 토큰을 많이 생성할수록 시퀀스 확률이 낮아집니다(0~1 확률을 계속 곱하니 0에 가까워짐). 그러면 짧은 시퀀스가 유리해지므로, 빔 서치는 이를 상쇄하는 보정항(토큰 수로 나누는 식)을 둡니다.</p>
+            <p>빔 서치는 경로를 여럿 추적·저장해야 해 연산이 많이 듭니다. 또 '가장 그럴듯한' 경로를 찾으므로 다양성·창의성이 떨어집니다. 그래서 일상 생성에는 잘 안 쓰고, 기계번역처럼 '매우 그럴듯한' 결과가 필요한 경우에 씁니다.</p>
+          </div>
+
+          <div class="diagram">
+            <pre class="mermaid">
+graph LR
+  S(["BOS"]) --> A["the · 0.5"]
+  S --> B["a · 0.3"]
+  S -.버려짐.-> X["dog · 0.1"]
+  A --> A1["cat · 0.4"]
+  A --> A2["sky · 0.2"]
+  B --> B1["fluffy · 0.5"]
+  B --> B2["big · 0.2"]
+  class A,B,A1,B1 kept
+  classDef kept fill:#f6ebe9,stroke:#8C1515,stroke-width:2px,color:#1a1a1a;
+            </pre>
+            <div class="cap">K=2 빔 서치: 각 단계에서 확률 상위 2개 경로(붉은색)만 남기고 나머지는 버린다 — 개념도</div>
+          </div>
+
+          <p>시퀀스 확률을 로그 합으로 계산하는 식(보정 전 기본형):</p>
+          <div>$$\log P(\text{seq}) = \sum_{i=1}^{n} \log P(w_i \mid w_{1:i-1})$$</div>
+
+          <div class="terms">
+            <span class="label">용어 설명</span>
+            <dl>
+              <dt>빔 서치 <span class="en-term">(beam search)</span></dt><dd>확률 상위 K개 경로를 추적해 전역 최적에 가까운 시퀀스를 찾는 방법.</dd>
+              <dt>빔 크기/너비 <span class="en-term">(beam size/width, K)</span></dt><dd>동시에 추적하는 경로 수.</dd>
+              <dt>로그 확률 <span class="en-term">(log probability)</span></dt><dd>시퀀스 확률을 다룰 때 곱셈 대신 로그 합으로 계산.</dd>
+              <dt>길이 보정</dt><dd>긴 시퀀스가 불리해지는 것을 상쇄하는 항.</dd>
+            </dl>
+          </div>
+        </div>
+
+        <!-- 블록 3 -->
+        <div id="block3">
+          <h3><span class="badge">블록 3</span>샘플링과 top-K·top-P</h3>
+
+          <details class="en">
+            <summary><span class="chev">▸</span> 영문 원문 보기</summary>
+            <div class="en-body">
+              <p><span class="ts">46:19</span> people use a third method (...) called (...) the sampling method. (...) they just sample the next token using that probability distribution. (...) fluffy, gentle, kind (...) will have a higher probability of being drawn as opposed to (...) airplane. (...) <span class="ts">48:09</span> highest probability is called greedy decoding (...) Beam search is a little bit better (...) but it lacks diversity (...) which is why what we want to do is to actually sample each token. (...) <span class="ts">49:13</span> top K sampling (...) you select the top (...) K highest probable tokens and you sample from them. (...) <span class="ts">49:44</span> top P (...) you limit yourself to the highest probable tokens such that their cumulative probability is more than a threshold P.</p>
+            </div>
+          </details>
+
+          <div class="ko">
+            <span class="label">한국어 번역</span>
+            <p>세 번째 방법은 샘플링(sampling)입니다. 다음 토큰 확률 분포에서 토큰을 '뽑습니다(sample)'. 예를 들어 'fluffy', 'gentle', 'kind', 'smart'는 확률이 높아 잘 뽑히고, 'airplane'은 확률이 낮아(0은 아니지만) 잘 안 뽑힙니다.</p>
+            <p>정리하면 — 최고 확률만 고르는 그리디 디코딩은 보통 원치 않는 방식이고, 빔 서치는 전역 최적에 더 가깝지만 다양성·창의성이 부족합니다. 그래서 매 토큰을 샘플링하려 합니다. 다만 아주 낮은 확률 토큰도 이론상 뽑힐 수 있는데 이는 바람직하지 않으므로, 뽑을 후보를 제한합니다.</p>
+            <ul>
+              <li><strong>top-K 샘플링</strong>: 확률 상위 K개 토큰만 두고 그중에서 샘플링. (예: K=4면 상위 4개에서 뽑음)</li>
+              <li><strong>top-P 샘플링</strong>: 누적 확률이 임계값 P를 넘을 때까지의 상위 토큰들만 두고 샘플링. (개수가 아니라 누적 확률 기준)</li>
+            </ul>
+          </div>
+
+          <div class="terms">
+            <span class="label">용어 설명</span>
+            <dl>
+              <dt>샘플링 <span class="en-term">(sampling)</span></dt><dd>확률 분포에서 다음 토큰을 무작위로 뽑음. 다양성·창의성 부여.</dd>
+              <dt>top-K 샘플링</dt><dd>확률 상위 K개로 후보 제한.</dd>
+              <dt>top-P 샘플링 <span class="en-term">(누클리어스 샘플링)</span></dt><dd>누적 확률 P까지의 상위 토큰으로 후보 제한.</dd>
+            </dl>
+          </div>
+        </div>
+
+        <!-- 블록 4 -->
+        <div id="block4">
+          <h3><span class="badge">블록 4</span>확률은 어떻게 나오나: 선형 층 + softmax</h3>
+
+          <details class="en">
+            <summary><span class="chev">▸</span> 영문 원문 보기</summary>
+            <div class="en-body">
+              <p><span class="ts">50:24</span> how do you obtain these probabilities to start with. (...) <span class="ts">50:55</span> these transformer(-)based architecture(s) (...) compute(s) an encoded representation of the input (...) some final layers at the very top (...) projecting the vector into the space of the vocabulary. (...) <span class="ts">51:49</span> your encoded embedding of the token go through a linear layer which (...) projects your d(-)model vector into a space of dimension size of v. (...) you would have a softmax layer which (...) converts everything to probabilities such that everything sums to one.</p>
+            </div>
+          </details>
+
+          <div class="ko">
+            <span class="label">한국어 번역</span>
+            <p>그럼 이 확률은 애초에 어떻게 나올까요? 트랜스포머 구조는 입력의 인코딩된 표현을 계산하고, 구조 맨 위에 마지막 층들을 둡니다. 그 역할은 벡터를 어휘 공간(vocabulary space)으로 투영하는 것입니다 — 각 토큰을 뽑을 확률을 숫자로 얻으려고요.</p>
+            <p>구체적으로: 맨 위에서, 토큰의 인코딩 임베딩(크기 <span class="en-term">d_model</span>)을 선형 층(linear layer)에 통과시켜 어휘 크기 V 차원으로 투영합니다. 그리고 softmax 층을 거쳐 전부를 합이 1인 확률로 바꿉니다.</p>
+            <p>softmax가 로짓 \(z\)를 확률로 바꾸는 식:</p>
+            <div>$$P(w_i) = \frac{e^{z_i}}{\displaystyle\sum_{j=1}^{V} e^{z_j}}$$</div>
+          </div>
+
+          <div class="terms">
+            <span class="label">용어 설명</span>
+            <dl>
+              <dt>어휘 공간 <span class="en-term">(vocabulary space)</span></dt><dd>사전의 모든 토큰에 대응하는 V차원 공간.</dd>
+              <dt>선형 층 <span class="en-term">(linear layer)</span></dt><dd>d_model 벡터를 V 차원으로 투영하는 마지막 층.</dd>
+              <dt>softmax 층</dt><dd>값들을 합이 1인 확률 분포로 변환.</dd>
+              <dt>로짓 <span class="en-term">(logit)</span></dt><dd>softmax 직전의 점수값. (다음 블록에서 등장)</dd>
+            </dl>
+          </div>
+        </div>
+
+        <!-- 블록 5 -->
+        <div id="block5">
+          <h3><span class="badge">블록 5</span>온도(temperature): 결정성과 창의성 조절</h3>
+
+          <details class="en">
+            <summary><span class="chev">▸</span> 영문 원문 보기</summary>
+            <div class="en-body">
+              <p><span class="ts">52:16</span> a hyperparameter that is quite important (...) the temperature T. (...) the probability of the next token being a given word (...) equal to the exponential of the input (...) over temperature (...) normalize(d) by the sum of all the other exponential (...) over t. (...) <span class="ts">54:58</span> low temperature will create a spiky distribution and then high temperature will create a uniform distribution. (...) <span class="ts">1:01:16</span> if you have a small temperature, it will encourage the next token to be (...) the highest probable token. (...) high temperature (...) closer to a uniform (...) your output will be more creative. (...) <span class="ts">1:02:11</span> if you have a strictly positive temperature, every time you run your model (...) you will obtain a different output.</p>
+            </div>
+          </details>
+
+          <div class="ko">
+            <span class="label">한국어 번역</span>
+            <p>중요한 하이퍼파라미터가 온도(temperature, T)입니다. softmax에서 각 토큰 확률을 계산할 때, 그 토큰의 값을 T로 나눈 지수(exp)를, 모든 토큰의 (값÷T) 지수의 합으로 정규화합니다.</p>
+            <div>$$P(w_i) = \frac{e^{z_i / T}}{\displaystyle\sum_{j=1}^{V} e^{z_j / T}}$$</div>
+            <p>온도의 효과:</p>
+            <ul>
+              <li><strong>낮은 온도</strong>: 분포가 뾰족(spiky)해집니다. 가장 확률 높은 토큰이 더 도드라져 거의 그것만 뽑힙니다. → 결정론적·고품질에 가까운 출력. <span style="color:var(--muted)">(\(T \to 0\) 이면 최고값 토큰만 확률 1)</span></li>
+              <li><strong>높은 온도</strong>: 분포가 균등(uniform)에 가까워집니다. 원래 낮았던 토큰도 뽑힐 확률이 올라갑니다. → 창의적·다양한 출력. <span style="color:var(--muted)">(\(T \to \infty\) 이면 모든 토큰이 \(1/V\))</span></li>
+            </ul>
+            <p>(수학적으로, 최고값 토큰의 지수로 분자·분모를 묶어내면, T→0일 때 최고값 토큰만 확률 1로 뾰족해지고, T→∞일 때 모든 토큰이 1/V로 균등해짐을 보일 수 있습니다.)</p>
+            <p>실무 직관: 매우 창의적인 글을 원하면 높은 온도, 결정적이고 정확한 답을 원하면 낮은 온도를 씁니다. 온도가 0보다 크면(strictly positive) 같은 입력이라도 매번 다른 출력이 나옵니다.</p>
+          </div>
+
+          <div class="callout note">
+            <div class="c-title">⚠️ 결정성에 관한 중요한 주의</div>
+            <p>트랜스포머 구조에서 확률적인 것은 '다음 토큰 샘플링' 하나뿐이고, 나머지는 전부 결정론적입니다. 그래서 T=0이면 이론상 출력이 하나로 고정됩니다. 하지만 실제로는 GPU 연산 순서 등 때문에 T=0에서도 결과가 달라질 수 있습니다(스케일이 크게 다른 수를 더하는 순서가 결과에 영향). 강사는 관심 있으면 "Defeating Nondeterminism in LLM Inference" 글을 (선택) 읽어보라고 권했습니다.</p>
+          </div>
+
+          <div class="terms">
+            <span class="label">용어 설명</span>
+            <dl>
+              <dt>온도 <span class="en-term">(temperature, T)</span></dt><dd>softmax에서 분포의 뾰족함을 조절하는 하이퍼파라미터.</dd>
+              <dt>낮은 온도 → 뾰족(spiky)</dt><dd>최고 확률 토큰 위주. 결정적.</dd>
+              <dt>높은 온도 → 균등(uniform)</dt><dd>다양한 토큰. 창의적.</dd>
+              <dt>비결정성 <span class="en-term">(nondeterminism)</span></dt><dd>T=0에서도 GPU 연산 순서 등으로 결과가 달라질 수 있는 실제 현상.</dd>
+            </dl>
+          </div>
+        </div>
+
+        <!-- 블록 6 -->
+        <div id="block6">
+          <h3><span class="badge">블록 6</span>형식 강제: 가이드 디코딩 (JSON 등)</h3>
+
+          <details class="en">
+            <summary><span class="chev">▸</span> 영문 원문 보기</summary>
+            <div class="en-body">
+              <p><span class="ts">1:04:41</span> generate an output in a very specific format (...) JSON. (...) <span class="ts">1:05:15</span> a very naive approach (...) tell your LLM (...) generate this in JSON (...) try to see if it's a valid JSON. If it's not you repeat (...) <span class="ts">1:05:39</span> a second approach (...) called guided decoding (...) during the generation process, it filters out (...) invalid next tokens. (...) <span class="ts">1:06:13</span> sometimes you can have more than one permitted next token in which case you would go back to (...) next token strategy. (...) <span class="ts">1:06:44</span> finite state machine FSM (...) context (free) grammar.</p>
+            </div>
+          </details>
+
+          <div class="ko">
+            <span class="label">한국어 번역</span>
+            <p>출력을 특정 형식(예: JSON)으로 받고 싶을 때가 있습니다.</p>
+            <ul>
+              <li><strong>순진한 방법</strong>: "JSON으로 만들어줘"라고 시키고, 유효한 JSON인지 확인해 아니면 다시 생성하게 반복.</li>
+              <li><strong>가이드 디코딩(guided decoding)</strong>: 생성 과정에서 '유효하지 않은 다음 토큰'을 걸러냅니다. 예를 들어 JSON이면 첫 토큰은 반드시 여는 중괄호여야 하므로 그것만 허용하고, 다음은 속성 이름만 허용하는 식입니다. 허용되는 다음 토큰이 여럿이면, 그중에서 앞서 본 토큰 선택 전략(샘플링 등)을 적용합니다.</li>
+            </ul>
+            <p>(구현은 유한 상태 기계(FSM)나 문맥 자유 문법(context-free grammar) 기반 논문들이 있으나 강의에서는 다루지 않음 — 포인터만 제시)</p>
+          </div>
+
+          <div class="terms">
+            <span class="label">용어 설명</span>
+            <dl>
+              <dt>가이드 디코딩 <span class="en-term">(guided decoding)</span></dt><dd>생성 중 형식에 안 맞는 토큰을 걸러 특정 형식(JSON 등)을 강제.</dd>
+              <dt>유한 상태 기계 <span class="en-term">(FSM, Finite State Machine)</span></dt><dd>허용 토큰을 상태로 관리하는 형식 강제 기법.</dd>
+            </dl>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== 4. 용어집 ===== -->
+      <section id="glossary">
+        <h2>4. 핵심 용어집</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>영문</th><th>한국어</th><th>발음</th><th>뜻</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>decoding</td><td>디코딩</td><td>디코딩</td><td>확률 분포에서 토큰 고르기</td></tr>
+              <tr><td>greedy decoding</td><td>그리디 디코딩</td><td>그리디</td><td>매 단계 최고 확률 토큰</td></tr>
+              <tr><td>beam search</td><td>빔 서치</td><td>빔 서치</td><td>상위 K 경로 추적, 전역 최적 근사</td></tr>
+              <tr><td>beam size / width</td><td>빔 크기/너비</td><td>—</td><td>추적 경로 수(K)</td></tr>
+              <tr><td>sampling</td><td>샘플링</td><td>샘플링</td><td>확률 분포에서 무작위로 뽑음</td></tr>
+              <tr><td>top-K sampling</td><td>top-K 샘플링</td><td>—</td><td>상위 K개로 후보 제한</td></tr>
+              <tr><td>top-P sampling</td><td>top-P 샘플링</td><td>—</td><td>누적 확률 P까지로 후보 제한</td></tr>
+              <tr><td>linear layer</td><td>선형 층</td><td>—</td><td>d_model→V 투영</td></tr>
+              <tr><td>softmax</td><td>소프트맥스</td><td>—</td><td>합이 1인 확률로 변환</td></tr>
+              <tr><td>logit</td><td>로짓</td><td>로짓</td><td>softmax 직전 점수값</td></tr>
+              <tr><td>temperature</td><td>온도</td><td>템퍼러처</td><td>분포 뾰족함 조절 하이퍼파라미터</td></tr>
+              <tr><td>deterministic</td><td>결정론적</td><td>—</td><td>같은 입력→같은 출력</td></tr>
+              <tr><td>guided decoding</td><td>가이드 디코딩</td><td>—</td><td>형식 강제 생성</td></tr>
+              <tr><td>FSM</td><td>유한 상태 기계</td><td>—</td><td>허용 토큰 상태 관리</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ===== 5. 복습 문제 ===== -->
+      <section id="review">
+        <h2>5. 복습 문제</h2>
+        <div class="callout review">
+          <div class="c-title">✏️ 스스로 점검</div>
+          <ol>
+            <li>그리디 디코딩이 '국소 최적이지만 전역 최적이 아니다'라는 말을 예로 설명하라. 빔 서치는 이를 어떻게 보완하는가?</li>
+            <li>빔 서치와 샘플링은 각각 어떤 상황에 적합한가? top-K와 top-P의 차이는?</li>
+            <li>온도(temperature)가 낮을 때와 높을 때 출력 분포와 결과는 각각 어떻게 달라지는가?</li>
+          </ol>
+        </div>
+      </section>
+
+      <!-- ===== 부록 ===== -->
+      <section id="appendix">
+        <h2>부록 · 실무 적용 포인트 <span style="font-size:14px; font-weight:500; color:var(--muted);">(NLP·LLM 기술 내용 한정)</span></h2>
+        <div class="callout practice">
+          <div class="c-title">💡 현장에서 써먹기</div>
+          <ul>
+            <li><strong>온도(temperature)는 실무에서 직접 조절할 수 있는 가장 실용적인 손잡이다.</strong> 정확성·일관성이 중요한 작업(데이터 추출, 표 작성, 공문 초안)은 낮은 온도로, 아이디어 발산·창의적 문구(홍보 문안, 브레인스토밍)는 높은 온도로 설정한다. 같은 모델도 온도에 따라 결과 성격이 크게 달라진다.</li>
+            <li><strong>"같은 질문에 매번 다른 답"은 버그가 아니라 샘플링의 본질이다.</strong> 출력이 매번 조금씩 다른 이유는 다음 토큰을 확률적으로 뽑기 때문이다. 재현성이 필요한 업무라면 온도를 낮추되, T=0에서도 완전히 똑같지 않을 수 있다는 점(GPU 연산 순서)은 알아둘 만하다.</li>
+            <li><strong>가이드 디코딩은 "AI 출력을 정해진 양식에 맞춰 받기"의 기술적 토대다.</strong> JSON·표 등 정해진 형식으로 안정적으로 받아야 하는 업무(시스템 연동, 일괄 처리)에서, 형식이 깨지는 문제를 구조적으로 줄일 수 있는 방법이 존재한다는 점을 알아두면 도구 선택·요청 방식에 도움이 된다.</li>
+          </ul>
+        </div>
+
+        <div class="next">
+          <strong>다음 섹션 예고</strong> · 2부(Shervin) — 프롬프팅 전략. context length, 인컨텍스트 러닝(zero/few-shot), 사고연쇄(CoT), self-consistency. <span class="ts">1:06:44</span> 이후.
+        </div>
+      </section>
+
+    </article>
+  </main>
+</div>
+
+<!-- KaTeX 자동 렌더 -->
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}],throwOnError:false});"></script>
+
+<!-- Mermaid -->
+<script type="module">
+  try{
+    const m = await import('https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs');
+    m.default.initialize({startOnLoad:true, theme:'base', themeVariables:{
+      fontFamily:'Pretendard, sans-serif', primaryColor:'#fffdfb', primaryBorderColor:'#d8d0c5',
+      primaryTextColor:'#1a1a1a', lineColor:'#b9554f', fontSize:'14px'
+    }});
+  }catch(e){ /* 오프라인이면 도식은 코드로 표시 */ }
+</script>
+
+<!-- 목차 활성표시 + 모바일 드로어 -->
+<script>
+  // 모바일 드로어
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('overlay');
+  const btn = document.getElementById('menuBtn');
+  const toggle = (on)=>{ sb.classList.toggle('open',on); ov.classList.toggle('show',on); };
+  btn.addEventListener('click',()=>toggle(!sb.classList.contains('open')));
+  ov.addEventListener('click',()=>toggle(false));
+  document.querySelectorAll('.toc a').forEach(a=>a.addEventListener('click',()=>{ if(window.innerWidth<=900) toggle(false); }));
+
+  // 현재 위치 강조
+  const links = [...document.querySelectorAll('.toc a')];
+  const map = {}; links.forEach(a=>{ const id=a.getAttribute('href').slice(1); map[id]=a; });
+  const targets = Object.keys(map).map(id=>document.getElementById(id)).filter(Boolean);
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(en=>{
+      if(en.isIntersecting){
+        links.forEach(l=>l.classList.remove('active'));
+        const a = map[en.target.id]; if(a) a.classList.add('active');
+      }
+    });
+  },{rootMargin:'-15% 0px -75% 0px', threshold:0});
+  targets.forEach(t=>io.observe(t));
+</script>
+
+</body>
+</html>

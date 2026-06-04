@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CME295 Lecture 2 · 섹션 2. 위치 임베딩 (Position Embedding)</title>
+
+<!-- 폰트: Pretendard (CDN, 없으면 시스템 폰트 폴백) -->
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<!-- 수식: KaTeX -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
+
+<style>
+  :root{
+    --bg:#FBF9F6;
+    --paper:#ffffff;
+    --ink:#1a1a1a;
+    --ink-soft:#4a4744;
+    --muted:#7a756f;
+    --accent:#8C1515;          /* Stanford 카디널 */
+    --accent-soft:#b9554f;
+    --tint:#f6ebe9;            /* 카디널 옅은 틴트 */
+    --tint-2:#f3efe9;          /* 따뜻한 회색 */
+    --line:#e7e1d9;
+    --line-strong:#d8d0c5;
+    --radius:10px;
+    --maxw:760px;
+    --sidew:268px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Pretendard","Pretendard Variable",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    line-height:1.78;
+    font-size:16.5px;
+    -webkit-font-smoothing:antialiased;
+    word-break:keep-all;
+  }
+
+  /* ===== 레이아웃 ===== */
+  .layout{display:flex; align-items:flex-start;}
+  .sidebar{
+    width:var(--sidew); flex:0 0 var(--sidew);
+    position:sticky; top:0; height:100vh; overflow-y:auto;
+    padding:28px 18px 40px; border-right:1px solid var(--line);
+    background:rgba(251,249,246,.85); backdrop-filter:saturate(120%) blur(2px);
+  }
+  .content{flex:1 1 auto; min-width:0; display:flex; justify-content:center; padding:0 24px;}
+  .doc{width:100%; max-width:var(--maxw); padding:48px 0 120px;}
+
+  /* ===== 사이드바 목차 ===== */
+  .toc-brand{font-size:12px; letter-spacing:.04em; color:var(--accent); font-weight:700; text-transform:uppercase; margin-bottom:4px;}
+  .toc-title{font-size:15px; font-weight:700; margin:0 0 18px; line-height:1.4; color:var(--ink);}
+  .toc{list-style:none; margin:0; padding:0; font-size:13.5px;}
+  .toc li{margin:1px 0;}
+  .toc a{display:block; padding:5px 10px; border-radius:7px; color:var(--ink-soft); text-decoration:none; border-left:2px solid transparent;}
+  .toc a:hover{background:var(--tint-2); color:var(--ink);}
+  .toc a.sub{padding-left:22px; font-size:13px; color:var(--muted);}
+  .toc a.active{color:var(--accent); background:var(--tint); border-left-color:var(--accent); font-weight:600;}
+
+  /* ===== 타이포 ===== */
+  h1{font-size:27px; line-height:1.32; font-weight:800; letter-spacing:-.01em; margin:0 0 6px;}
+  .subtitle{font-size:18px; font-weight:700; color:var(--accent); margin:0 0 22px;}
+  h2{font-size:21px; font-weight:800; letter-spacing:-.01em; margin:46px 0 14px; padding-bottom:9px; border-bottom:2px solid var(--line-strong);}
+  h3{font-size:17.5px; font-weight:700; margin:34px 0 12px; color:var(--ink);}
+  h3 .badge{display:inline-block; font-size:12px; font-weight:700; color:#fff; background:var(--accent); border-radius:6px; padding:2px 8px; margin-right:8px; vertical-align:middle;}
+  p{margin:12px 0;}
+  strong{font-weight:700;}
+  a{color:var(--accent);}
+  ul,ol{margin:12px 0; padding-left:22px;}
+  li{margin:6px 0;}
+  hr{display:none;}
+
+  /* ===== 출처 배너 ===== */
+  .source-banner{
+    display:flex; gap:10px; align-items:baseline;
+    background:var(--tint); border-left:4px solid var(--accent);
+    border-radius:0 var(--radius) var(--radius) 0;
+    padding:12px 16px; margin:0 0 8px; font-size:13.5px; color:var(--ink-soft);
+  }
+  .source-banner b{color:var(--accent);}
+
+  /* ===== 한국어 번역 카드 ===== */
+  .ko{
+    background:var(--paper); border:1px solid var(--line);
+    border-left:4px solid var(--accent); border-radius:var(--radius);
+    padding:6px 22px; margin:16px 0;
+    box-shadow:0 1px 2px rgba(60,40,20,.04);
+  }
+  .ko > .label, .terms > .label{
+    display:inline-block; font-size:11.5px; font-weight:800; letter-spacing:.06em;
+    color:var(--accent); text-transform:uppercase; margin:14px 0 -4px;
+  }
+
+  /* ===== 영문 원문 토글 ===== */
+  details.en{
+    background:var(--tint-2); border:1px solid var(--line); border-radius:var(--radius);
+    margin:14px 0; overflow:hidden;
+  }
+  details.en > summary{
+    cursor:pointer; list-style:none; padding:11px 16px;
+    font-size:13.5px; font-weight:700; color:var(--muted);
+    display:flex; align-items:center; gap:8px; user-select:none;
+  }
+  details.en > summary::-webkit-details-marker{display:none;}
+  details.en > summary .chev{transition:transform .2s; color:var(--accent-soft);}
+  details.en[open] > summary .chev{transform:rotate(90deg);}
+  details.en[open] > summary{border-bottom:1px solid var(--line);}
+  .en-body{padding:4px 18px 14px; font-size:14px; line-height:1.7; color:#5c574f; font-style:normal;}
+  .en-body p{margin:10px 0;}
+  .ts{
+    display:inline-block; font-family:"SFMono-Regular",ui-monospace,Menlo,Consolas,monospace;
+    font-size:11.5px; font-style:normal; color:var(--accent);
+    background:var(--tint); border:1px solid #e6cfcc; border-radius:5px;
+    padding:0 5px; margin:0 2px; vertical-align:baseline;
+  }
+
+  /* ===== 용어 설명 ===== */
+  .terms{
+    border:1px solid var(--line); border-left:3px solid var(--accent-soft);
+    border-radius:var(--radius); background:#fffdfb; padding:4px 20px 8px; margin:16px 0;
+  }
+  .terms dl{margin:8px 0;}
+  .terms dt{font-weight:700; color:var(--ink); margin-top:8px;}
+  .terms dt .en-term{color:var(--accent); font-weight:600;}
+  .terms dd{margin:1px 0 6px; color:var(--ink-soft); font-size:15px;}
+
+  /* ===== 표 ===== */
+  .table-wrap{overflow-x:auto; margin:16px 0; border:1px solid var(--line); border-radius:var(--radius);}
+  table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:520px;}
+  thead th{background:var(--accent); color:#fff; font-weight:700; text-align:left; padding:11px 14px; white-space:nowrap;}
+  tbody td{padding:9px 14px; border-top:1px solid var(--line);}
+  tbody tr:nth-child(even){background:var(--tint-2);}
+  tbody td:first-child{font-family:ui-monospace,Menlo,monospace; font-size:13px; color:var(--accent);}
+
+  /* ===== 콜아웃 ===== */
+  .callout{border-radius:var(--radius); padding:14px 20px 6px; margin:18px 0;}
+  .callout .c-title{font-weight:800; margin:6px 0 2px; display:flex; align-items:center; gap:8px;}
+  .callout.review{background:#fff; border:1px solid var(--line-strong);}
+  .callout.review ol{counter-reset:none;}
+  .callout.note{background:var(--tint-2); border-left:4px solid var(--muted); border-radius:0 var(--radius) var(--radius) 0; padding-bottom:12px;}
+  .callout.practice{background:var(--tint); border:1px solid #e6cfcc; padding-bottom:14px;}
+  .callout.practice li{margin:12px 0;}
+  .next{margin-top:40px; padding:14px 18px; background:var(--tint-2); border-radius:var(--radius); font-size:14px; color:var(--ink-soft);}
+
+  /* 수식 / 도식 */
+  .katex-display{margin:14px 0; overflow-x:auto; overflow-y:hidden; padding:6px 0;}
+  .diagram{background:#fffdfb; border:1px solid var(--line); border-radius:var(--radius); padding:14px; margin:16px 0; text-align:center;}
+  .diagram .cap{font-size:12.5px; color:var(--muted); margin-top:6px;}
+  .mermaid{display:flex; justify-content:center;}
+
+  /* ===== 모바일 ===== */
+  .menu-btn{display:none;}
+  .overlay{display:none;}
+  @media (max-width:900px){
+    .menu-btn{
+      display:flex; align-items:center; justify-content:center;
+      position:fixed; top:14px; left:14px; z-index:50;
+      width:42px; height:42px; border-radius:10px; border:1px solid var(--line-strong);
+      background:var(--paper); color:var(--accent); font-size:20px; cursor:pointer;
+      box-shadow:0 2px 8px rgba(60,40,20,.12);
+    }
+    .sidebar{
+      position:fixed; left:0; top:0; z-index:60; height:100vh;
+      transform:translateX(-105%); transition:transform .25s ease;
+      box-shadow:4px 0 24px rgba(0,0,0,.12); background:var(--bg);
+    }
+    .sidebar.open{transform:translateX(0);}
+    .overlay.show{display:block; position:fixed; inset:0; background:rgba(0,0,0,.32); z-index:55;}
+    .content{padding:0 16px;}
+    .doc{padding:64px 0 100px;}
+    body{font-size:16px;}
+    h1{font-size:23px;}
+    .ko,.terms{padding-left:16px; padding-right:16px;}
+  }
+
+  /* ===== 인쇄 ===== */
+  @media print{
+    .sidebar,.menu-btn,.overlay{display:none !important;}
+    .content{padding:0;}
+    body{background:#fff; font-size:11pt;}
+    details.en{display:none;}          /* 인쇄본은 한국어 위주 */
+    .ko,.terms,.callout,.table-wrap{break-inside:avoid; box-shadow:none;}
+    a{color:var(--ink);}
+  }
+  .home-btn{position:fixed; top:16px; right:18px; z-index:70;
+    display:inline-flex; align-items:center; gap:6px; text-decoration:none;
+    background:var(--paper); color:var(--accent); border:1px solid var(--line-strong);
+    border-radius:999px; padding:8px 14px; font-size:13.5px; font-weight:700;
+    box-shadow:0 2px 8px rgba(60,40,20,.12); transition:background .12s,color .12s;}
+  .home-btn:hover{background:var(--accent); color:#fff; border-color:var(--accent);}
+  @media (max-width:900px){ .home-btn{top:14px; right:14px; padding:8px 12px; font-size:12.5px;} }
+  @media print{ .home-btn{display:none !important;} }
+</style>
+</head>
+<body>
+<a class="home-btn" href="../index.html" title="전체 목차로 돌아가기">← 전체 목차</a>
+
+<button class="menu-btn" id="menuBtn" aria-label="목차 열기">☰</button>
+<div class="overlay" id="overlay"></div>
+
+<div class="layout">
+  <nav class="sidebar" id="sidebar"><div class="toc-brand">Stanford CME295 · Lecture 2</div><p class="toc-title">섹션 2. 위치 임베딩 (Position Embedding)</p><ul class="toc"><li><a href="#overview">1. 강의 개요</a></li><li><a href="#goals">2. 학습 목표</a></li><li><a href="#body">3. 본문</a></li><li><a class="sub" href="#block1">블록 1 · 위치 정보의 필요성과 학습형 위치 임베딩</a></li><li><a class="sub" href="#block2">블록 2 · 사인·코사인 위치 임베딩과 '상대 거리' 직관</a></li><li><a class="sub" href="#block3">블록 3 · 위치 정보를 어텐션 층에 직접 넣기 (T5 bias, ALiBi)</a></li><li><a class="sub" href="#block4">블록 4 · RoPE: 회전 위치 임베딩 (오늘날 표준)</a></li><li><a href="#glossary">4. 핵심 용어집</a></li><li><a href="#review">5. 복습 문제</a></li><li><a href="#appendix">부록. 실무 적용 포인트 (NLP·LLM 기술 내용 한정)</a></li></ul></nav>
+  <main class="content"><article class="doc"><h1>CME295 Transformers &amp; LLMs — Lecture 2 한국어 교재</h1><p class="subtitle">섹션 2. 위치 임베딩 (Position Embedding)</p><div class="source-banner"><span>📄</span><span><b>원문 출처</b>: Stanford CME295, Autumn 2025, Lecture 2, 타임스탬프 <span class="ts">10:32</span>~<span class="ts">43:26</span></span></div><section id="overview"><h2>1. 강의 개요</h2><ul><li>트랜스포머는 토큰을 순차 처리하지 않고 직접 연결하므로 순서 정보를 잃는다. 이를 보완하는 위치 임베딩(position embedding)을 다룬다.</li><li>원논문의 두 방법(학습형 / 사인·코사인)과 각각의 장단점, 그리고 사인·코사인이 '상대 거리'를 담는 직관을 설명한다.</li><li>위치 정보를 어텐션 층에 직접 넣는 변형들(T5 상대 위치 bias, ALiBi)과, 오늘날 표준인 RoPE(회전 위치 임베딩)를 본다.</li></ul></section><section id="goals"><h2>2. 학습 목표</h2><ol><li>트랜스포머가 왜 위치 정보를 따로 주입해야 하는지(직접 연결 → 순서 상실) 설명할 수 있다.</li><li>학습형과 사인·코사인 방식의 차이·장단점을 비교하고, 사인·코사인이 상대 거리를 담는 원리를 안다.</li><li>RoPE가 쿼리·키를 회전시켜 상대 거리를 반영하는 방식이며 오늘날 대부분의 모델이 쓴다는 점을 이해한다.</li></ol></section><section id="body"><h2>3. 본문</h2><div id="block1"><h3><span class="badge">블록 1</span>위치 정보의 필요성과 학습형 위치 임베딩</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">10:32</span> we're letting tokens interact with all other tokens in a direct fashion. So they have direct links. But contrary to things like RNNs where you have a sequential dependency (...) here you're basically losing this idea of a token being processed before another one. So you kind of lose this position information. (...) <span class="ts">11:54</span> each position has one embedding. (...) they chose to add that embedding to the input token embedding. (...) <span class="ts">12:33</span> are the position embeddings learned or static? Both. (...) <span class="ts">13:33</span> you can only learn positions up to the max number of position that is in your training set. (...) <span class="ts">14:48</span> if you have at inference time a position that is beyond the position that was in the training set, well you have not learned that.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>트랜스포머는 토큰을 다른 모든 토큰과 직접 연결(direct link)합니다. 그런데 RNN처럼 토큰을 하나씩 순차로 처리하는 방식과 달리, 여기서는 어떤 토큰이 다른 토큰보다 먼저 처리됐다는 개념이 사라집니다. 즉 위치 정보를 잃습니다. 그래서 각 위치의 토큰을 정량화해, 트랜스포머가 입력을 처리할 때 그 위치 정보를 주입해야 합니다.</p>
+<p>원논문 저자들의 첫 방법은 위치마다 전용 임베딩을 두는 것입니다. 위치 1에 임베딩 하나, 위치 2에 임베딩 하나... 이런 식으로 두고, 이 위치 임베딩을 입력 토큰 임베딩에 더합니다. 예를 들어 "a cute teddy bear is reading"의 첫 단어 'a'는 [토큰 'a'의 임베딩] + [위치 1의 임베딩]으로 표현됩니다.</p>
+<p>이 위치 임베딩은 학습형(learned)일 수도, 정적(static)일 수도 있습니다. 저자들은 둘 다 시도했습니다. 학습형의 경우 위치별 임베딩을 경사하강법으로 학습합니다. 한계는 두 가지입니다.</p>
+<ol><li>학습 데이터에 크게 의존합니다(특정 위치에 특정 패턴이 자주 나오면 그 편향이 학습됨).</li><li>학습 데이터에 등장한 최대 위치까지만 학습할 수 있습니다. 예를 들어 길이 512까지로 학습했다면, 추론 시점에 그보다 뒤 위치가 나오면 학습된 값이 없습니다.</li></ol></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>위치 임베딩<span class="en-term">(position embedding)</span></dt><dd>토큰이 시퀀스에서 몇 번째인지를 담아 토큰 임베딩에 더하는 벡터.</dd><dt>직접 연결<span class="en-term">(direct link)</span></dt><dd>트랜스포머가 모든 토큰을 한꺼번에 연결하는 방식. 그 대가로 순서 정보를 잃음.</dd><dt>학습형<span class="en-term">(learned)</span> vs 정적<span class="en-term">(static)</span></dt><dd>위치 임베딩을 데이터로 학습하느냐 / 미리 정한 공식으로 두느냐.</dd><dt>과적합<span class="en-term">(overfitting)</span></dt><dd>학습 데이터에 지나치게 맞춰져 새 데이터에 약해지는 현상. 학습형 위치 임베딩의 위험.</dd></dl></div>
+</div>
+<div id="block2"><h3><span class="badge">블록 2</span>사인·코사인 위치 임베딩과 '상대 거리' 직관</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">15:56</span> you have one embedding per position but you're not going to learn that. (...) what the authors chose was a formulation using s(ine) and cosine. (...) <span class="ts">17:40</span> what you want is to represent positions in a way that reflects the following facts. words that are close together are likely to be more relevant as opposed to words that are further together. (...) <span class="ts">18:30</span> cosine of a minus b is equal to cosine of a cosine of b plus sin a sin b (...) <span class="ts">20:00</span> when you perform a dotproduct of these embeddings you end up with a sum of cosine that are a function of the relative distance between m and n. (...) <span class="ts">22:29</span> when m is equal to n this quantity is maximum which means (...) if you're looking at the position itself it's the most similar. (...) <span class="ts">24:31</span> using this method leads to comparable results compared to the learned one. But here we have a big advantage because it can extend to any sequence length not just the sequence length that you saw at training time.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>두 번째 방법은 위치마다 임베딩을 두되 학습하지 않고, 미리 정한 공식으로 계산하는 것입니다. 저자들은 사인(sine)·코사인(cosine)을 쓰는 공식을 골랐습니다. 위치 m에 대해 크기 d_model의 벡터를 만드는데(토큰 임베딩과 더해야 하므로 차원이 같아야 함), 각 차원의 값을 sin·cos 공식으로 계산합니다.</p>
+<p><strong>왜 사인·코사인인가</strong>: 우리가 원하는 것은, 가까운 단어가 먼 단어보다 더 관련 있다(=더 비슷하다)는 사실을 위치 표현에 담는 것입니다. 한 위치 떨어진 단어가 1만 위치 떨어진 단어보다 더 비슷해야 합니다.</p>
+<p>여기서 삼각함수 항등식이 핵심입니다: cos(a−b) = cos(a)cos(b) + sin(a)sin(b). 위치 m과 n의 두 위치 임베딩을 내적(dot product)하면, 이 항등식 덕분에 그 결과가 <strong>두 위치의 상대 거리(m−n)의 함수</strong>인 코사인 합으로 나옵니다. 즉 내적값이 절대 위치가 아니라 '얼마나 떨어져 있는지'에만 의존합니다.</p>
+<ul><li>m = n일 때(자기 자신) 이 값이 최대 → 자기 위치와 가장 비슷. 우리의 직관과 일치합니다.</li><li>왜 내적이 중요한가: 임베딩 유사도는 보통 코사인 유사도로 재는데, 코사인 유사도는 결국 내적을 노름으로 나눈 것이므로 내적이 핵심입니다.</li></ul>
+<p>저자들이 보니, 이 사인·코사인 방식은 학습형과 비슷한 성능을 내면서도 큰 장점이 있었습니다 — <strong>학습 때 본 길이를 넘어 어떤 시퀀스 길이로도 확장</strong>됩니다. (정해진 공식이라 위치가 길어져도 값을 계산할 수 있음)</p></div>
+<div class="callout note"><div class="c-title">⚠️ 참고</div><p>그래프 직관: 위치 임베딩 벡터의 낮은 차원은 값이 자주 오르내리고(고주파), 높은 차원은 천천히 변합니다(저주파). 이는 공식 속 ωᵢ(오메가)가 낮은 차원에서 크고 높은 차원에서 작기 때문이며, 사인·코사인이 얼마나 빨리 진동하는지를 결정합니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>사인·코사인 위치 임베딩<span class="en-term">(sinusoidal position embedding)</span></dt><dd>sin·cos 공식으로 위치를 표현하는 정적 방식.</dd><dt>상대 거리<span class="en-term">(relative distance, m−n)</span></dt><dd>두 토큰이 얼마나 떨어져 있는지. 사인·코사인 방식의 내적이 이에만 의존.</dd><dt>내적<span class="en-term">(dot product)</span></dt><dd>두 벡터를 곱해 더한 값. 유사도(코사인 유사도)의 핵심.</dd><dt>고주파/저주파</dt><dd>값이 빨리/느리게 진동하는 정도. 차원에 따라 다름.</dd></dl></div>
+</div>
+<div id="block3"><h3><span class="badge">블록 3</span>위치 정보를 어텐션 층에 직접 넣기 (T5 bias, ALiBi)</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">25:39</span> we're still using this idea of we want far tokens to be less similar than closer tokens. But we're not injecting the embedding like they did. (...) what you care about is determining how similar tokens are in the self attention computation. And where does (it) happen? In the attention layer. (...) <span class="ts">27:41</span> what we want is to directly do something about the attention formula (...) add a little something inside that softmax. (...) <span class="ts">28:19</span> the T5 paper (...) tried these relative position bias by learning the bias term (...) bucketize all m minus n into some buckets and let the model learn these quantities that are then injected in the softmax. (...) <span class="ts">30:27</span> the alibi (...) attention with linear bias (...) instead of learning those biases, let's have a deterministic formula which is a function of the relative difference between those two positions.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>2025년 현재도 "먼 토큰은 가까운 토큰보다 덜 비슷해야 한다"는 아이디어는 그대로 쓰지만, 원논문처럼 입력에 임베딩을 더하는 방식은 안 씁니다. 이유는 — 우리가 정작 신경 쓰는 것은 self-attention 계산(즉 어텐션 층)에서의 유사도인데, 입력에 더하는 건 어텐션 층에 간접적으로만 영향을 주기 때문입니다.</p>
+<p>그래서 어텐션 공식 softmax(QKᵀ/√d)V의 softmax 안에 직접 '무언가'를 더해, "어떤 토큰들은 더 비슷해야 한다"는 사실을 반영하려는 변형들이 나왔습니다.</p>
+<ul><li><strong>T5의 상대 위치 bias</strong>: 위치 m, n의 거리(m−n)를 구간(bucket)으로 묶고, 각 구간에 해당하는 bias 값을 모델이 학습해 softmax 안에 주입합니다. (softmax가 어차피 정규화하므로 안에 무엇을 더하든 괜찮음. 멀리 떨어진 것엔 더 음수인 bias를 주는 식)</li><li><strong>ALiBi(Attention with Linear Biases)</strong>: bias를 학습하지 않고, 두 위치의 상대 거리에 대한 정해진(deterministic) 공식으로 구합니다.</li></ul></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>T5</dt><dd>텍스트-투-텍스트 트랜스포머 모델군(섹션 4에서 다룸). 상대 위치 bias를 학습.</dd><dt>상대 위치 bias<span class="en-term">(relative position bias)</span></dt><dd>토큰 간 거리에 따라 어텐션 점수에 더하는 보정값.</dd><dt>구간화<span class="en-term">(bucketize)</span></dt><dd>거리값들을 몇 개 구간으로 묶는 것.</dd><dt>ALiBi<span class="en-term">(Attention with Linear Biases)</span></dt><dd>거리에 비례한 정해진 공식으로 bias를 주는 방법.</dd><dt>deterministic<span class="en-term">(정해진/결정론적)</span></dt><dd>학습하지 않고 공식으로 고정.</dd></dl></div>
+</div>
+<div id="block4"><h3><span class="badge">블록 4</span>RoPE: 회전 위치 임베딩 (오늘날 표준)</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">31:01</span> most models actually use another kind of position embedding (...) this method relies on rotating the query and the key vector by some angle (...) rotate your query by some angle that is a function of its position (...) and the key vector by some angle that is a function of its position n. (...) <span class="ts">32:30</span> a quantity that's called rotation matrix (...) <span class="ts">37:24</span> their method is called ROP(E) (...) rotary position embeddings. (...) this method has two great things. So the first one is that if you rotate the query and the key, you will end up with a quantity that will be a function of the relative distance between the two. (...) <span class="ts">38:30</span> if you rotate the query by an angle m and the key by an angle n, what you're going to end up is a formula that has the rotation matrix of angle theta (n minus m). (...) <span class="ts">38:00</span> most models these days, they use rope. (...) <span class="ts">39:12</span> the upper bound of the attention weight (...) is such that we observe a long-term decay. (...) <span class="ts">40:24</span> theta is actually fixed (...) a function of i and d.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>오늘날 대부분의 모델은 또 다른 위치 임베딩을 씁니다. 이 방법은 쿼리와 키 벡터를 각도만큼 '회전'시킵니다. 쿼리는 자기 위치 m의 함수인 각도만큼, 키는 자기 위치 n의 함수인 각도만큼 회전시킵니다.</p>
+<p>벡터를 회전시키는 방법은 회전 행렬(rotation matrix)과의 곱셈입니다. 2차원 평면에서 회전 행렬은 [[cosθ, −sinθ], [sinθ, cosθ]] 형태의 2×2 행렬입니다. (강사는 이 행렬을 벡터에 곱하면 각도만큼 회전한다는 것을 삼각함수 항등식으로 증명해 보였다.)</p>
+<p>이 방법이 RoPE(Rotary Position Embedding, 회전 위치 임베딩)입니다. 왜 중요한가, 두 가지 큰 장점이 있습니다.</p>
+<ol><li><strong>상대 거리 반영</strong>: 쿼리를 각도 m만큼, 키를 각도 n만큼 회전시킨 뒤 어텐션 공식(Q·Kᵀ)에 넣으면, 결과가 각도 (n−m)의 회전 행렬을 포함하는 식이 됩니다. 즉 두 위치의 상대 거리의 함수가 됩니다.</li><li><strong>장기 감쇠(long-term decay)</strong>: 쿼리·키가 주는 어텐션 가중치의 상한이, 거리(m−n)가 커질수록 (약간의 진동은 있지만) 점점 작아집니다. 즉 멀수록 영향이 줄어드는 성질이 수학적으로 보장됩니다.</li></ol>
+<p>각도 θ는 학습되는 게 아니라 고정값(fixed)이며, 차원 i와 d의 함수입니다(앞의 ωᵢ와 거의 같음). 2차원 회전을 차원 블록 단위로 확장해 고차원에 적용합니다.</p></div>
+<div class="callout note"><div class="c-title">⚠️ 참고</div><p>강사는 RoPE에 시간을 많이 쓴 이유를 "많은 모델이 쓰는데 직관이 쉽지 않기 때문"이라고 했다. 핵심 직관은 앞의 사인·코사인 설명과 같다 — 상대 거리에 따라 유사도를 조절한다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>RoPE<span class="en-term">(Rotary Position Embedding, 회전 위치 임베딩)</span></dt><dd>쿼리·키를 위치에 따른 각도로 회전시켜 상대 거리를 반영하는 방법. 오늘날 대부분의 LLM이 채택.</dd><dt>회전 행렬<span class="en-term">(rotation matrix)</span></dt><dd>벡터를 각도만큼 회전시키는 행렬. 2D에서 [[cosθ,−sinθ],[sinθ,cosθ]].</dd><dt>장기 감쇠<span class="en-term">(long-term decay)</span></dt><dd>거리가 멀수록 어텐션 영향이 줄어드는 성질. RoPE가 수학적으로 보장.</dd><dt>θ<span class="en-term">(theta)</span></dt><dd>회전 각도. 학습이 아니라 차원의 함수로 고정.</dd></dl></div>
+</div></section><section id="glossary"><h2>4. 핵심 용어집</h2><div class="table-wrap"><table><thead><tr><th>영문</th><th>한국어</th><th>발음</th><th>뜻</th></tr></thead><tbody><tr><td>position embedding</td><td>위치 임베딩</td><td>포지션 임베딩</td><td>토큰 순서를 담는 벡터</td></tr><tr><td>learned / static</td><td>학습형 / 정적</td><td>런드 / 스태틱</td><td>데이터로 학습 / 공식 고정</td></tr><tr><td>sinusoidal</td><td>사인·코사인 방식</td><td>사인소이덜</td><td>sin·cos 공식 위치 임베딩</td></tr><tr><td>relative distance</td><td>상대 거리</td><td>렐러티브 디스턴스</td><td>두 토큰 간 거리(m−n)</td></tr><tr><td>dot product</td><td>내적</td><td>닷 프로덕트</td><td>두 벡터 곱해 더한 값</td></tr><tr><td>overfitting</td><td>과적합</td><td>오버피팅</td><td>학습 데이터에 지나치게 맞춤</td></tr><tr><td>relative position bias</td><td>상대 위치 bias</td><td>—</td><td>거리에 따른 어텐션 보정값(T5)</td></tr><tr><td>ALiBi</td><td>앨라이바이</td><td>앨라이바이</td><td>거리 비례 정해진 bias</td></tr><tr><td>RoPE (Rotary Position Embedding)</td><td>회전 위치 임베딩</td><td>로프</td><td>쿼리·키 회전으로 상대 거리 반영(현 표준)</td></tr><tr><td>rotation matrix</td><td>회전 행렬</td><td>로테이션 매트릭스</td><td>벡터를 각도만큼 회전</td></tr><tr><td>long-term decay</td><td>장기 감쇠</td><td>롱텀 디케이</td><td>멀수록 어텐션 영향 감소</td></tr><tr><td>d_model</td><td>d_model</td><td>디 모델</td><td>임베딩 차원</td></tr></tbody></table></div></section><section id="review"><h2>5. 복습 문제</h2><div class="callout review"><div class="c-title">✏️ 스스로 점검</div><ol><li>트랜스포머는 왜 RNN과 달리 위치 정보를 따로 주입해야 하는가?</li><li>학습형 위치 임베딩의 두 가지 한계는 무엇이며, 사인·코사인 방식은 어떤 장점으로 이를 보완하는가?</li><li>RoPE가 쿼리·키를 회전시켰을 때 어텐션 결과가 '상대 거리의 함수'가 되는 이유를 개념적으로 설명하라.</li></ol></div></section><section id="appendix"><h2>부록. 실무 적용 포인트 <span style="font-size:14px;font-weight:500;color:var(--muted);">(NLP·LLM 기술 내용 한정)</span></h2><div class="callout practice"><div class="c-title">💡 현장에서 써먹기</div><ul><li><strong>위치 임베딩 방식이 곧 "모델이 다룰 수 있는 최대 입력 길이"를 좌우한다.</strong> 학습형은 학습 때 본 길이까지만 되지만, 사인·코사인·RoPE는 더 긴 입력으로 확장이 가능하다. LLM마다 컨텍스트 길이(한 번에 넣을 수 있는 분량)가 다른 근본 이유 중 하나가 여기 있다. 긴 보고서·문서를 한 번에 처리할 수 있느냐를 가늠할 때 알아둘 배경이다.</li><li><strong>"가까운 토큰이 더 관련 있다"는 설계 원칙은 AI의 문맥 처리 방식을 설명한다.</strong> 위치 임베딩은 멀리 떨어진 내용보다 가까운 내용을 더 강하게 연결하도록 만들어진다. 그래서 긴 문서에서 멀리 떨어진 정보끼리의 연결은 상대적으로 약할 수 있다 — 핵심 정보는 가까이 배치하는 것이 결과 품질에 유리할 수 있다는 실무 힌트다.</li></ul></div><div class="next"><strong><strong>다음 섹션 예고</strong>·&lt;/strong&gt; · 트랜스포머에서 바뀐 두 번째·세 번째 요소 — 레이어 정규화(RMSNorm)와 어텐션 변형(sliding window, MQA/GQA/MHA). <span class="ts">43:26</span> 이후.</div></section></article></main>
+</div>
+
+<!-- KaTeX 자동 렌더 -->
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}],throwOnError:false});"></script>
+
+<!-- Mermaid -->
+<script type="module">
+  try{
+    const m = await import('https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs');
+    m.default.initialize({startOnLoad:true, theme:'base', themeVariables:{
+      fontFamily:'Pretendard, sans-serif', primaryColor:'#fffdfb', primaryBorderColor:'#d8d0c5',
+      primaryTextColor:'#1a1a1a', lineColor:'#b9554f', fontSize:'14px'
+    }});
+  }catch(e){ /* 오프라인이면 도식은 코드로 표시 */ }
+</script>
+
+<!-- 목차 활성표시 + 모바일 드로어 -->
+<script>
+  // 모바일 드로어
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('overlay');
+  const btn = document.getElementById('menuBtn');
+  const toggle = (on)=>{ sb.classList.toggle('open',on); ov.classList.toggle('show',on); };
+  btn.addEventListener('click',()=>toggle(!sb.classList.contains('open')));
+  ov.addEventListener('click',()=>toggle(false));
+  document.querySelectorAll('.toc a').forEach(a=>a.addEventListener('click',()=>{ if(window.innerWidth<=900) toggle(false); }));
+
+  // 현재 위치 강조
+  const links = [...document.querySelectorAll('.toc a')];
+  const map = {}; links.forEach(a=>{ const id=a.getAttribute('href').slice(1); map[id]=a; });
+  const targets = Object.keys(map).map(id=>document.getElementById(id)).filter(Boolean);
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(en=>{
+      if(en.isIntersecting){
+        links.forEach(l=>l.classList.remove('active'));
+        const a = map[en.target.id]; if(a) a.classList.add('active');
+      }
+    });
+  },{rootMargin:'-15% 0px -75% 0px', threshold:0});
+  targets.forEach(t=>io.observe(t));
+</script>
+
+</body>
+</html>

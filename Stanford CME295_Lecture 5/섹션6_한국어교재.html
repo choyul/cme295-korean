@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CME295 Lecture 5 · 섹션 6. Best-of-N과 DPO</title>
+
+<!-- 폰트: Pretendard (CDN, 없으면 시스템 폰트 폴백) -->
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<!-- 수식: KaTeX -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
+
+<style>
+  :root{
+    --bg:#FBF9F6;
+    --paper:#ffffff;
+    --ink:#1a1a1a;
+    --ink-soft:#4a4744;
+    --muted:#7a756f;
+    --accent:#8C1515;          /* Stanford 카디널 */
+    --accent-soft:#b9554f;
+    --tint:#f6ebe9;            /* 카디널 옅은 틴트 */
+    --tint-2:#f3efe9;          /* 따뜻한 회색 */
+    --line:#e7e1d9;
+    --line-strong:#d8d0c5;
+    --radius:10px;
+    --maxw:760px;
+    --sidew:268px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Pretendard","Pretendard Variable",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    line-height:1.78;
+    font-size:16.5px;
+    -webkit-font-smoothing:antialiased;
+    word-break:keep-all;
+  }
+
+  /* ===== 레이아웃 ===== */
+  .layout{display:flex; align-items:flex-start;}
+  .sidebar{
+    width:var(--sidew); flex:0 0 var(--sidew);
+    position:sticky; top:0; height:100vh; overflow-y:auto;
+    padding:28px 18px 40px; border-right:1px solid var(--line);
+    background:rgba(251,249,246,.85); backdrop-filter:saturate(120%) blur(2px);
+  }
+  .content{flex:1 1 auto; min-width:0; display:flex; justify-content:center; padding:0 24px;}
+  .doc{width:100%; max-width:var(--maxw); padding:48px 0 120px;}
+
+  /* ===== 사이드바 목차 ===== */
+  .toc-brand{font-size:12px; letter-spacing:.04em; color:var(--accent); font-weight:700; text-transform:uppercase; margin-bottom:4px;}
+  .toc-title{font-size:15px; font-weight:700; margin:0 0 18px; line-height:1.4; color:var(--ink);}
+  .toc{list-style:none; margin:0; padding:0; font-size:13.5px;}
+  .toc li{margin:1px 0;}
+  .toc a{display:block; padding:5px 10px; border-radius:7px; color:var(--ink-soft); text-decoration:none; border-left:2px solid transparent;}
+  .toc a:hover{background:var(--tint-2); color:var(--ink);}
+  .toc a.sub{padding-left:22px; font-size:13px; color:var(--muted);}
+  .toc a.active{color:var(--accent); background:var(--tint); border-left-color:var(--accent); font-weight:600;}
+
+  /* ===== 타이포 ===== */
+  h1{font-size:27px; line-height:1.32; font-weight:800; letter-spacing:-.01em; margin:0 0 6px;}
+  .subtitle{font-size:18px; font-weight:700; color:var(--accent); margin:0 0 22px;}
+  h2{font-size:21px; font-weight:800; letter-spacing:-.01em; margin:46px 0 14px; padding-bottom:9px; border-bottom:2px solid var(--line-strong);}
+  h3{font-size:17.5px; font-weight:700; margin:34px 0 12px; color:var(--ink);}
+  h3 .badge{display:inline-block; font-size:12px; font-weight:700; color:#fff; background:var(--accent); border-radius:6px; padding:2px 8px; margin-right:8px; vertical-align:middle;}
+  p{margin:12px 0;}
+  strong{font-weight:700;}
+  a{color:var(--accent);}
+  ul,ol{margin:12px 0; padding-left:22px;}
+  li{margin:6px 0;}
+  hr{display:none;}
+
+  /* ===== 출처 배너 ===== */
+  .source-banner{
+    display:flex; gap:10px; align-items:baseline;
+    background:var(--tint); border-left:4px solid var(--accent);
+    border-radius:0 var(--radius) var(--radius) 0;
+    padding:12px 16px; margin:0 0 8px; font-size:13.5px; color:var(--ink-soft);
+  }
+  .source-banner b{color:var(--accent);}
+
+  /* ===== 한국어 번역 카드 ===== */
+  .ko{
+    background:var(--paper); border:1px solid var(--line);
+    border-left:4px solid var(--accent); border-radius:var(--radius);
+    padding:6px 22px; margin:16px 0;
+    box-shadow:0 1px 2px rgba(60,40,20,.04);
+  }
+  .ko > .label, .terms > .label{
+    display:inline-block; font-size:11.5px; font-weight:800; letter-spacing:.06em;
+    color:var(--accent); text-transform:uppercase; margin:14px 0 -4px;
+  }
+
+  /* ===== 영문 원문 토글 ===== */
+  details.en{
+    background:var(--tint-2); border:1px solid var(--line); border-radius:var(--radius);
+    margin:14px 0; overflow:hidden;
+  }
+  details.en > summary{
+    cursor:pointer; list-style:none; padding:11px 16px;
+    font-size:13.5px; font-weight:700; color:var(--muted);
+    display:flex; align-items:center; gap:8px; user-select:none;
+  }
+  details.en > summary::-webkit-details-marker{display:none;}
+  details.en > summary .chev{transition:transform .2s; color:var(--accent-soft);}
+  details.en[open] > summary .chev{transform:rotate(90deg);}
+  details.en[open] > summary{border-bottom:1px solid var(--line);}
+  .en-body{padding:4px 18px 14px; font-size:14px; line-height:1.7; color:#5c574f; font-style:normal;}
+  .en-body p{margin:10px 0;}
+  .ts{
+    display:inline-block; font-family:"SFMono-Regular",ui-monospace,Menlo,Consolas,monospace;
+    font-size:11.5px; font-style:normal; color:var(--accent);
+    background:var(--tint); border:1px solid #e6cfcc; border-radius:5px;
+    padding:0 5px; margin:0 2px; vertical-align:baseline;
+  }
+
+  /* ===== 용어 설명 ===== */
+  .terms{
+    border:1px solid var(--line); border-left:3px solid var(--accent-soft);
+    border-radius:var(--radius); background:#fffdfb; padding:4px 20px 8px; margin:16px 0;
+  }
+  .terms dl{margin:8px 0;}
+  .terms dt{font-weight:700; color:var(--ink); margin-top:8px;}
+  .terms dt .en-term{color:var(--accent); font-weight:600;}
+  .terms dd{margin:1px 0 6px; color:var(--ink-soft); font-size:15px;}
+
+  /* ===== 표 ===== */
+  .table-wrap{overflow-x:auto; margin:16px 0; border:1px solid var(--line); border-radius:var(--radius);}
+  table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:520px;}
+  thead th{background:var(--accent); color:#fff; font-weight:700; text-align:left; padding:11px 14px; white-space:nowrap;}
+  tbody td{padding:9px 14px; border-top:1px solid var(--line);}
+  tbody tr:nth-child(even){background:var(--tint-2);}
+  tbody td:first-child{font-family:ui-monospace,Menlo,monospace; font-size:13px; color:var(--accent);}
+
+  /* ===== 콜아웃 ===== */
+  .callout{border-radius:var(--radius); padding:14px 20px 6px; margin:18px 0;}
+  .callout .c-title{font-weight:800; margin:6px 0 2px; display:flex; align-items:center; gap:8px;}
+  .callout.review{background:#fff; border:1px solid var(--line-strong);}
+  .callout.review ol{counter-reset:none;}
+  .callout.note{background:var(--tint-2); border-left:4px solid var(--muted); border-radius:0 var(--radius) var(--radius) 0; padding-bottom:12px;}
+  .callout.practice{background:var(--tint); border:1px solid #e6cfcc; padding-bottom:14px;}
+  .callout.practice li{margin:12px 0;}
+  .next{margin-top:40px; padding:14px 18px; background:var(--tint-2); border-radius:var(--radius); font-size:14px; color:var(--ink-soft);}
+
+  /* 수식 / 도식 */
+  .katex-display{margin:14px 0; overflow-x:auto; overflow-y:hidden; padding:6px 0;}
+  .diagram{background:#fffdfb; border:1px solid var(--line); border-radius:var(--radius); padding:14px; margin:16px 0; text-align:center;}
+  .diagram .cap{font-size:12.5px; color:var(--muted); margin-top:6px;}
+  .mermaid{display:flex; justify-content:center;}
+
+  /* ===== 모바일 ===== */
+  .menu-btn{display:none;}
+  .overlay{display:none;}
+  @media (max-width:900px){
+    .menu-btn{
+      display:flex; align-items:center; justify-content:center;
+      position:fixed; top:14px; left:14px; z-index:50;
+      width:42px; height:42px; border-radius:10px; border:1px solid var(--line-strong);
+      background:var(--paper); color:var(--accent); font-size:20px; cursor:pointer;
+      box-shadow:0 2px 8px rgba(60,40,20,.12);
+    }
+    .sidebar{
+      position:fixed; left:0; top:0; z-index:60; height:100vh;
+      transform:translateX(-105%); transition:transform .25s ease;
+      box-shadow:4px 0 24px rgba(0,0,0,.12); background:var(--bg);
+    }
+    .sidebar.open{transform:translateX(0);}
+    .overlay.show{display:block; position:fixed; inset:0; background:rgba(0,0,0,.32); z-index:55;}
+    .content{padding:0 16px;}
+    .doc{padding:64px 0 100px;}
+    body{font-size:16px;}
+    h1{font-size:23px;}
+    .ko,.terms{padding-left:16px; padding-right:16px;}
+  }
+
+  /* ===== 인쇄 ===== */
+  @media print{
+    .sidebar,.menu-btn,.overlay{display:none !important;}
+    .content{padding:0;}
+    body{background:#fff; font-size:11pt;}
+    details.en{display:none;}          /* 인쇄본은 한국어 위주 */
+    .ko,.terms,.callout,.table-wrap{break-inside:avoid; box-shadow:none;}
+    a{color:var(--ink);}
+  }
+  .home-btn{position:fixed; top:16px; right:18px; z-index:70;
+    display:inline-flex; align-items:center; gap:6px; text-decoration:none;
+    background:var(--paper); color:var(--accent); border:1px solid var(--line-strong);
+    border-radius:999px; padding:8px 14px; font-size:13.5px; font-weight:700;
+    box-shadow:0 2px 8px rgba(60,40,20,.12); transition:background .12s,color .12s;}
+  .home-btn:hover{background:var(--accent); color:#fff; border-color:var(--accent);}
+  @media (max-width:900px){ .home-btn{top:14px; right:14px; padding:8px 12px; font-size:12.5px;} }
+  @media print{ .home-btn{display:none !important;} }
+</style>
+</head>
+<body>
+<a class="home-btn" href="../index.html" title="전체 목차로 돌아가기">← 전체 목차</a>
+
+<button class="menu-btn" id="menuBtn" aria-label="목차 열기">☰</button>
+<div class="overlay" id="overlay"></div>
+
+<div class="layout">
+  <nav class="sidebar" id="sidebar"><div class="toc-brand">Stanford CME295 · Lecture 5</div><p class="toc-title">섹션 6. Best-of-N과 DPO</p><ul class="toc"><li><a href="#overview">1. 강의 개요</a></li><li><a href="#goals">2. 학습 목표</a></li><li><a href="#body">3. 본문</a></li><li><a class="sub" href="#block1">블록 1 · Best-of-N</a></li><li><a class="sub" href="#block2">블록 2 · Best-of-N의 비용과 지연시간</a></li><li><a class="sub" href="#block3">블록 3 · DPO: 보상 모델 없이 한 번에</a></li><li><a class="sub" href="#block4">블록 4 · DPO 유도와 RLHF 대비</a></li><li><a class="sub" href="#block5">블록 5 · 트레이드오프와 곰인형 최종 예제</a></li><li><a href="#glossary">4. 핵심 용어집</a></li><li><a href="#review">5. 복습 문제</a></li><li><a href="#appendix">부록. 실무 적용 포인트 (NLP·LLM 기술 내용 한정)</a></li></ul></nav>
+  <main class="content"><article class="doc"><h1>CME295 Transformers &amp; LLMs — Lecture 5 한국어 교재</h1><p class="subtitle">섹션 6. Best-of-N과 DPO</p><div class="source-banner"><span>📄</span><span><b>원문 출처</b>: Stanford CME295, Autumn 2025, Lecture 5, 타임스탬프 <span class="ts">1:19:00</span>~(1:47:28, 끝)</span></div><section id="overview"><h2>1. 강의 개요</h2><ul><li>RL의 복잡함을 피하는 두 길을 다룬다 — 추론 때 여러 응답을 뽑아 최고를 고르는 Best-of-N과, 보상 모델·RL 없이 한 번에 정렬하는 DPO.</li><li>DPO(직접 선호 최적화)가 어떻게 보상 항을 정책으로 치환해 단일 손실로 푸는지(Bradley-Terry에서 유도) 본다.</li><li>RLHF·DPO·Best-of-N의 트레이드오프와, 곰인형 최종 예제로 선호 튜닝의 효과를 확인한다.</li></ul></section><section id="goals"><h2>2. 학습 목표</h2><ol><li>Best-of-N의 작동(여러 생성 → 보상으로 최고 선택)과 그 비용(추론 부담)을 설명할 수 있다.</li><li>DPO가 보상 모델·RL 없이 선호 쌍으로 단일 손실을 최적화한다는 핵심을 안다.</li><li>RLHF·DPO·Best-of-N의 트레이드오프(성능 vs 단순함)를 비교할 수 있다.</li></ol></section><section id="body"><h2>3. 본문</h2><div id="block1"><h3><span class="badge">블록 1</span>Best-of-N</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">22:43</span> a method (...) for people who have a reward model but (...) don't want to do RL (...) <span class="ts">23:16</span> best of n (...) leverage the reward model (...) to choose the output (...) <span class="ts">23:47</span> you generate (...) four times five times (...) give a score to each (...) return the best one. (...) <span class="ts">1:25:50</span> you query the model many times which is (...) the problem (...) pushing all the work to (...) the inference stage (...) super costly.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>RL이 비싸고 복잡해 하기 싫지만 보상 모델은 있는 경우의 방법이 Best-of-N(베스트 오브 N, BoN)입니다. 발상: 보상 모델로 '사용자에게 돌려줄 출력'을 고릅니다. 프롬프트를 SFT 모델에 넣어 여러 번(예: 3~5번) 생성하고, 각 (프롬프트+완성)에 보상 점수를 매겨 가장 높은 하나를 반환합니다 — 그래서 'N개 중 최고'입니다.</p>
+<p>예: "곰인형과 할 새 활동 제안" → 3개 생성 → 보상 점수(0.8 / −2 / 0.5) → 최고(0.8)를 반환. SFT 모델은 그대로(학습 안 함) 쓰고, 보상 모델로 고르기만 합니다.</p>
+<p>문제점:</p>
+<ul><li>모델이 나쁘면 결과도 나쁨(단, 충분히 다양하게 생성하면 완화).</li><li>핵심 문제: 모델을 여러 번 호출하므로 추론 비용이 큼. RL 학습은 건너뛰지만 부담을 추론 단계로 떠넘긴 셈입니다. 트래픽이 많은 서비스라면 비용 측면에서 부적합할 수 있습니다.</li></ul></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>Best-of-N<span class="en-term">(BoN)</span></dt><dd>여러 응답을 생성해 보상 모델로 최고를 고르는 방법. 학습 없이 추론에서 품질↑.</dd><dt>추론 부담 전가</dt><dd>학습 비용은 줄지만 추론 호출이 늘어 비용↑.</dd></dl></div>
+</div>
+<div id="block2"><h3><span class="badge">블록 2</span>Best-of-N의 비용과 지연시간</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">1:31:11</span> latency and cost issues (...) <span class="ts">1:31:42</span> let's suppose we had infinite money (...) generate all of these in parallel (...) you would still need to (...) wait for the maximum time of (...) the generation (...) <span class="ts">1:31:42</span> the probability distribution of the max of (...) n answers (...) will tend to be (...) shifted to the right.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>2부(Shervin)에서 Best-of-N의 한계를 더 짚습니다. 돈이 무한해서 N개를 병렬로 생성한다 해도, 결국 그중 가장 오래 걸리는 생성이 끝날 때까지 기다려야 합니다. 지연시간 분포가 한 점에 몰려 있지 않다면, 'N개 중 최댓값'의 분포는 오른쪽으로 치우칩니다(더 오래 걸리는 쪽). 즉 무한한 자원이 있어도 한 번 생성보다 더 기다리게 됩니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>지연시간<span class="en-term">(latency)</span> 분포</dt><dd>응답 생성 시간의 분포. N개 중 최댓값은 더 길어지는 경향.</dd></dl></div>
+</div>
+<div id="block3"><h3><span class="badge">블록 3</span>DPO: 보상 모델 없이 한 번에</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">1:32:17</span> DPO stands for direct preference optimization (...) instead of (...) first finding some reward model and then (...) iterating on the model's weights, it optimizes a single loss function that directly optimizes for the model's weight(s) (...) no reward involved anymore (...) <span class="ts">1:33:18</span> compares the probability of the winning (...) completion (...) versus the losing one (...) <span class="ts">1:34:21</span> the paper is titled your language model is secretly a reward model.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>DPO(Direct Preference Optimization, 직접 선호 최적화)는 "왜 내내 지도학습으로 못 하나"라는 질문에 답합니다. 보상 모델을 먼저 만들고 가중치를 반복 갱신하는 비싼 두 단계 대신, 단일 손실 함수로 모델 가중치를 직접 최적화합니다. 더 이상 보상(R)이 등장하지 않습니다.</p>
+<p>DPO 손실은 선호 쌍으로 표현됩니다 — 시그모이드 안에 '승리 완성의 확률'과 '패배 완성의 확률'의 차이가 들어갑니다. 자세히 보면 섹션 4의 Bradley-Terry 형태(log σ의 기댓값, σ 안에 보상에 해당하는 항의 차이)가 보입니다.</p>
+<p>논문 제목이 「Your Language Model is Secretly a Reward Model(당신의 언어모델은 사실 보상 모델이다)」인 이유: 이 손실에서 보상에 해당하는 자리를 정책(policy)의 함수로 표현할 수 있기 때문입니다. 즉 R을 따로 두지 않고, 보상에 해당하는 것을 모델 자체로 표현합니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>DPO<span class="en-term">(직접 선호 최적화)</span></dt><dd>보상 모델·RL 없이, 선호 쌍으로 단일 손실을 최적화해 직접 정렬.</dd><dt>"언어모델이 곧 보상 모델"</dt><dd>보상 항을 정책의 함수로 치환할 수 있다는 DPO의 통찰.</dd></dl></div>
+</div>
+<div id="block4"><h3><span class="badge">블록 4</span>DPO 유도와 RLHF 대비</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">1:35:25</span> the PO objective (...) maximize rewards and minimize the (KL) (...) this beta coefficient (...) <span class="ts">1:35:55</span> solved what would be the optimal solution (...) the optimal policy pi star (...) as a function of r (...) <span class="ts">1:36:57</span> express R as a function of this pi star (...) plug(ged) in (...) into a Bradley (Terry) formulation (...) <span class="ts">1:38:31</span> the beta (...) typically taken (...) around 0.1. (...) <span class="ts">1:40:05</span> instead of four models you just need two.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>어떻게 유도됐나: PPO 목표(보상 최대화 − KL 발산, β로 벗어남 정도 조절)에서 출발해, 최적 정책 π*를 풀면 그것이 보상 r의 함수로 나옵니다(추가 가정 없이 미분·정리만으로). 여기엔 정규화용 분배 함수(partition function) Z 항이 있는데, 이미 있던 항들의 함수일 뿐 새로운 게 아닙니다. 이 식을 뒤집어 R을 π*의 함수로 표현하고, 그것을 Bradley-Terry 공식(σ(R_W − R_L))에 대입하면 — 보상이 사라지고 정책과 β만 남는 식이 됩니다. 이를 손실로 바꾼 것이 DPO 손실입니다. β는 PPO의 β와 같은 것으로 보통 0.1 정도입니다.</p>
+<p>RLHF 대비:</p>
+<ul><li><strong>RLHF</strong>: 두 단계(보상 모델 → 정책 갱신), 모델이 많이 필요(정책·직전/기준·보상·가치 함수 ≈ 4개), 불안정.</li><li><strong>DPO</strong>: 선호 쌍에 직접 손실을 맞춤(지도학습식). 모델 2개만 필요(학습 정책 π_θ + 동결된 기준 SFT 모델 π_ref).</li></ul></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>최적 정책 π*</dt><dd>PPO 목표를 풀어 얻는 이상적 정책. 보상의 함수로 나옴.</dd><dt>분배 함수<span class="en-term">(partition function)</span> Z</dt><dd>확률을 정규화하는 항.</dd><dt>β</dt><dd>기본 모델에서 벗어남을 벌하는 계수(≈0.1).</dd></dl></div>
+</div>
+<div id="block5"><h3><span class="badge">블록 5</span>트레이드오프와 곰인형 최종 예제</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">1:40:36</span> why is not everyone just simply using DPO? (...) overall PO performs better than DPO (...) <span class="ts">1:41:08</span> this shift in distribution is (...) a challenge intrinsic to DPO (...) <span class="ts">1:44:15</span> (teddy bear) handwashing (...) factually correct (...) <span class="ts">1:45:24</span> a bit too rough, doesn't sound super friendly (...) <span class="ts">1:45:55</span> the preference tune(d) answer could be (...) a gentler one (...) <span class="ts">1:46:58</span> PO (...) will give the highest results (...) DPO is your friend (...) (if) you want a quick preference tuning.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>DPO가 더 쉬운데 왜 모두 쓰지 않을까요? 각자 장단점이 있습니다.</p>
+<ul><li>전반적으로 PPO가 DPO보다 성능이 좋습니다.</li><li>DPO의 직접 지도는 '모델이 학습 때 본 분포와 정확히 일치하지 않는 데이터에 맞추는' 분포 이탈(distribution shift) 문제를 내재합니다. (선호 데이터로 SFT를 더 하거나 직접 생성해 평가하면 완화되지만, 그것도 비용)</li></ul>
+<p><strong>곰인형 최종 예제</strong>: "세탁기에 넣어도 되냐"에 instruction tuning 후 답은 "안 됩니다, 손상될 수 있으니 손세탁하세요" — 사실은 맞지만 너무 퉁명스럽고 친근하지 않습니다. 선호 튜닝의 목적은 새 사실을 배우는 게 아니라, 기존 완성 분포 안에서 사람이 선호하는 쪽으로 어조를 맞추는 것입니다. 그래서 선호 튜닝 후 답은 "곰인형이 상할 수 있으니 세탁기는 피하는 게 좋아요. 부드럽게 손세탁하면 안전합니다"처럼 같은 내용을 더 친근한 어조로 전합니다.</p>
+<p><strong>언제 무엇을?</strong> 컴퓨트 예산, 성능 중시 정도, 학습 관리 부담에 달려 있습니다. PPO(RL)는 튜닝이 매우 어렵지만 최고 성능을 줍니다. DPO는 적은 수고로 좋은(최고는 아닐 수 있는) 결과를 줍니다. 빠른 선호 튜닝엔 DPO, RL 전문가가 마지막 한 방울 성능까지 원하면 PPO가 낫습니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>분포 이탈<span class="en-term">(distribution shift)</span></dt><dd>학습 분포와 실제 분포가 어긋나는 문제. DPO에 내재.</dd><dt>선호 튜닝의 본질</dt><dd>새 사실 학습이 아니라, 기존 분포 내에서 선호하는 어조·태도로 맞추기.</dd></dl></div>
+</div></section><section id="glossary"><h2>4. 핵심 용어집</h2><div class="table-wrap"><table><thead><tr><th>영문</th><th>한국어</th><th>발음</th><th>뜻</th></tr></thead><tbody><tr><td>Best-of-N (BoN)</td><td>베스트 오브 N</td><td>—</td><td>여러 생성 중 보상 최고 선택</td></tr><tr><td>latency</td><td>지연시간</td><td>—</td><td>응답 생성 시간</td></tr><tr><td>DPO</td><td>직접 선호 최적화</td><td>—</td><td>보상 모델·RL 없이 단일 손실 정렬</td></tr><tr><td>partition function (Z)</td><td>분배 함수</td><td>—</td><td>확률 정규화 항</td></tr><tr><td>beta (β)</td><td>베타</td><td>—</td><td>기본 모델 벗어남 벌점 계수(≈0.1)</td></tr><tr><td>distribution shift</td><td>분포 이탈</td><td>—</td><td>학습·실제 분포 어긋남</td></tr><tr><td>optimal policy (π*)</td><td>최적 정책</td><td>—</td><td>PPO 목표의 이상적 해</td></tr></tbody></table></div></section><section id="review"><h2>5. 복습 문제</h2><div class="callout review"><div class="c-title">✏️ 스스로 점검</div><ol><li>Best-of-N은 어떻게 작동하며, 가장 큰 비용은 어디에 있는가?</li><li>DPO가 RLHF와 달리 보상 모델·RL 없이 정렬할 수 있는 핵심 아이디어는? 필요한 모델 수는 각각 몇 개인가?</li><li>PPO와 DPO의 트레이드오프는? 곰인형 예에서 선호 튜닝이 바꾼 것은 '사실'인가 '어조'인가?</li></ol></div></section><section id="appendix"><h2>부록. 실무 적용 포인트 <span style="font-size:14px;font-weight:500;color:var(--muted);">(NLP·LLM 기술 내용 한정)</span></h2><div class="callout practice"><div class="c-title">💡 현장에서 써먹기</div><ul><li><strong>Best-of-N은 "여러 번 뽑아 가장 좋은 걸 쓰라"는, 누구나 쓸 수 있는 품질 향상법이다.</strong> 모델을 다시 학습하지 않아도, 같은 프롬프트로 여러 응답을 받아 가장 나은 것을 고르면 품질이 오른다(단 비용↑). 중요한 산출물에서 응답을 여러 번 생성해 비교하는 실무 습관의 이론적 근거다(Lecture 3 self-consistency와 연결).</li><li><strong>선호 튜닝이 '사실이 아니라 어조'를 바꾼다는 점은 도구 선택의 기준을 준다.</strong> 같은 사실도 모델마다 어조·태도가 다른 것은 선호 튜닝의 차이다. 대민 응대처럼 어조가 중요한 업무라면, 정확성뿐 아니라 '말투가 적절한가'도 도구 선택 기준이 된다.</li><li><strong>DPO vs PPO의 트레이드오프는 "완벽보다 충분히 좋은 것"의 실용 감각을 준다.</strong> 최고 성능(PPO)은 막대한 수고를 요한다. 적은 수고로 충분히 좋은 결과(DPO)가 대부분의 실무엔 합리적이라는 판단 — 기관 단위 맞춤화 검토 시 참고할 관점이다.</li></ul></div></section></article></main>
+</div>
+
+<!-- KaTeX 자동 렌더 -->
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}],throwOnError:false});"></script>
+
+<!-- Mermaid -->
+<script type="module">
+  try{
+    const m = await import('https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs');
+    m.default.initialize({startOnLoad:true, theme:'base', themeVariables:{
+      fontFamily:'Pretendard, sans-serif', primaryColor:'#fffdfb', primaryBorderColor:'#d8d0c5',
+      primaryTextColor:'#1a1a1a', lineColor:'#b9554f', fontSize:'14px'
+    }});
+  }catch(e){ /* 오프라인이면 도식은 코드로 표시 */ }
+</script>
+
+<!-- 목차 활성표시 + 모바일 드로어 -->
+<script>
+  // 모바일 드로어
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('overlay');
+  const btn = document.getElementById('menuBtn');
+  const toggle = (on)=>{ sb.classList.toggle('open',on); ov.classList.toggle('show',on); };
+  btn.addEventListener('click',()=>toggle(!sb.classList.contains('open')));
+  ov.addEventListener('click',()=>toggle(false));
+  document.querySelectorAll('.toc a').forEach(a=>a.addEventListener('click',()=>{ if(window.innerWidth<=900) toggle(false); }));
+
+  // 현재 위치 강조
+  const links = [...document.querySelectorAll('.toc a')];
+  const map = {}; links.forEach(a=>{ const id=a.getAttribute('href').slice(1); map[id]=a; });
+  const targets = Object.keys(map).map(id=>document.getElementById(id)).filter(Boolean);
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(en=>{
+      if(en.isIntersecting){
+        links.forEach(l=>l.classList.remove('active'));
+        const a = map[en.target.id]; if(a) a.classList.add('active');
+      }
+    });
+  },{rootMargin:'-15% 0px -75% 0px', threshold:0});
+  targets.forEach(t=>io.observe(t));
+</script>
+
+</body>
+</html>

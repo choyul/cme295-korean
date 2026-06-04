@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CME295 Lecture 1 · 섹션 5. 어텐션과 트랜스포머 아키텍처</title>
+
+<!-- 폰트: Pretendard (CDN, 없으면 시스템 폰트 폴백) -->
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<!-- 수식: KaTeX -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
+
+<style>
+  :root{
+    --bg:#FBF9F6;
+    --paper:#ffffff;
+    --ink:#1a1a1a;
+    --ink-soft:#4a4744;
+    --muted:#7a756f;
+    --accent:#8C1515;          /* Stanford 카디널 */
+    --accent-soft:#b9554f;
+    --tint:#f6ebe9;            /* 카디널 옅은 틴트 */
+    --tint-2:#f3efe9;          /* 따뜻한 회색 */
+    --line:#e7e1d9;
+    --line-strong:#d8d0c5;
+    --radius:10px;
+    --maxw:760px;
+    --sidew:268px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Pretendard","Pretendard Variable",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    line-height:1.78;
+    font-size:16.5px;
+    -webkit-font-smoothing:antialiased;
+    word-break:keep-all;
+  }
+
+  /* ===== 레이아웃 ===== */
+  .layout{display:flex; align-items:flex-start;}
+  .sidebar{
+    width:var(--sidew); flex:0 0 var(--sidew);
+    position:sticky; top:0; height:100vh; overflow-y:auto;
+    padding:28px 18px 40px; border-right:1px solid var(--line);
+    background:rgba(251,249,246,.85); backdrop-filter:saturate(120%) blur(2px);
+  }
+  .content{flex:1 1 auto; min-width:0; display:flex; justify-content:center; padding:0 24px;}
+  .doc{width:100%; max-width:var(--maxw); padding:48px 0 120px;}
+
+  /* ===== 사이드바 목차 ===== */
+  .toc-brand{font-size:12px; letter-spacing:.04em; color:var(--accent); font-weight:700; text-transform:uppercase; margin-bottom:4px;}
+  .toc-title{font-size:15px; font-weight:700; margin:0 0 18px; line-height:1.4; color:var(--ink);}
+  .toc{list-style:none; margin:0; padding:0; font-size:13.5px;}
+  .toc li{margin:1px 0;}
+  .toc a{display:block; padding:5px 10px; border-radius:7px; color:var(--ink-soft); text-decoration:none; border-left:2px solid transparent;}
+  .toc a:hover{background:var(--tint-2); color:var(--ink);}
+  .toc a.sub{padding-left:22px; font-size:13px; color:var(--muted);}
+  .toc a.active{color:var(--accent); background:var(--tint); border-left-color:var(--accent); font-weight:600;}
+
+  /* ===== 타이포 ===== */
+  h1{font-size:27px; line-height:1.32; font-weight:800; letter-spacing:-.01em; margin:0 0 6px;}
+  .subtitle{font-size:18px; font-weight:700; color:var(--accent); margin:0 0 22px;}
+  h2{font-size:21px; font-weight:800; letter-spacing:-.01em; margin:46px 0 14px; padding-bottom:9px; border-bottom:2px solid var(--line-strong);}
+  h3{font-size:17.5px; font-weight:700; margin:34px 0 12px; color:var(--ink);}
+  h3 .badge{display:inline-block; font-size:12px; font-weight:700; color:#fff; background:var(--accent); border-radius:6px; padding:2px 8px; margin-right:8px; vertical-align:middle;}
+  p{margin:12px 0;}
+  strong{font-weight:700;}
+  a{color:var(--accent);}
+  ul,ol{margin:12px 0; padding-left:22px;}
+  li{margin:6px 0;}
+  hr{display:none;}
+
+  /* ===== 출처 배너 ===== */
+  .source-banner{
+    display:flex; gap:10px; align-items:baseline;
+    background:var(--tint); border-left:4px solid var(--accent);
+    border-radius:0 var(--radius) var(--radius) 0;
+    padding:12px 16px; margin:0 0 8px; font-size:13.5px; color:var(--ink-soft);
+  }
+  .source-banner b{color:var(--accent);}
+
+  /* ===== 한국어 번역 카드 ===== */
+  .ko{
+    background:var(--paper); border:1px solid var(--line);
+    border-left:4px solid var(--accent); border-radius:var(--radius);
+    padding:6px 22px; margin:16px 0;
+    box-shadow:0 1px 2px rgba(60,40,20,.04);
+  }
+  .ko > .label, .terms > .label{
+    display:inline-block; font-size:11.5px; font-weight:800; letter-spacing:.06em;
+    color:var(--accent); text-transform:uppercase; margin:14px 0 -4px;
+  }
+
+  /* ===== 영문 원문 토글 ===== */
+  details.en{
+    background:var(--tint-2); border:1px solid var(--line); border-radius:var(--radius);
+    margin:14px 0; overflow:hidden;
+  }
+  details.en > summary{
+    cursor:pointer; list-style:none; padding:11px 16px;
+    font-size:13.5px; font-weight:700; color:var(--muted);
+    display:flex; align-items:center; gap:8px; user-select:none;
+  }
+  details.en > summary::-webkit-details-marker{display:none;}
+  details.en > summary .chev{transition:transform .2s; color:var(--accent-soft);}
+  details.en[open] > summary .chev{transform:rotate(90deg);}
+  details.en[open] > summary{border-bottom:1px solid var(--line);}
+  .en-body{padding:4px 18px 14px; font-size:14px; line-height:1.7; color:#5c574f; font-style:normal;}
+  .en-body p{margin:10px 0;}
+  .ts{
+    display:inline-block; font-family:"SFMono-Regular",ui-monospace,Menlo,Consolas,monospace;
+    font-size:11.5px; font-style:normal; color:var(--accent);
+    background:var(--tint); border:1px solid #e6cfcc; border-radius:5px;
+    padding:0 5px; margin:0 2px; vertical-align:baseline;
+  }
+
+  /* ===== 용어 설명 ===== */
+  .terms{
+    border:1px solid var(--line); border-left:3px solid var(--accent-soft);
+    border-radius:var(--radius); background:#fffdfb; padding:4px 20px 8px; margin:16px 0;
+  }
+  .terms dl{margin:8px 0;}
+  .terms dt{font-weight:700; color:var(--ink); margin-top:8px;}
+  .terms dt .en-term{color:var(--accent); font-weight:600;}
+  .terms dd{margin:1px 0 6px; color:var(--ink-soft); font-size:15px;}
+
+  /* ===== 표 ===== */
+  .table-wrap{overflow-x:auto; margin:16px 0; border:1px solid var(--line); border-radius:var(--radius);}
+  table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:520px;}
+  thead th{background:var(--accent); color:#fff; font-weight:700; text-align:left; padding:11px 14px; white-space:nowrap;}
+  tbody td{padding:9px 14px; border-top:1px solid var(--line);}
+  tbody tr:nth-child(even){background:var(--tint-2);}
+  tbody td:first-child{font-family:ui-monospace,Menlo,monospace; font-size:13px; color:var(--accent);}
+
+  /* ===== 콜아웃 ===== */
+  .callout{border-radius:var(--radius); padding:14px 20px 6px; margin:18px 0;}
+  .callout .c-title{font-weight:800; margin:6px 0 2px; display:flex; align-items:center; gap:8px;}
+  .callout.review{background:#fff; border:1px solid var(--line-strong);}
+  .callout.review ol{counter-reset:none;}
+  .callout.note{background:var(--tint-2); border-left:4px solid var(--muted); border-radius:0 var(--radius) var(--radius) 0; padding-bottom:12px;}
+  .callout.practice{background:var(--tint); border:1px solid #e6cfcc; padding-bottom:14px;}
+  .callout.practice li{margin:12px 0;}
+  .next{margin-top:40px; padding:14px 18px; background:var(--tint-2); border-radius:var(--radius); font-size:14px; color:var(--ink-soft);}
+
+  /* 수식 / 도식 */
+  .katex-display{margin:14px 0; overflow-x:auto; overflow-y:hidden; padding:6px 0;}
+  .diagram{background:#fffdfb; border:1px solid var(--line); border-radius:var(--radius); padding:14px; margin:16px 0; text-align:center;}
+  .diagram .cap{font-size:12.5px; color:var(--muted); margin-top:6px;}
+  .mermaid{display:flex; justify-content:center;}
+
+  /* ===== 모바일 ===== */
+  .menu-btn{display:none;}
+  .overlay{display:none;}
+  @media (max-width:900px){
+    .menu-btn{
+      display:flex; align-items:center; justify-content:center;
+      position:fixed; top:14px; left:14px; z-index:50;
+      width:42px; height:42px; border-radius:10px; border:1px solid var(--line-strong);
+      background:var(--paper); color:var(--accent); font-size:20px; cursor:pointer;
+      box-shadow:0 2px 8px rgba(60,40,20,.12);
+    }
+    .sidebar{
+      position:fixed; left:0; top:0; z-index:60; height:100vh;
+      transform:translateX(-105%); transition:transform .25s ease;
+      box-shadow:4px 0 24px rgba(0,0,0,.12); background:var(--bg);
+    }
+    .sidebar.open{transform:translateX(0);}
+    .overlay.show{display:block; position:fixed; inset:0; background:rgba(0,0,0,.32); z-index:55;}
+    .content{padding:0 16px;}
+    .doc{padding:64px 0 100px;}
+    body{font-size:16px;}
+    h1{font-size:23px;}
+    .ko,.terms{padding-left:16px; padding-right:16px;}
+  }
+
+  /* ===== 인쇄 ===== */
+  @media print{
+    .sidebar,.menu-btn,.overlay{display:none !important;}
+    .content{padding:0;}
+    body{background:#fff; font-size:11pt;}
+    details.en{display:none;}          /* 인쇄본은 한국어 위주 */
+    .ko,.terms,.callout,.table-wrap{break-inside:avoid; box-shadow:none;}
+    a{color:var(--ink);}
+  }
+  .home-btn{position:fixed; top:16px; right:18px; z-index:70;
+    display:inline-flex; align-items:center; gap:6px; text-decoration:none;
+    background:var(--paper); color:var(--accent); border:1px solid var(--line-strong);
+    border-radius:999px; padding:8px 14px; font-size:13.5px; font-weight:700;
+    box-shadow:0 2px 8px rgba(60,40,20,.12); transition:background .12s,color .12s;}
+  .home-btn:hover{background:var(--accent); color:#fff; border-color:var(--accent);}
+  @media (max-width:900px){ .home-btn{top:14px; right:14px; padding:8px 12px; font-size:12.5px;} }
+  @media print{ .home-btn{display:none !important;} }
+</style>
+</head>
+<body>
+<a class="home-btn" href="../index.html" title="전체 목차로 돌아가기">← 전체 목차</a>
+
+<button class="menu-btn" id="menuBtn" aria-label="목차 열기">☰</button>
+<div class="overlay" id="overlay"></div>
+
+<div class="layout">
+  <nav class="sidebar" id="sidebar"><div class="toc-brand">Stanford CME295 · Lecture 1</div><p class="toc-title">섹션 5. 어텐션과 트랜스포머 아키텍처</p><ul class="toc"><li><a href="#overview">1. 강의 개요</a></li><li><a href="#goals">2. 학습 목표</a></li><li><a href="#body">3. 본문</a></li><li><a class="sub" href="#block1">블록 1 · 어텐션(attention)의 등장 동기</a></li><li><a class="sub" href="#block2">블록 2 · self-attention과 트랜스포머의 등장</a></li><li><a class="sub" href="#block3">블록 3 · 쿼리·키·값 (Query, Key, Value)</a></li><li><a class="sub" href="#block4">블록 4 · 인코더-디코더 아키텍처 개요</a></li><li><a class="sub" href="#block5">블록 5 · 멀티헤드(multi-head)와 라벨 스무딩(label smoothing)</a></li><li><a class="sub" href="#block6">블록 6 · 종단(end-to-end) 예제: 토큰화부터 번역 출력까지</a></li><li><a href="#glossary">4. 핵심 용어집</a></li><li><a href="#review">5. 복습 문제</a></li><li><a href="#appendix">부록. 실무 적용 포인트 (NLP·LLM 기술 내용 한정)</a></li></ul></nav>
+  <main class="content"><article class="doc"><h1>CME295 Transformers &amp; LLMs — Lecture 1 한국어 교재</h1><p class="subtitle">섹션 5. 어텐션과 트랜스포머 아키텍처</p><div class="source-banner"><span>📄</span><span><b>원문 출처</b>: Stanford CME295, Autumn 2025, Lecture 1, 타임스탬프 <span class="ts">1:04:46</span>~(1:41:50, 끝)</span></div><section id="overview"><h2>1. 강의 개요</h2><ul><li>RNN의 한계를 푸는 핵심 아이디어인 어텐션(attention)과, 그것만으로 세운 2017년 트랜스포머(Transformer)를 다룬다.</li><li>self-attention의 작동 원리를 쿼리·키·값(Query·Key·Value)으로 설명하고, 인코더-디코더 구조와 멀티헤드·교차·마스크드 어텐션을 본다.</li><li>마지막으로 "a cute teddy bear is reading" 예문으로 토큰화부터 번역 출력까지 전 과정을 종단(end-to-end)으로 따라간다.</li></ul></section><section id="goals"><h2>2. 학습 목표</h2><ol><li>어텐션이 RNN의 어떤 약점(장기 의존성)을 어떻게 푸는지, self-attention이 맥락 의존 표현을 어떻게 만드는지 설명할 수 있다.</li><li>쿼리·키·값(Q·K·V)의 역할과 self-attention 공식(softmax(QKᵀ/√dₖ)V)의 각 단계 의미를 안다.</li><li>인코더-디코더 구조에서 self-attention / 마스크드 / 교차 어텐션, 멀티헤드, 위치 인코딩의 역할을 구분할 수 있다.</li></ol></section><section id="body"><h2>3. 본문</h2><div id="block1"><h3><span class="badge">블록 1</span>어텐션(attention)의 등장 동기</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">1:04:46</span> for the fact that the model has trouble remembering things from the past, people have tried having more direct connections between something and the thing from the past. And this is the idea behind attention. (...) it tries to have a direct link between what we're trying to predict and something from the past. (...) <span class="ts">1:05:47</span> when wanting to generate the next word of my translation, it would be great if I could take a peek at a certain area of the input text. So, the idea behind attention is to have a direct link between what you're trying to predict and things before. (...) it was introduced in 2014.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>RNN이 과거를 기억하기 어렵다는 문제 때문에, 사람들은 '예측하려는 것'과 '과거의 어떤 것' 사이에 더 직접적인 연결을 두려고 했습니다. 이것이 어텐션(attention)의 아이디어입니다. 어텐션은 예측하려는 대상과 과거의 정보를 직접 연결합니다.</p>
+<p>예를 들어 영어 문장을 프랑스어로 번역한다고 합시다. RNN으로 입력을 처리하며 은닉 상태를 계산하는데, 번역의 다음 단어를 생성할 때 입력 텍스트의 특정 부분을 '엿볼 수' 있다면 좋을 것입니다. 어텐션은 바로 이렇게, 예측하려는 것과 그 이전 것들 사이에 직접 연결을 두는 발상이며, 2014년에 처음 도입됐습니다. 이는 장기 의존성 문제를 풀기 위한 것입니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>어텐션<span class="en-term">(attention)</span></dt><dd>예측 대상과 과거(또는 입력)의 정보를 직접 연결하는 메커니즘. RNN의 순차 의존을 우회한다.</dd></dl><p style="margin:8px 0 2px;color:var(--ink-soft);font-size:15px;">어텐션은 이 강의 전체의 핵심 개념이며, 트랜스포머의 토대다.</p></div>
+</div>
+<div id="block2"><h3><span class="badge">블록 2</span>self-attention과 트랜스포머의 등장</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">1:07:02</span> the Transformer (...) was introduced in 2017 in this paper named Attention Is All You Need. (...) the authors tried to (...) move away from these sequential way of processing the text, and instead let the model just have direct connections with all parts of the text at once. So, that's called self-attention. (...) <span class="ts">1:08:00</span> in order to compute the representation of the token teddy bear, we're going to look at all the other tokens in the sequence at once. (...) <span class="ts">1:08:36</span> back to your question about river bank and robbing a bank, here the bank would have different representations. So, this is the idea. (...) this is called the self-attention mechanism.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>트랜스포머(Transformer)는 2017년 「Attention Is All You Need(어텐션만 있으면 된다)」 논문에서 도입됐습니다. 제목에서 보이듯 저자들은 어텐션에만 기대려 했습니다. 저자들은 텍스트를 순차적으로 처리하는 방식에서 벗어나, 모델이 텍스트의 모든 부분과 한꺼번에(at once) 직접 연결되게 했습니다. 이것이 self-attention(셀프 어텐션)입니다. 번역 과제에서 시도했더니 결과가 매우 좋았습니다.</p>
+<p>예문 "a cute teddy bear is reading"에서, "teddy bear" 토큰의 표현을 계산할 때 시퀀스의 다른 모든 토큰을 한꺼번에, 직접 연결로 봅니다. 그래서 "teddy bear"는 자기가 속한 맥락에 따라 고유한 표현을 갖게 됩니다. 앞서 나온 질문(강가의 'bank'와 은행 'bank')처럼, 같은 단어라도 맥락에 따라 다른 표현을 갖게 되는 것입니다. 이것이 self-attention 메커니즘입니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>트랜스포머<span class="en-term">(Transformer)</span></dt><dd>2017년 「Attention Is All You Need」에서 제시된, 어텐션 기반 아키텍처. 오늘날 LLM의 토대.</dd><dt>self-attention<span class="en-term">(셀프 어텐션)</span></dt><dd>한 토큰의 표현을 같은 시퀀스 내 모든 토큰과의 관계로 한꺼번에 계산하는 방식.</dd><dt>맥락 의존 표현</dt><dd>같은 단어라도 문장 맥락에 따라 달라지는 표현. self-attention의 핵심 이점(river bank vs. robbing a bank).</dd></dl></div>
+</div>
+<div id="block3"><h3><span class="badge">블록 3</span>쿼리·키·값 (Query, Key, Value)</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">1:09:09</span> when you want to express something in terms of something else, we use the words query, key, and value, Q, K, and V. (...) our goal is to figure out what other tokens is the query teddy bear more similar to. (...) you're going to compare the query to the key to quantify how similar your query is to the given key and take the corresponding value. (...) <span class="ts">1:11:16</span> we can express doing the self-attention computation across the whole sequence in a matrix format. And GPUs love matrices (...) softmax of the query and the key, which is (...) a way to get some kinds of weights of which values will be more important (...) <span class="ts">1:12:42</span> these quantities, they're learned. (...) the key is there for you to figure out which one is most similar to the query and the value is the actual value that is associated with that element. (...) we're going to actually do projections to obtain these quantities and these projections are learned by the model.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>무언가를 다른 것들과의 관계로 표현하려 할 때, 쿼리(Query)·키(Key)·값(Value), 줄여서 Q·K·V라는 말을 씁니다. 목표는 쿼리(예: "teddy bear")가 다른 어떤 토큰들과 더 비슷한지 알아내는 것입니다. 방법은 이렇습니다. 쿼리를 모든 토큰의 키와 비교해 얼마나 비슷한지 정량화하고, 그 비슷함에 따라 가중치를 줘서 대응하는 값(value)을 가중합(weighted sum)합니다. 즉 비슷한 토큰의 값일수록 큰 가중치로 반영합니다.</p>
+<p>이렇게 Q·K·V로 표현하면 한 가지 큰 이점이 있습니다. 시퀀스 전체에 대한 self-attention 계산을 행렬(matrix) 형태로 한꺼번에 할 수 있다는 것입니다. GPU는 행렬 연산에 최적화돼 있어, 이 방식이 하드웨어에 잘 맞습니다. 핵심은 softmax(쿼리·키)로 "어떤 값이 더 중요한지"에 대한 가중치를 얻고, 그 가중치를 값에 곱하는 것입니다.</p>
+<p>중요한 점: Q·K·V는 고정된 게 아니라 학습됩니다(learned). 해석하자면 키는 쿼리와 무엇이 가장 비슷한지 알아내기 위한 것이고, 값은 그 요소에 실제로 연결된 벡터입니다. 그리고 이 Q·K·V는 입력 임베딩에 투영(projection)을 적용해 얻는데, 그 투영 행렬도 모델이 학습합니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>쿼리<span class="en-term">(Query, Q)</span></dt><dd>"내가 무엇과 비슷한지 찾고 싶은" 주체 토큰의 표현.</dd><dt>키<span class="en-term">(Key, K)</span></dt><dd>쿼리와 비교되는 대상. 유사도 계산에 쓰임.</dd><dt>값<span class="en-term">(Value, V)</span></dt><dd>키에 연결된 실제 벡터. 가중합되어 결과가 됨.</dd><dt>가중합<span class="en-term">(weighted sum)</span></dt><dd>유사도가 높을수록 큰 가중치로 값들을 더하는 것.</dd><dt>투영<span class="en-term">(projection)</span></dt><dd>입력 임베딩을 Q·K·V 공간으로 변환하는 것. 그 변환 행렬(W_Q, W_K, W_V)은 학습된다.</dd></dl></div>
+</div>
+<div id="block4"><h3><span class="badge">블록 4</span>인코더-디코더 아키텍처 개요</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">1:13:37</span> the authors proposed an architecture that is composed of two parts, an encoder, which is on the left side, and a decoder, which is on the right side. (...) what will go through the encoder is the input text in your source language and what is going to go through the decoder is the target language. (...) <span class="ts">1:15:01</span> you do that by using a layer called the attention layer. So, multi-head attention layer (...) <span class="ts">1:16:26</span> start your translation with (...) the beginning of sentence token (...) use all the representations from your input sentence in order to figure out what to predict next. (...) this is the cross-attention layer (...) <span class="ts">1:18:05</span> the keys and values are actually coming from the encoder (...) the query (...) the thing that you want to figure out. (...) <span class="ts">1:18:32</span> another attention layer (...) called masked because it only looks at the tokens that translated so far. (...) <span class="ts">1:20:05</span> you don't have this sense of order (...) Which is why you have position encodings.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>저자들은 두 부분으로 된 구조를 제안했습니다. 왼쪽의 인코더(encoder)와 오른쪽의 디코더(decoder)입니다. 번역 과제에서, 출발어 입력 텍스트는 인코더를 지나고, 예측할 도착어는 디코더를 지납니다.</p>
+<p><strong>인코더</strong>: 입력 텍스트로부터 의미 있는 임베딩을 계산합니다. 멀티헤드 어텐션 층(multi-head attention layer)에서 입력의 모든 토큰이 서로에게 어텐션을 적용해(self-attention), 각 토큰의 표현을 다른 토큰들의 함수로 계산합니다. 이어 피드포워드 층(feed-forward layer)을 거쳐 또 다른 투영을 학습합니다. 인코딩이 끝나면 입력 문장의 풍부한 토큰 표현을 얻습니다.</p>
+<p><strong>디코더</strong>: 문장 시작(BOS, beginning of sentence) 토큰으로 번역을 시작하고, 입력 문장의 모든 표현을 써서 다음에 무엇을 예측할지 알아냅니다. 디코더에는 두 종류의 어텐션이 있습니다.</p>
+<ul><li><strong>교차 어텐션(cross-attention)</strong>: 입력(인코더)의 무엇이 중요한지 본다. 여기서 쿼리(Q)는 디코더에서, 키(K)·값(V)은 인코더(입력 시퀀스)에서 온다. (강사가 청중에게 "디코더에서 오는 화살표가 Q·K·V 중 무엇이냐" 묻고, 정답은 쿼리(Query)임을 확인)</li><li><strong>마스크드 self-attention(masked self-attention)</strong>: 지금까지 번역된(디코딩된) 토큰들만 본다. '마스크드'라 부르는 이유는, 아직 번역하지 않은(오른쪽) 토큰은 보지 못하게 가리기 때문이다.</li></ul>
+<p>마지막으로, 어텐션은 모든 토큰과 직접 연결되므로 순서 감각이 없습니다(RNN과 달리). 그래서 위치 인코딩(position encoding)을 더해 토큰이 시퀀스에서 몇 번째인지 알려줍니다. 디코더 끝에서는 크기가 사전 크기인 벡터를 softmax에 통과시켜 다음 단어를 고릅니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>인코더<span class="en-term">(encoder)</span></dt><dd>입력 텍스트를 풍부한 표현으로 바꾸는 부분.</dd><dt>디코더<span class="en-term">(decoder)</span></dt><dd>그 표현을 받아 출력(번역문)을 생성하는 부분.</dd><dt>멀티헤드 어텐션<span class="en-term">(multi-head attention)</span></dt><dd>어텐션 계산을 여러 방식(head)으로 동시에 수행. (블록 5 참고)</dd><dt>피드포워드 층<span class="en-term">(feed-forward layer, FFN)</span></dt><dd>어텐션 뒤에 붙어 표현에 자유도를 더하는 신경망 층.</dd><dt>교차 어텐션<span class="en-term">(cross-attention)</span></dt><dd>디코더가 인코더(입력)를 참조. Q=디코더, K·V=인코더.</dd><dt>마스크드 <span class="en-term">(self-)</span>어텐션<span class="en-term">(masked attention)</span></dt><dd>지금까지 생성된 토큰만 보도록 미래를 가림.</dd><dt>BOS / EOS</dt><dd>문장 시작 / 끝을 나타내는 특수 토큰.</dd><dt>위치 인코딩<span class="en-term">(position encoding)</span></dt><dd>토큰의 순서 정보를 더해주는 장치.</dd></dl></div>
+</div>
+<div id="block5"><h3><span class="badge">블록 5</span>멀티헤드(multi-head)와 라벨 스무딩(label smoothing)</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">1:22:58</span> when you do the self-attention computation, you (...) make queries interact with keys and then take the corresponding value, but nothing prevents you from doing that several times. (...) the term head is given to the projection matrices that you use to obtain the query, key, and value. And when you have several heads (...) you're allowing your model to learn different projections. (...) <span class="ts">1:23:36</span> it is similar to having multiple filters in your convolution. (...) <span class="ts">1:25:34</span> label smoothing (...) in NLP, when you want to predict what comes next, there is typically more than one way. (...) instead of saying "Predict this word 100%" (...) it says "predict this word, but there's a chance it's not this word." (...) it takes the one-hot encoding (...) instead of 1 0 0 0 (...) it's 1 minus epsilon and then epsilon over V minus one (...) <span class="ts">1:26:57</span> it tends to improve metrics like BLEU.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p><strong>멀티헤드(multi-head)</strong>: self-attention 계산에서 쿼리와 키를 상호작용시켜 대응하는 값을 가져오는데, 이걸 여러 번 해도 됩니다. 헤드(head)란 Q·K·V를 얻는 데 쓰는 투영 행렬들을 가리킵니다. 헤드가 여러 개면 모델이 서로 다른 투영, 즉 벡터 간의 서로 다른 연관을 학습할 자유도를 갖습니다. (컴퓨터 비전을 안다면, 합성곱에서 여러 필터를 두는 것과 비슷합니다.) 헤드 수는 보통 소문자 h로 표기합니다. 모델에 제약을 두지 않아도, 학습 과정에서 실제로 서로 다른 표현을 학습하게 됩니다.</p>
+<p><strong>라벨 스무딩(label smoothing)</strong>: NLP에서 다음에 올 단어는 보통 한 가지가 아닙니다. "What a great ___"의 빈칸은 day, lecture, book 등 여러 답이 가능합니다. 라벨 스무딩은 이를 다루는 기법으로, "이 단어가 100% 정답이고 다른 건 없다"고 하는 대신 "이 단어를 예측하되, 아닐 가능성도 있다"고 말합니다. 구체적으로는 정답 원핫 벡터 [1,0,0,0] 대신, 정답 자리를 1−ε로, 나머지를 ε/(V−1)로 분산시킵니다. 이러면 모델이 예측에 덜 확신하게 되는데, 실제로는 BLEU 같은 (번역 과제의) 지표를 향상시키는 효과가 있습니다. NLP 전반에 두루 쓰이는 기법입니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>헤드<span class="en-term">(head)</span></dt><dd>Q·K·V를 얻는 투영 행렬 한 벌. 여러 개면 서로 다른 연관을 학습.</dd><dt>멀티헤드 어텐션<span class="en-term">(multi-head attention)</span></dt><dd>어텐션을 여러 헤드로 병렬 수행해 표현을 다양화.</dd><dt>라벨 스무딩<span class="en-term">(label smoothing)</span></dt><dd>정답을 100%가 아니라 1−ε로 두고 나머지에 ε를 분산해, 과한 확신을 줄이는 기법.</dd></dl></div>
+</div>
+<div id="block6"><h3><span class="badge">블록 6</span>종단(end-to-end) 예제: 토큰화부터 번역 출력까지</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">1:29:41</span> now we're going to piece it all together with one specific example. (...) a cute teddy bear is reading (...) first we start with tokenization (...) you need to indicate the start and the end of a sequence (...) with the BOS and EOS tokens. (...) <span class="ts">1:30:34</span> you have some added information that is in the form of a position embedding (...) sines and cosines that it adds additively (...) <span class="ts">1:31:25</span> send this representation through the encoder (...) you take this input and project it on three spaces (...) WQ (...) WK (...) WV (...) learned by the model. (...) <span class="ts">1:32:24</span> softmax of QK transpose over square root of DK times V (...) <span class="ts">1:33:51</span> as the dimension of key and queries grows, it will tend to grow as well. So, you want to normalize this dot product (...) <span class="ts">1:35:23</span> you obtain H such matrices, and you concatenate them (...) another projection matrix that you call WO (...) <span class="ts">1:37:25</span> the FFN (...) the hidden layer is of a bigger dimension than input and outputs (...) <span class="ts">1:38:14</span> you don't have just one encoder module, you have actually N of them (...) <span class="ts">1:39:10</span> you start with the BOS token (...) the self-attention layer is causal (...) <span class="ts">1:40:04</span> cross-attention that takes as keys and values these encoded embeddings (...) the queries are those that come out of the self-attention layer (...) <span class="ts">1:40:46</span> a linear projection and a softmax layer to turn the prediction of the next word into a probability distribution (...) <span class="ts">1:41:17</span> When you hit the EOS token (...) it stops.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>예문 "a cute teddy bear is reading"으로 전 과정을 한꺼번에 따라가 봅니다.</p>
+<ol><li><strong>토큰화</strong>: 문장을 토큰으로 나누고, 시작·끝을 나타내는 BOS·EOS 토큰을 붙입니다.</li></ol>
+<ol><li><strong>입력 표현 = 임베딩 + 위치 임베딩</strong>: 각 토큰은 학습된 임베딩을 갖습니다. 여기에 토큰이 시퀀스에서 몇 번째인지를 담은 위치 임베딩(position embedding)을 더합니다. 원논문은 사인·코사인을 써서 원소별 덧셈(element-wise addition)으로 더합니다. 이렇게 위치를 아는 임베딩을 토큰마다 만들고, 전체를 행렬로 봅니다(한 차원은 임베딩 크기 d_model, 다른 차원은 시퀀스 길이 N).</li></ol>
+<ol><li><strong>인코더의 self-attention</strong>: 입력을 세 공간으로 투영합니다 — W_Q로 쿼리, W_K로 키, W_V로 값. (W_Q, W_K, W_V는 학습되는 투영 행렬) 그다음 self-attention 공식을 적용합니다:</li></ol>
+<p><strong>softmax(Q·Kᵀ / √dₖ) · V</strong></p>
+<ul><li>Q는 각 행이 한 쿼리인 행렬, Kᵀ는 각 열이 한 키인 행렬. 둘을 곱하면 각 쿼리가 각 키에 얼마나 투영되는지 나오고, softmax를 취하면 각 쿼리에 대한 키들의 확률 분포(가중치)가 됩니다.</li><li><strong>왜 √dₖ로 나누나(스케일링)</strong>: 키·쿼리의 차원이 커지면 내적(dot product) 값도 커지는 경향이 있어, 이를 정규화하려고 키 차원의 제곱근으로 나눕니다.</li><li>마지막으로 이 가중치를 값 행렬 V에 곱하면, 각 쿼리마다 값들의 가중합이 나옵니다.</li></ul>
+<ol><li><strong>멀티헤드 결합</strong>: 위 계산을 여러 헤드로 병렬 수행해 H개의 행렬을 얻고, 열 방향으로 이어 붙인(concatenate) 뒤, 또 다른 투영 행렬 W_O로 원래 임베딩 차원으로 되돌립니다.</li></ol>
+<ol><li><strong>피드포워드(FFN)</strong>: 어텐션 뒤에 FFN이 붙습니다. word2vec과 달리 여기서는 은닉층 차원이 입출력보다 더 큽니다. 모델이 유용한 표현을 학습할 자유도를 충분히 주기 위해서입니다.</li></ol>
+<ol><li><strong>N개 적층</strong>: 인코더 모듈은 하나가 아니라 N개(원논문 표기)를 쌓습니다. 디코더도 N개를 쌓습니다. 인코더의 마지막 표현이 각 디코더의 교차 어텐션에 전달됩니다.</li></ol>
+<ol><li><strong>디코딩</strong>: BOS 토큰으로 시작합니다. 디코더의 self-attention은 인과적(causal)입니다 — 자기 자신과 그 앞의 토큰들만 봅니다(미래를 가림). 그다음 교차 어텐션에서, 키·값은 인코더의 임베딩에서, 쿼리는 디코더 self-attention의 출력에서 옵니다. 이어 FFN으로 표현을 풍부하게 만듭니다. 이 과정을 N번 거친 뒤, 마지막에 선형 투영(linear projection)과 softmax로 다음 단어를 사전 전체에 대한 확률 분포로 바꿉니다.</li></ol>
+<ol><li><strong>반복과 종료</strong>: 예측한 다음 토큰을 다시 디코더에 넣어 그다음 토큰을 예측하는 식으로 반복하고, EOS 토큰이 나오면 멈춥니다. 이것이 원논문 저자들이 기계번역을 수행한 방식입니다.</li></ol></div>
+<div class="callout note"><div class="c-title">⚠️ 참고</div><p>청중 질문 메모: "여러 헤드가 똑같은 결과를 내면 의미 없지 않나?"에 대해 — 제약은 없지만, 경사하강법(gradient descent)으로 학습하는 과정에서 모델은 똑같이 베낄 유인이 없고, 실제로는 서로 다른 유용한 표현으로 수렴한다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>위치 임베딩<span class="en-term">(position embedding)</span></dt><dd>토큰의 순서를 담아 임베딩에 더하는 값(원논문은 사인·코사인).</dd><dt>d_model / N</dt><dd>임베딩 차원 / 시퀀스 길이(또는 적층 수).</dd><dt>self-attention 공식 softmax<span class="en-term">(QKᵀ/√dₖ)</span>V</dt><dd>쿼리·키 유사도를 가중치로 만들어 값을 가중합.</dd><dt>스케일링<span class="en-term">(√dₖ로 나눔)</span></dt><dd>차원이 커질수록 내적이 커지는 것을 정규화.</dd><dt>concatenate<span class="en-term">(이어 붙이기)</span> + W_O</dt><dd>멀티헤드 결과를 합쳐 원래 차원으로 되돌리는 투영.</dd><dt>인과적<span class="en-term">(causal)</span> self-attention</dt><dd>현재와 과거 토큰만 보고 미래는 가리는 어텐션(=마스크드).</dd><dt>경사하강법<span class="en-term">(gradient descent)</span></dt><dd>손실을 줄이는 방향으로 가중치를 조정하는 최적화 방법.</dd></dl></div>
+</div></section><section id="glossary"><h2>4. 핵심 용어집</h2><div class="table-wrap"><table><thead><tr><th>영문</th><th>한국어</th><th>발음</th><th>뜻</th></tr></thead><tbody><tr><td>attention</td><td>어텐션</td><td>어텐션</td><td>예측 대상과 과거/입력을 직접 연결</td></tr><tr><td>Transformer</td><td>트랜스포머</td><td>트랜스포머</td><td>2017년 어텐션 기반 아키텍처</td></tr><tr><td>self-attention</td><td>셀프 어텐션</td><td>셀프 어텐션</td><td>시퀀스 내 모든 토큰 관계로 표현 계산</td></tr><tr><td>Query / Key / Value</td><td>쿼리/키/값</td><td>큐·케이·브이</td><td>비교 주체 / 비교 대상 / 실제 벡터</td></tr><tr><td>weighted sum</td><td>가중합</td><td>웨이티드 섬</td><td>유사도 가중치로 값들을 더함</td></tr><tr><td>projection (W_Q,W_K,W_V)</td><td>투영 행렬</td><td>프로젝션</td><td>임베딩을 Q·K·V로 변환(학습됨)</td></tr><tr><td>encoder</td><td>인코더</td><td>인코더</td><td>입력을 풍부한 표현으로 변환</td></tr><tr><td>decoder</td><td>디코더</td><td>디코더</td><td>표현을 받아 출력 생성</td></tr><tr><td>multi-head attention</td><td>멀티헤드 어텐션</td><td>멀티헤드</td><td>어텐션을 여러 헤드로 병렬 수행</td></tr><tr><td>head</td><td>헤드</td><td>헤드</td><td>Q·K·V 투영 행렬 한 벌</td></tr><tr><td>feed-forward (FFN)</td><td>피드포워드</td><td>에프에프엔</td><td>표현에 자유도를 더하는 층</td></tr><tr><td>cross-attention</td><td>교차 어텐션</td><td>크로스 어텐션</td><td>디코더가 인코더 참조(Q=디코더, K·V=인코더)</td></tr><tr><td>masked / causal attention</td><td>마스크드/인과 어텐션</td><td>마스크드</td><td>미래 토큰을 가림</td></tr><tr><td>position encoding/embedding</td><td>위치 인코딩/임베딩</td><td>포지션 인코딩</td><td>토큰 순서 정보 추가</td></tr><tr><td>BOS / EOS</td><td>문장 시작/끝 토큰</td><td>비오에스/이오에스</td><td>생성 시작/종료 표시</td></tr><tr><td>label smoothing</td><td>라벨 스무딩</td><td>라벨 스무딩</td><td>정답 확신을 낮춰 일반화</td></tr><tr><td>softmax(QKᵀ/√dₖ)V</td><td>self-attention 공식</td><td>—</td><td>어텐션 핵심 수식</td></tr><tr><td>gradient descent</td><td>경사하강법</td><td>그래디언트 디센트</td><td>손실을 줄이는 최적화</td></tr></tbody></table></div></section><section id="review"><h2>5. 복습 문제</h2><div class="callout review"><div class="c-title">✏️ 스스로 점검</div><ol><li>self-attention이 RNN과 달리 "river bank"와 "robbing a bank"의 'bank'를 다르게 표현할 수 있는 이유는 무엇인가?</li><li>쿼리·키·값(Q·K·V)의 역할을 각각 한 문장으로 설명하고, 교차 어텐션에서 Q와 K·V가 각각 어디(인코더/디코더)에서 오는지 답하라.</li><li>종단 예제에서, 디코더가 다음 단어를 생성하고 멈추기까지의 과정을 (BOS → … → EOS) 순서대로 요약하라. self-attention 공식 softmax(QKᵀ/√dₖ)V에서 √dₖ로 나누는 이유는?</li></ol></div></section><section id="appendix"><h2>부록. 실무 적용 포인트 <span style="font-size:14px;font-weight:500;color:var(--muted);">(NLP·LLM 기술 내용 한정)</span></h2><div class="callout practice"><div class="c-title">💡 현장에서 써먹기</div><ul><li><strong>self-attention의 "맥락 의존 표현"이 곧 오늘날 LLM이 문맥을 이해하는 원리다.</strong> 같은 단어도 문맥에 따라 다르게 해석하기 때문에, "사업"이 어떤 문서 안에 있느냐에 따라 의미를 구분해 처리할 수 있다. 과거 모델 대비 LLM이 긴 맥락을 잘 다루는 근본 이유이며, 긴 보고서·복잡한 민원을 통째로 넣고 처리시킬 수 있는 배경이다.</li><li><strong>어텐션은 입력 길이가 길수록 연산이 가파르게 늘어난다.</strong> 모든 토큰이 모든 토큰과 연결되므로(시퀀스 길이의 제곱에 비례), 입력이 길수록 비용·시간이 크게 증가한다. 매우 긴 문서를 한 번에 넣기보다 필요한 부분만 추려 넣는 것이 비용·속도 면에서 유리하다는 실무 판단의 근거가 된다.</li><li><strong>인코더-디코더 구분은 도구 선택의 직관을 준다.</strong> 입력 이해 중심 과제(분류·검색·개체 추출)는 인코더 계열, 텍스트 생성 과제(번역·요약·작성)는 디코더(생성) 계열에 가깝다. 어떤 AI 도구가 어떤 업무에 맞는지 가늠할 때 참고할 수 있는 큰 그림이다.</li><li><strong>라벨 스무딩·멀티헤드 같은 기법은 "왜 같은 입력에도 답이 조금씩 달라지나"의 단서다.</strong> 모델은 단 하나의 정답에 100% 확신하도록 학습되지 않는다(여러 표현·여러 가능 답을 학습). 그래서 생성 결과에 변동이 있는 것이 정상이며, 중요한 산출물은 한 번에 끝내지 말고 검토·재생성하는 것이 안전하다.</li></ul>
+<p>&gt; 강의 1 전체 변환 완료. 핵심 줄기: 텍스트 → 토큰화 → 표현(임베딩) → 순차 모델의 한계 → 어텐션 → 트랜스포머. 다음 강의는 트랜스포머의 세부와 LLM 학습·활용으로 이어질 예정.</p></div></section></article></main>
+</div>
+
+<!-- KaTeX 자동 렌더 -->
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}],throwOnError:false});"></script>
+
+<!-- Mermaid -->
+<script type="module">
+  try{
+    const m = await import('https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs');
+    m.default.initialize({startOnLoad:true, theme:'base', themeVariables:{
+      fontFamily:'Pretendard, sans-serif', primaryColor:'#fffdfb', primaryBorderColor:'#d8d0c5',
+      primaryTextColor:'#1a1a1a', lineColor:'#b9554f', fontSize:'14px'
+    }});
+  }catch(e){ /* 오프라인이면 도식은 코드로 표시 */ }
+</script>
+
+<!-- 목차 활성표시 + 모바일 드로어 -->
+<script>
+  // 모바일 드로어
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('overlay');
+  const btn = document.getElementById('menuBtn');
+  const toggle = (on)=>{ sb.classList.toggle('open',on); ov.classList.toggle('show',on); };
+  btn.addEventListener('click',()=>toggle(!sb.classList.contains('open')));
+  ov.addEventListener('click',()=>toggle(false));
+  document.querySelectorAll('.toc a').forEach(a=>a.addEventListener('click',()=>{ if(window.innerWidth<=900) toggle(false); }));
+
+  // 현재 위치 강조
+  const links = [...document.querySelectorAll('.toc a')];
+  const map = {}; links.forEach(a=>{ const id=a.getAttribute('href').slice(1); map[id]=a; });
+  const targets = Object.keys(map).map(id=>document.getElementById(id)).filter(Boolean);
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(en=>{
+      if(en.isIntersecting){
+        links.forEach(l=>l.classList.remove('active'));
+        const a = map[en.target.id]; if(a) a.classList.add('active');
+      }
+    });
+  },{rootMargin:'-15% 0px -75% 0px', threshold:0});
+  targets.forEach(t=>io.observe(t));
+</script>
+
+</body>
+</html>

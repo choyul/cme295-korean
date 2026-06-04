@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CME295 Lecture 3 · 섹션 5. 추론 효율화 기법</title>
+
+<!-- 폰트: Pretendard (CDN, 없으면 시스템 폰트 폴백) -->
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<!-- 수식: KaTeX -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
+
+<style>
+  :root{
+    --bg:#FBF9F6;
+    --paper:#ffffff;
+    --ink:#1a1a1a;
+    --ink-soft:#4a4744;
+    --muted:#7a756f;
+    --accent:#8C1515;          /* Stanford 카디널 */
+    --accent-soft:#b9554f;
+    --tint:#f6ebe9;            /* 카디널 옅은 틴트 */
+    --tint-2:#f3efe9;          /* 따뜻한 회색 */
+    --line:#e7e1d9;
+    --line-strong:#d8d0c5;
+    --radius:10px;
+    --maxw:760px;
+    --sidew:268px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Pretendard","Pretendard Variable",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    line-height:1.78;
+    font-size:16.5px;
+    -webkit-font-smoothing:antialiased;
+    word-break:keep-all;
+  }
+
+  /* ===== 레이아웃 ===== */
+  .layout{display:flex; align-items:flex-start;}
+  .sidebar{
+    width:var(--sidew); flex:0 0 var(--sidew);
+    position:sticky; top:0; height:100vh; overflow-y:auto;
+    padding:28px 18px 40px; border-right:1px solid var(--line);
+    background:rgba(251,249,246,.85); backdrop-filter:saturate(120%) blur(2px);
+  }
+  .content{flex:1 1 auto; min-width:0; display:flex; justify-content:center; padding:0 24px;}
+  .doc{width:100%; max-width:var(--maxw); padding:48px 0 120px;}
+
+  /* ===== 사이드바 목차 ===== */
+  .toc-brand{font-size:12px; letter-spacing:.04em; color:var(--accent); font-weight:700; text-transform:uppercase; margin-bottom:4px;}
+  .toc-title{font-size:15px; font-weight:700; margin:0 0 18px; line-height:1.4; color:var(--ink);}
+  .toc{list-style:none; margin:0; padding:0; font-size:13.5px;}
+  .toc li{margin:1px 0;}
+  .toc a{display:block; padding:5px 10px; border-radius:7px; color:var(--ink-soft); text-decoration:none; border-left:2px solid transparent;}
+  .toc a:hover{background:var(--tint-2); color:var(--ink);}
+  .toc a.sub{padding-left:22px; font-size:13px; color:var(--muted);}
+  .toc a.active{color:var(--accent); background:var(--tint); border-left-color:var(--accent); font-weight:600;}
+
+  /* ===== 타이포 ===== */
+  h1{font-size:27px; line-height:1.32; font-weight:800; letter-spacing:-.01em; margin:0 0 6px;}
+  .subtitle{font-size:18px; font-weight:700; color:var(--accent); margin:0 0 22px;}
+  h2{font-size:21px; font-weight:800; letter-spacing:-.01em; margin:46px 0 14px; padding-bottom:9px; border-bottom:2px solid var(--line-strong);}
+  h3{font-size:17.5px; font-weight:700; margin:34px 0 12px; color:var(--ink);}
+  h3 .badge{display:inline-block; font-size:12px; font-weight:700; color:#fff; background:var(--accent); border-radius:6px; padding:2px 8px; margin-right:8px; vertical-align:middle;}
+  p{margin:12px 0;}
+  strong{font-weight:700;}
+  a{color:var(--accent);}
+  ul,ol{margin:12px 0; padding-left:22px;}
+  li{margin:6px 0;}
+  hr{display:none;}
+
+  /* ===== 출처 배너 ===== */
+  .source-banner{
+    display:flex; gap:10px; align-items:baseline;
+    background:var(--tint); border-left:4px solid var(--accent);
+    border-radius:0 var(--radius) var(--radius) 0;
+    padding:12px 16px; margin:0 0 8px; font-size:13.5px; color:var(--ink-soft);
+  }
+  .source-banner b{color:var(--accent);}
+
+  /* ===== 한국어 번역 카드 ===== */
+  .ko{
+    background:var(--paper); border:1px solid var(--line);
+    border-left:4px solid var(--accent); border-radius:var(--radius);
+    padding:6px 22px; margin:16px 0;
+    box-shadow:0 1px 2px rgba(60,40,20,.04);
+  }
+  .ko > .label, .terms > .label{
+    display:inline-block; font-size:11.5px; font-weight:800; letter-spacing:.06em;
+    color:var(--accent); text-transform:uppercase; margin:14px 0 -4px;
+  }
+
+  /* ===== 영문 원문 토글 ===== */
+  details.en{
+    background:var(--tint-2); border:1px solid var(--line); border-radius:var(--radius);
+    margin:14px 0; overflow:hidden;
+  }
+  details.en > summary{
+    cursor:pointer; list-style:none; padding:11px 16px;
+    font-size:13.5px; font-weight:700; color:var(--muted);
+    display:flex; align-items:center; gap:8px; user-select:none;
+  }
+  details.en > summary::-webkit-details-marker{display:none;}
+  details.en > summary .chev{transition:transform .2s; color:var(--accent-soft);}
+  details.en[open] > summary .chev{transform:rotate(90deg);}
+  details.en[open] > summary{border-bottom:1px solid var(--line);}
+  .en-body{padding:4px 18px 14px; font-size:14px; line-height:1.7; color:#5c574f; font-style:normal;}
+  .en-body p{margin:10px 0;}
+  .ts{
+    display:inline-block; font-family:"SFMono-Regular",ui-monospace,Menlo,Consolas,monospace;
+    font-size:11.5px; font-style:normal; color:var(--accent);
+    background:var(--tint); border:1px solid #e6cfcc; border-radius:5px;
+    padding:0 5px; margin:0 2px; vertical-align:baseline;
+  }
+
+  /* ===== 용어 설명 ===== */
+  .terms{
+    border:1px solid var(--line); border-left:3px solid var(--accent-soft);
+    border-radius:var(--radius); background:#fffdfb; padding:4px 20px 8px; margin:16px 0;
+  }
+  .terms dl{margin:8px 0;}
+  .terms dt{font-weight:700; color:var(--ink); margin-top:8px;}
+  .terms dt .en-term{color:var(--accent); font-weight:600;}
+  .terms dd{margin:1px 0 6px; color:var(--ink-soft); font-size:15px;}
+
+  /* ===== 표 ===== */
+  .table-wrap{overflow-x:auto; margin:16px 0; border:1px solid var(--line); border-radius:var(--radius);}
+  table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:520px;}
+  thead th{background:var(--accent); color:#fff; font-weight:700; text-align:left; padding:11px 14px; white-space:nowrap;}
+  tbody td{padding:9px 14px; border-top:1px solid var(--line);}
+  tbody tr:nth-child(even){background:var(--tint-2);}
+  tbody td:first-child{font-family:ui-monospace,Menlo,monospace; font-size:13px; color:var(--accent);}
+
+  /* ===== 콜아웃 ===== */
+  .callout{border-radius:var(--radius); padding:14px 20px 6px; margin:18px 0;}
+  .callout .c-title{font-weight:800; margin:6px 0 2px; display:flex; align-items:center; gap:8px;}
+  .callout.review{background:#fff; border:1px solid var(--line-strong);}
+  .callout.review ol{counter-reset:none;}
+  .callout.note{background:var(--tint-2); border-left:4px solid var(--muted); border-radius:0 var(--radius) var(--radius) 0; padding-bottom:12px;}
+  .callout.practice{background:var(--tint); border:1px solid #e6cfcc; padding-bottom:14px;}
+  .callout.practice li{margin:12px 0;}
+  .next{margin-top:40px; padding:14px 18px; background:var(--tint-2); border-radius:var(--radius); font-size:14px; color:var(--ink-soft);}
+
+  /* 수식 / 도식 */
+  .katex-display{margin:14px 0; overflow-x:auto; overflow-y:hidden; padding:6px 0;}
+  .diagram{background:#fffdfb; border:1px solid var(--line); border-radius:var(--radius); padding:14px; margin:16px 0; text-align:center;}
+  .diagram .cap{font-size:12.5px; color:var(--muted); margin-top:6px;}
+  .mermaid{display:flex; justify-content:center;}
+
+  /* ===== 모바일 ===== */
+  .menu-btn{display:none;}
+  .overlay{display:none;}
+  @media (max-width:900px){
+    .menu-btn{
+      display:flex; align-items:center; justify-content:center;
+      position:fixed; top:14px; left:14px; z-index:50;
+      width:42px; height:42px; border-radius:10px; border:1px solid var(--line-strong);
+      background:var(--paper); color:var(--accent); font-size:20px; cursor:pointer;
+      box-shadow:0 2px 8px rgba(60,40,20,.12);
+    }
+    .sidebar{
+      position:fixed; left:0; top:0; z-index:60; height:100vh;
+      transform:translateX(-105%); transition:transform .25s ease;
+      box-shadow:4px 0 24px rgba(0,0,0,.12); background:var(--bg);
+    }
+    .sidebar.open{transform:translateX(0);}
+    .overlay.show{display:block; position:fixed; inset:0; background:rgba(0,0,0,.32); z-index:55;}
+    .content{padding:0 16px;}
+    .doc{padding:64px 0 100px;}
+    body{font-size:16px;}
+    h1{font-size:23px;}
+    .ko,.terms{padding-left:16px; padding-right:16px;}
+  }
+
+  /* ===== 인쇄 ===== */
+  @media print{
+    .sidebar,.menu-btn,.overlay{display:none !important;}
+    .content{padding:0;}
+    body{background:#fff; font-size:11pt;}
+    details.en{display:none;}          /* 인쇄본은 한국어 위주 */
+    .ko,.terms,.callout,.table-wrap{break-inside:avoid; box-shadow:none;}
+    a{color:var(--ink);}
+  }
+  .home-btn{position:fixed; top:16px; right:18px; z-index:70;
+    display:inline-flex; align-items:center; gap:6px; text-decoration:none;
+    background:var(--paper); color:var(--accent); border:1px solid var(--line-strong);
+    border-radius:999px; padding:8px 14px; font-size:13.5px; font-weight:700;
+    box-shadow:0 2px 8px rgba(60,40,20,.12); transition:background .12s,color .12s;}
+  .home-btn:hover{background:var(--accent); color:#fff; border-color:var(--accent);}
+  @media (max-width:900px){ .home-btn{top:14px; right:14px; padding:8px 12px; font-size:12.5px;} }
+  @media print{ .home-btn{display:none !important;} }
+</style>
+</head>
+<body>
+<a class="home-btn" href="../index.html" title="전체 목차로 돌아가기">← 전체 목차</a>
+
+<button class="menu-btn" id="menuBtn" aria-label="목차 열기">☰</button>
+<div class="overlay" id="overlay"></div>
+
+<div class="layout">
+  <nav class="sidebar" id="sidebar"><div class="toc-brand">Stanford CME295 · Lecture 3</div><p class="toc-title">섹션 5. 추론 효율화 기법</p><ul class="toc"><li><a href="#overview">1. 강의 개요</a></li><li><a href="#goals">2. 학습 목표</a></li><li><a href="#body">3. 본문</a></li><li><a class="sub" href="#block1">블록 1 · KV 캐시 (재계산 회피)</a></li><li><a class="sub" href="#block2">블록 2 · GQA로 캐시 줄이기</a></li><li><a class="sub" href="#block3">블록 3 · PagedAttention (메모리 단편화 해소)</a></li><li><a class="sub" href="#block4">블록 4 · MLA: 키·값 압축 (DeepSeek)</a></li><li><a class="sub" href="#block5">블록 5 · Speculative decoding (작은 초안 모델로 가속)</a></li><li><a class="sub" href="#block6">블록 6 · Multi-token prediction (초안 모델 내장)</a></li><li><a href="#glossary">4. 핵심 용어집</a></li><li><a href="#review">5. 복습 문제</a></li><li><a href="#appendix">부록. 실무 적용 포인트 (NLP·LLM 기술 내용 한정)</a></li></ul></nav>
+  <main class="content"><article class="doc"><h1>CME295 Transformers &amp; LLMs — Lecture 3 한국어 교재</h1><p class="subtitle">섹션 5. 추론 효율화 기법</p><div class="source-banner"><span>📄</span><span><b>원문 출처</b>: Stanford CME295, Autumn 2025, Lecture 3, 타임스탬프 <span class="ts">1:24:54</span>~(1:48:21, 끝)</span></div><section id="overview"><h2>1. 강의 개요</h2><ul><li>거대한 LLM으로 많은 토큰을 최대한 효율적으로 생성하는 추론(inference) 단계 기법들을 다룬다.</li><li>어텐션 층 쪽: KV 캐시(재계산 회피), GQA(키·값 공유), PagedAttention(메모리 단편화 해소), MLA(키·값 압축).</li><li>출력 토큰 쪽: speculative decoding(작은 모델로 미리 생성)과 multi-token prediction(한 모델 안에 초안 모델 내장).</li></ul></section><section id="goals"><h2>2. 학습 목표</h2><ol><li>KV 캐시가 무엇을 재사용하며 왜 키·값만 저장하는지 설명할 수 있다.</li><li>PagedAttention이 해결하는 메모리 단편화 문제와, MLA가 키·값을 압축하는 발상을 안다.</li><li>speculative decoding과 multi-token prediction이 작은(또는 내장) 초안 모델로 생성을 가속하는 원리를 이해한다.</li></ol></section><section id="body"><h2>3. 본문</h2><div id="block1"><h3><span class="badge">블록 1</span>KV 캐시 (재계산 회피)</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">1:27:30</span> for every token you need the current token to attend to the previous ones (...) in this masked self attention. (...) <span class="ts">1:27:58</span> you have the query (eats). You will compute the key representation and the value representation of (eats) (...) But we want to (...) reuse the past computations (...) <span class="ts">1:28:58</span> we want (...) the key and value matrices to be saved (...) the query corresponding to the previous tokens are not going to be of interest for the present token. (...) <span class="ts">1:28:58</span> this concept of KV cache where the goal is to store these key and value matrices (...) and reuse them directly from the cache. (...) <span class="ts">1:29:33</span> during training (...) teacher forcing (...) this concept of KV caching doesn't even come up.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>마스크드 self-attention에서, 현재 토큰은 그 앞의 토큰들에 어텐션해야 합니다. 예를 들어 "a cute teddy bear"를 생성했고 지금 "is"를 처리한다면, "is"의 쿼리·키·값은 당연히 새로 계산합니다. 그런데 앞 토큰들의 키·값 표현은 이미 전에 계산했으니, 그 과거 계산을 재사용하고 싶습니다.</p>
+<p>즉 키 행렬과 값 행렬을 저장해 두려는 것입니다. (쿼리는 저장하지 않습니다 — 앞 토큰들의 쿼리는 현재 토큰 예측에 필요 없기 때문입니다.) 이 장치가 KV 캐시(KV cache)입니다. 키·값 행렬을 어딘가 저장해 두고, 새 토큰을 계산할 때 다시 계산하지 않고 캐시에서 바로 가져옵니다.</p></div>
+<div class="callout note"><div class="c-title">⚠️ 참고</div><p>학습 때는? 학습에서는 교사 강요(teacher forcing)로 입력을 한꺼번에 넣고 처리하므로, KV 캐싱 개념 자체가 등장하지 않습니다. (KV 캐시는 추론 단계의 기법)</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>추론<span class="en-term">(inference)</span></dt><dd>학습된 모델로 실제 생성을 수행하는 단계.</dd><dt>KV 캐시<span class="en-term">(KV cache)</span></dt><dd>앞 토큰들의 키·값을 저장해 재계산을 피하는 장치. 키·값만 저장(쿼리는 제외).</dd><dt>마스크드 self-attention</dt><dd>현재 토큰이 자기와 앞 토큰만 보는 어텐션(decoder-only).</dd></dl></div>
+</div>
+<div id="block2"><h3><span class="badge">블록 2</span>GQA로 캐시 줄이기</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">1:30:59</span> is there something from last week's lecture that we could reuse? (...) something that reduces the amount of cash, the key and value. (...) <span class="ts">1:31:28</span> you're attending to everyone and you focus on the number of keys and values. Is there a way to reduce this number? (...) <span class="ts">1:31:56</span> group query attention (...) we had this concept of grouping keys and values together (...) the general formulation is called group query attention where you group these (...) in modern day LLM's a lot of papers they use GQA.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>지난 강의(Lecture 2)에서 캐시 양, 즉 키·값을 줄일 수 있는 기법을 재사용할 수 있을까요? 멀티헤드 어텐션에서는 H개 헤드마다 쿼리·키·값 투영이 따로 있습니다. 키·값 투영의 개수를 줄일 방법 — 바로 GQA(Grouped-Query Attention, 그룹 쿼리 어텐션)입니다. 키·값을 그룹으로 묶어 공유하는 것으로(H개와 1개의 양 극단이 각각 표준 멀티헤드와 MQA), 현대 LLM의 많은 논문이 적절한 그룹 수로 GQA를 씁니다. 키·값을 공유하면 저장할 키·값이 줄어 KV 캐시가 작아집니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>GQA<span class="en-term">(Grouped-Query Attention)</span></dt><dd>키·값 투영을 그룹별로 공유. KV 캐시 크기를 줄임. (Lecture 2 섹션 3 참고)</dd></dl></div>
+</div>
+<div id="block3"><h3><span class="badge">블록 3</span>PagedAttention (메모리 단편화 해소)</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">1:32:37</span> the hardware side (...) <span class="ts">1:33:23</span> a naive way of storing the key and value matrices would be reserving a portion of the memory (...) that correspond(s) to the entire context length (...) you stop your decoding when you hit the EOS token (...) it leads to a lot of waste. (...) <span class="ts">1:34:32</span> paged (at)tention (...) reserved (...) internal fragmentation and external fragmentation (...) <span class="ts">1:35:39</span> it breaks it down by smaller chunks (...) a value of 16 for blocks (...) some dictionary that maps token position indices to their cache values (...) it reduces fragmentation by quite a lot.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>이제 하드웨어 쪽입니다. 추론 서버가 여러 사용자의 요청을 받는다고 합시다. KV 캐시를 순진하게 저장하면, 처음에 전체 컨텍스트 길이만큼의 메모리를 미리 예약해 둡니다 — 디코딩이 EOS 토큰에서 언제 멈출지 모르기 때문입니다. 예컨대 컨텍스트 길이가 2,000이면 요청마다 2,000칸을 예약합니다. 이건 낭비가 큽니다. 요청이 늘면 메모리가 금방 부족해집니다.</p>
+<p>PagedAttention 논문이 이를 해결했습니다. 몇 가지 개념을 정의합니다 — 예약(reserved), 내부 단편화(internal fragmentation), 외부 단편화(external fragmentation). 내부 단편화는 요청 완료용으로 예약했지만 실제로는 안 쓰인 빈 공간이고, 외부 단편화는 메모리 관리 시스템이 블록을 띄엄띄엄 할당해 생기는 틈입니다. PagedAttention은 생성 과정을 고정 크기 블록(논문은 블록당 16) 단위로 매핑합니다. 메모리를 통째로 예약하는 대신 작은 덩어리로 쪼개 쓰고, 토큰 위치 인덱스를 그 캐시 값에 매핑하는 사전(dictionary)을 둡니다. 이 방식(추론 패키지 vLLM에 적용)이 단편화를 크게 줄였습니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>PagedAttention</dt><dd>KV 캐시 메모리를 고정 크기 블록으로 쪼개 관리해 낭비를 줄이는 기법.</dd><dt>메모리 단편화<span class="en-term">(fragmentation)</span></dt><dd>메모리에 쓸모없는 빈틈이 생기는 것. 내부(예약 후 미사용)·외부(할당 틈)로 나뉨.</dd><dt>vLLM</dt><dd>PagedAttention을 적용한 추론 패키지(소프트웨어).</dd><dt>EOS 토큰</dt><dd>생성을 멈추는 끝 표시 토큰.</dd></dl></div>
+</div>
+<div id="block4"><h3><span class="badge">블록 4</span>MLA: 키·값 압축 (DeepSeek)</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">1:36:36</span> key and value is (...) of a dimension that is non-negligible and you need to store each copies of it in each transformer block (...) is there a way to make that representation more compact (...) DeepS(eek) (...) multi-l(atent) attention. (...) <span class="ts">1:38:09</span> what multi-l(atent) attention does is that it factorizes these projection matrix into an intermediary space that is of lower dimension than the space of keys (...) reduces the dimension and then another one that decompresses it. (...) <span class="ts">1:38:44</span> the compression matrix could be shared across keys and values (...) <span class="ts">1:39:16</span> even better share it across the h heads (...) for every transformer block you have a single representation per token. (...) <span class="ts">1:39:54</span> the deep se(ek)v2 paper also showed a performance improvement (...) credited (to) some regularization.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>키와 값은 차원이 작지 않고, 트랜스포머 블록마다 그 사본을 저장해야 합니다. 저장할 벡터가 매우 많고 또 길죠. 이를 더 압축할 수 없을까요? DeepSeek이 MLA(Multi-head Latent Attention, 다중 잠재 어텐션)로 다룬 주제입니다.</p>
+<p>기본 멀티헤드에서는 토큰 표현을 키로 만드는 투영 행렬 W_k가 헤드마다(H개) 있고, 결과 임베딩도 H개를 캐시에 저장해야 합니다(값도 마찬가지). MLA는 이 투영 행렬을 키 공간보다 낮은 차원의 중간 공간으로 인수분해(factorize)합니다 — 먼저 차원을 줄이는 변환, 그다음 복원(압축 해제)하는 변환을 둡니다. 그래서 캐시에는 줄어든(압축된) 표현만 저장하면 됩니다.</p>
+<p>더 영리한 점:</p>
+<ul><li>압축 행렬을 키·값이 공유합니다 — 한 토큰에 대해 키·값용으로 저장할 캐시가 같아집니다(복원 행렬은 키·값 각각 따로 둬서 서로 다른 표현은 학습).</li><li>나아가 H개 헤드에 걸쳐서도 공유합니다 — H개 임베딩 대신 단 하나만 둡니다. 그래서 트랜스포머 블록마다 토큰당 표현이 하나로 줄어듭니다.</li></ul>
+<p>DeepSeek-V2 논문은 저장량을 줄였을 뿐 아니라 성능 향상도 보였는데, 이는 일종의 정규화(regularization) 효과로 해석됩니다 — 키·값에 걸쳐 공유된, 더 유용한 표현을 학습한다는 것입니다. (압축 중간 차원은 설계 선택으로 고정값)</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>MLA<span class="en-term">(Multi-head Latent Attention, 다중 잠재 어텐션)</span></dt><dd>키·값을 낮은 차원으로 압축해 KV 캐시를 줄이는 기법(DeepSeek).</dd><dt>인수분해/압축<span class="en-term">(factorize)</span></dt><dd>큰 투영을 '차원 축소 → 복원' 두 단계로 나눔.</dd><dt>정규화<span class="en-term">(regularization)</span></dt><dd>모델이 더 일반화되게 만드는 효과. MLA의 부수 이점.</dd></dl></div>
+</div>
+<div id="block5"><h3><span class="badge">블록 5</span>Speculative decoding (작은 초안 모델로 가속)</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">1:41:28</span> techniques that operate at the output token level (...) speculative dec(oding) (...) uses some smaller model to help the generation of a bigger model (...) <span class="ts">1:42:26</span> you ask a smaller model (...) the paper calls draft to generate next words (...) since the LLM is small this is typically done faster (...) <span class="ts">1:42:54</span> you put the tokens that are predicted by the smaller LLM all as input to the target LLM (...) <span class="ts">1:43:38</span> if the probability of the draft model is bigger (...) you just accept the token. Otherwise you have some acceptance rejection mechanism (...) <span class="ts">1:44:13</span> if everything is accepted then in a single pass you were able to advance by way more tokens (...) <span class="ts">1:45:51</span> at inference time you are memory bound (...) computations are not the limiting factor.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>이제 출력 토큰 단위의 기법입니다. 첫째는 speculative decoding(추측 디코딩)으로, 작은 모델을 써서 큰 모델의 생성을 돕되, 출력 분포가 큰(목표) 모델의 것과 일치하도록 보장하는 영리한 방법입니다.</p>
+<p>방식: 작은 모델(논문에서 draft, 초안 모델이라 부름)에게 다음 단어들을 먼저 생성시킵니다. 예를 들어 "my teddy bear" 다음에 "is", "cute", "smart"를 작은 모델이 빠르게 이어 냅니다(작아서 빠름). 그다음 이 초안 토큰들을 한꺼번에 목표(큰) 모델에 입력으로 넣어, 각 토큰의 확률 분포를 얻습니다. 그리고 수락-기각(acceptance-rejection) 규칙을 적용합니다 — 초안 모델이 예측한 토큰의 확률이 (조건을 만족하면) 수락하고, 아니면 기각해 그 지점부터 분포를 보정하며 다시 생성합니다. 전부 수락되면 한 번의 패스로 여러 토큰을 한꺼번에 진전시킬 수 있습니다.</p>
+<p>왜 목표 분포와 일치하나: 전체 확률의 법칙(law of total probability)에서 출발해 각 항을 전개하면 목표 분포가 나옵니다(논문에 몇 줄로 증명 — 일종의 기각 샘플링rejection sampling). 또 초안 토큰들과 함께 마지막 토큰까지 넣는 이유는, 한 번의 순전파로 그 다음 토큰의 분포까지 공짜로 얻어 바로 샘플링할 수 있기 때문입니다.</p>
+<p>핵심 직관: 추론 시에는 연산이 아니라 메모리가 병목(memory bound)입니다. 그래서 작은 모델로 토큰들을 미리 뽑고, 큰 모델로는 그 모든 분포를 한 번에 계산하는 게 유리합니다. (한 번에 여러 토큰을 넣어 계산하는 비용이 한 토큰씩 여러 번 하는 것과 비슷하기 때문)</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>speculative decoding<span class="en-term">(추측 디코딩)</span></dt><dd>작은 초안 모델로 토큰을 미리 생성하고, 큰 모델이 한 번에 검증·수락해 생성을 가속.</dd><dt>초안 모델<span class="en-term">(draft model)</span></dt><dd>빠르게 후보 토큰을 내는 작은 모델.</dd><dt>수락-기각<span class="en-term">(acceptance-rejection)</span></dt><dd>초안 토큰을 받아들일지 정하는 규칙. 목표 분포와 일치 보장(기각 샘플링).</dd><dt>메모리 병목<span class="en-term">(memory bound)</span></dt><dd>추론 속도를 제한하는 것이 연산이 아니라 메모리라는 사실.</dd></dl></div>
+</div>
+<div id="block6"><h3><span class="badge">블록 6</span>Multi-token prediction (초안 모델 내장)</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">1:46:49</span> multi-token prediction (...) doing the same but (...) the draft model is embedded in the same model (...) <span class="ts">1:47:16</span> a model that attaches multiple heads on top of the representation of the last decoder (...) at training time, it doesn't do next word prediction. It does multi-word prediction. And at test time, the draft model is all your heads. And your main model is just the first head(s). (...) <span class="ts">1:47:45</span> the paper does it in a greedy way (...) the interesting note (...) is the change in objective function (...) the draft model and the target model are basically embedded in the same one.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>마지막은 multi-token prediction(다중 토큰 예측)입니다. speculative decoding과 같은 일을 하되, 초안 모델을 별도로 두지 않고 같은 모델 안에 내장하는 강력한 방식입니다.</p>
+<p>마지막 디코더의 표현 위에 여러 개의 헤드(head)를 붙입니다. 학습 때 다음 단어 예측이 아니라 다중 단어 예측(여러 다음 토큰을 동시에 예측)을 합니다. 테스트(추론) 때는 — 이 여러 헤드가 곧 초안 모델 역할을 하고, 첫 번째 헤드가 본 모델 역할을 합니다. 즉 헤드들이 만든 초안 토큰들을 다시 첫 헤드에 넣어 수락-기각을 합니다. (논문은 그리디 방식으로 수행 — 목적함수가 바뀌어 speculative decoding의 깔끔한 분포 일치 성질 대신 약간 변형된 형태를 씀)</p>
+<p>핵심 포인트 두 가지: ① 목적함수가 바뀐다(다음 토큰 예측 → 다중 토큰 예측), ② 초안 모델과 목표 모델이 같은 모델에 내장돼 둘을 분리할 필요가 없다.</p></div>
+<div class="callout note"><div class="c-title">⚠️ 참고</div><p>강사 마무리: 이번 강의에서 본 효율화 기법들은 각각 추론의 서로 다른 측면(어텐션·메모리·출력 생성)을 개선합니다. 관련 논문들을 직접 보길 권합니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>multi-token prediction<span class="en-term">(다중 토큰 예측)</span></dt><dd>한 모델에 여러 헤드를 붙여 여러 다음 토큰을 예측. 초안 모델을 내장.</dd><dt>헤드<span class="en-term">(head)</span></dt><dd>여기서는 마지막 디코더 표현 위에 붙인 출력 갈래. 각각 다른 미래 토큰 예측.</dd><dt>목적함수 변경</dt><dd>다음 토큰 예측 → 다중 토큰 예측으로 학습 목표를 바꿈.</dd></dl></div>
+</div></section><section id="glossary"><h2>4. 핵심 용어집</h2><div class="table-wrap"><table><thead><tr><th>영문</th><th>한국어</th><th>발음</th><th>뜻</th></tr></thead><tbody><tr><td>inference</td><td>추론</td><td>인퍼런스</td><td>학습된 모델로 생성 수행</td></tr><tr><td>KV cache</td><td>KV 캐시</td><td>케이브이 캐시</td><td>키·값 저장해 재계산 회피</td></tr><tr><td>GQA</td><td>그룹 쿼리 어텐션</td><td>—</td><td>키·값 공유로 캐시 축소</td></tr><tr><td>PagedAttention</td><td>페이지드 어텐션</td><td>—</td><td>KV 캐시를 블록 단위로 관리</td></tr><tr><td>fragmentation</td><td>단편화</td><td>프래그멘테이션</td><td>메모리에 빈틈 생김</td></tr><tr><td>vLLM</td><td>vLLM</td><td>브이엘엘엠</td><td>PagedAttention 적용 추론 패키지</td></tr><tr><td>MLA (Multi-head Latent Attention)</td><td>다중 잠재 어텐션</td><td>—</td><td>키·값 압축으로 캐시 축소(DeepSeek)</td></tr><tr><td>regularization</td><td>정규화</td><td>—</td><td>일반화를 돕는 효과</td></tr><tr><td>speculative decoding</td><td>추측 디코딩</td><td>—</td><td>작은 초안 모델로 생성 가속</td></tr><tr><td>draft model</td><td>초안 모델</td><td>—</td><td>후보 토큰 내는 작은 모델</td></tr><tr><td>acceptance-rejection</td><td>수락-기각</td><td>—</td><td>초안 토큰 채택 규칙(분포 일치)</td></tr><tr><td>memory bound</td><td>메모리 병목</td><td>—</td><td>추론을 제한하는 건 메모리</td></tr><tr><td>multi-token prediction</td><td>다중 토큰 예측</td><td>—</td><td>여러 헤드로 초안 모델 내장</td></tr></tbody></table></div></section><section id="review"><h2>5. 복습 문제</h2><div class="callout review"><div class="c-title">✏️ 스스로 점검</div><ol><li>KV 캐시는 무엇을 재사용하며, 왜 쿼리는 저장하지 않고 키·값만 저장하는가?</li><li>PagedAttention이 해결하는 메모리 단편화 문제는 무엇이며, MLA는 어떤 발상으로 KV 캐시를 줄이는가?</li><li>speculative decoding이 작은 초안 모델로 생성을 가속하는 원리를 설명하라. multi-token prediction은 이와 어떻게 다른가?</li></ol></div></section><section id="appendix"><h2>부록. 실무 적용 포인트 <span style="font-size:14px;font-weight:500;color:var(--muted);">(NLP·LLM 기술 내용 한정)</span></h2><div class="callout practice"><div class="c-title">💡 현장에서 써먹기</div><ul><li><strong>이 기법들은 모두 "왜 LLM 서비스 비용·속도가 그렇게 결정되는가"의 내부 사정이다.</strong> KV 캐시·PagedAttention·MLA는 메모리를, speculative/multi-token은 생성 속도를 다룬다. 정책담당자가 코드를 짤 일은 없지만, AI 서비스 요금·응답속도가 '연산'만이 아니라 '메모리 관리'와 '디코딩 방식'에 크게 좌우된다는 큰 그림을 알면 도입·계약 시 판단에 도움이 된다.</li><li><strong>메모리가 병목이라는 사실은 "긴 대화·긴 출력이 왜 무거워지는가"를 설명한다.</strong> 생성이 길어질수록 KV 캐시가 쌓여 메모리를 잡아먹는다. 긴 세션이 느려지거나 비용이 오르는 배경이며, GQA·MLA 같은 기법이 이를 얼마나 적용했는지가 모델별 효율 차이를 만든다.</li><li><strong>speculative decoding은 "작은 모델 + 큰 모델 조합"이라는 비용 절감 발상의 한 예다.</strong> 빠른 작은 모델이 초안을, 정확한 큰 모델이 검증을 맡는 구조다. 직접 구축할 일은 드물지만, 'AI 비용은 모델 하나의 크기만이 아니라 조합·구조로도 줄일 수 있다'는 관점을 얻을 수 있다.</li></ul>
+<p>&gt; Lecture 3 전체 변환 완료. 핵심 줄기: LLM 정의 → 효율적 확장(MoE) → 다음 토큰 생성(디코딩·온도) → 잘 부리기(프롬프팅·CoT) → 빠르게 생성(추론 효율화). 강의 1~3을 통해 트랜스포머 기초부터 현대 LLM의 구조·생성·운영까지 이어졌다.</p></div></section></article></main>
+</div>
+
+<!-- KaTeX 자동 렌더 -->
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}],throwOnError:false});"></script>
+
+<!-- Mermaid -->
+<script type="module">
+  try{
+    const m = await import('https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs');
+    m.default.initialize({startOnLoad:true, theme:'base', themeVariables:{
+      fontFamily:'Pretendard, sans-serif', primaryColor:'#fffdfb', primaryBorderColor:'#d8d0c5',
+      primaryTextColor:'#1a1a1a', lineColor:'#b9554f', fontSize:'14px'
+    }});
+  }catch(e){ /* 오프라인이면 도식은 코드로 표시 */ }
+</script>
+
+<!-- 목차 활성표시 + 모바일 드로어 -->
+<script>
+  // 모바일 드로어
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('overlay');
+  const btn = document.getElementById('menuBtn');
+  const toggle = (on)=>{ sb.classList.toggle('open',on); ov.classList.toggle('show',on); };
+  btn.addEventListener('click',()=>toggle(!sb.classList.contains('open')));
+  ov.addEventListener('click',()=>toggle(false));
+  document.querySelectorAll('.toc a').forEach(a=>a.addEventListener('click',()=>{ if(window.innerWidth<=900) toggle(false); }));
+
+  // 현재 위치 강조
+  const links = [...document.querySelectorAll('.toc a')];
+  const map = {}; links.forEach(a=>{ const id=a.getAttribute('href').slice(1); map[id]=a; });
+  const targets = Object.keys(map).map(id=>document.getElementById(id)).filter(Boolean);
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(en=>{
+      if(en.isIntersecting){
+        links.forEach(l=>l.classList.remove('active'));
+        const a = map[en.target.id]; if(a) a.classList.add('active');
+      }
+    });
+  },{rootMargin:'-15% 0px -75% 0px', threshold:0});
+  targets.forEach(t=>io.observe(t));
+</script>
+
+</body>
+</html>

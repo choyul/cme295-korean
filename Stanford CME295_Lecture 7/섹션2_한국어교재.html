@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CME295 Lecture 7 · 섹션 2. 지식 베이스와 2단계 검색</title>
+
+<!-- 폰트: Pretendard (CDN, 없으면 시스템 폰트 폴백) -->
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<!-- 수식: KaTeX -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
+
+<style>
+  :root{
+    --bg:#FBF9F6;
+    --paper:#ffffff;
+    --ink:#1a1a1a;
+    --ink-soft:#4a4744;
+    --muted:#7a756f;
+    --accent:#8C1515;          /* Stanford 카디널 */
+    --accent-soft:#b9554f;
+    --tint:#f6ebe9;            /* 카디널 옅은 틴트 */
+    --tint-2:#f3efe9;          /* 따뜻한 회색 */
+    --line:#e7e1d9;
+    --line-strong:#d8d0c5;
+    --radius:10px;
+    --maxw:760px;
+    --sidew:268px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Pretendard","Pretendard Variable",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    line-height:1.78;
+    font-size:16.5px;
+    -webkit-font-smoothing:antialiased;
+    word-break:keep-all;
+  }
+
+  /* ===== 레이아웃 ===== */
+  .layout{display:flex; align-items:flex-start;}
+  .sidebar{
+    width:var(--sidew); flex:0 0 var(--sidew);
+    position:sticky; top:0; height:100vh; overflow-y:auto;
+    padding:28px 18px 40px; border-right:1px solid var(--line);
+    background:rgba(251,249,246,.85); backdrop-filter:saturate(120%) blur(2px);
+  }
+  .content{flex:1 1 auto; min-width:0; display:flex; justify-content:center; padding:0 24px;}
+  .doc{width:100%; max-width:var(--maxw); padding:48px 0 120px;}
+
+  /* ===== 사이드바 목차 ===== */
+  .toc-brand{font-size:12px; letter-spacing:.04em; color:var(--accent); font-weight:700; text-transform:uppercase; margin-bottom:4px;}
+  .toc-title{font-size:15px; font-weight:700; margin:0 0 18px; line-height:1.4; color:var(--ink);}
+  .toc{list-style:none; margin:0; padding:0; font-size:13.5px;}
+  .toc li{margin:1px 0;}
+  .toc a{display:block; padding:5px 10px; border-radius:7px; color:var(--ink-soft); text-decoration:none; border-left:2px solid transparent;}
+  .toc a:hover{background:var(--tint-2); color:var(--ink);}
+  .toc a.sub{padding-left:22px; font-size:13px; color:var(--muted);}
+  .toc a.active{color:var(--accent); background:var(--tint); border-left-color:var(--accent); font-weight:600;}
+
+  /* ===== 타이포 ===== */
+  h1{font-size:27px; line-height:1.32; font-weight:800; letter-spacing:-.01em; margin:0 0 6px;}
+  .subtitle{font-size:18px; font-weight:700; color:var(--accent); margin:0 0 22px;}
+  h2{font-size:21px; font-weight:800; letter-spacing:-.01em; margin:46px 0 14px; padding-bottom:9px; border-bottom:2px solid var(--line-strong);}
+  h3{font-size:17.5px; font-weight:700; margin:34px 0 12px; color:var(--ink);}
+  h3 .badge{display:inline-block; font-size:12px; font-weight:700; color:#fff; background:var(--accent); border-radius:6px; padding:2px 8px; margin-right:8px; vertical-align:middle;}
+  p{margin:12px 0;}
+  strong{font-weight:700;}
+  a{color:var(--accent);}
+  ul,ol{margin:12px 0; padding-left:22px;}
+  li{margin:6px 0;}
+  hr{display:none;}
+
+  /* ===== 출처 배너 ===== */
+  .source-banner{
+    display:flex; gap:10px; align-items:baseline;
+    background:var(--tint); border-left:4px solid var(--accent);
+    border-radius:0 var(--radius) var(--radius) 0;
+    padding:12px 16px; margin:0 0 8px; font-size:13.5px; color:var(--ink-soft);
+  }
+  .source-banner b{color:var(--accent);}
+
+  /* ===== 한국어 번역 카드 ===== */
+  .ko{
+    background:var(--paper); border:1px solid var(--line);
+    border-left:4px solid var(--accent); border-radius:var(--radius);
+    padding:6px 22px; margin:16px 0;
+    box-shadow:0 1px 2px rgba(60,40,20,.04);
+  }
+  .ko > .label, .terms > .label{
+    display:inline-block; font-size:11.5px; font-weight:800; letter-spacing:.06em;
+    color:var(--accent); text-transform:uppercase; margin:14px 0 -4px;
+  }
+
+  /* ===== 영문 원문 토글 ===== */
+  details.en{
+    background:var(--tint-2); border:1px solid var(--line); border-radius:var(--radius);
+    margin:14px 0; overflow:hidden;
+  }
+  details.en > summary{
+    cursor:pointer; list-style:none; padding:11px 16px;
+    font-size:13.5px; font-weight:700; color:var(--muted);
+    display:flex; align-items:center; gap:8px; user-select:none;
+  }
+  details.en > summary::-webkit-details-marker{display:none;}
+  details.en > summary .chev{transition:transform .2s; color:var(--accent-soft);}
+  details.en[open] > summary .chev{transform:rotate(90deg);}
+  details.en[open] > summary{border-bottom:1px solid var(--line);}
+  .en-body{padding:4px 18px 14px; font-size:14px; line-height:1.7; color:#5c574f; font-style:normal;}
+  .en-body p{margin:10px 0;}
+  .ts{
+    display:inline-block; font-family:"SFMono-Regular",ui-monospace,Menlo,Consolas,monospace;
+    font-size:11.5px; font-style:normal; color:var(--accent);
+    background:var(--tint); border:1px solid #e6cfcc; border-radius:5px;
+    padding:0 5px; margin:0 2px; vertical-align:baseline;
+  }
+
+  /* ===== 용어 설명 ===== */
+  .terms{
+    border:1px solid var(--line); border-left:3px solid var(--accent-soft);
+    border-radius:var(--radius); background:#fffdfb; padding:4px 20px 8px; margin:16px 0;
+  }
+  .terms dl{margin:8px 0;}
+  .terms dt{font-weight:700; color:var(--ink); margin-top:8px;}
+  .terms dt .en-term{color:var(--accent); font-weight:600;}
+  .terms dd{margin:1px 0 6px; color:var(--ink-soft); font-size:15px;}
+
+  /* ===== 표 ===== */
+  .table-wrap{overflow-x:auto; margin:16px 0; border:1px solid var(--line); border-radius:var(--radius);}
+  table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:520px;}
+  thead th{background:var(--accent); color:#fff; font-weight:700; text-align:left; padding:11px 14px; white-space:nowrap;}
+  tbody td{padding:9px 14px; border-top:1px solid var(--line);}
+  tbody tr:nth-child(even){background:var(--tint-2);}
+  tbody td:first-child{font-family:ui-monospace,Menlo,monospace; font-size:13px; color:var(--accent);}
+
+  /* ===== 콜아웃 ===== */
+  .callout{border-radius:var(--radius); padding:14px 20px 6px; margin:18px 0;}
+  .callout .c-title{font-weight:800; margin:6px 0 2px; display:flex; align-items:center; gap:8px;}
+  .callout.review{background:#fff; border:1px solid var(--line-strong);}
+  .callout.review ol{counter-reset:none;}
+  .callout.note{background:var(--tint-2); border-left:4px solid var(--muted); border-radius:0 var(--radius) var(--radius) 0; padding-bottom:12px;}
+  .callout.practice{background:var(--tint); border:1px solid #e6cfcc; padding-bottom:14px;}
+  .callout.practice li{margin:12px 0;}
+  .next{margin-top:40px; padding:14px 18px; background:var(--tint-2); border-radius:var(--radius); font-size:14px; color:var(--ink-soft);}
+
+  /* 수식 / 도식 */
+  .katex-display{margin:14px 0; overflow-x:auto; overflow-y:hidden; padding:6px 0;}
+  .diagram{background:#fffdfb; border:1px solid var(--line); border-radius:var(--radius); padding:14px; margin:16px 0; text-align:center;}
+  .diagram .cap{font-size:12.5px; color:var(--muted); margin-top:6px;}
+  .mermaid{display:flex; justify-content:center;}
+
+  /* ===== 모바일 ===== */
+  .menu-btn{display:none;}
+  .overlay{display:none;}
+  @media (max-width:900px){
+    .menu-btn{
+      display:flex; align-items:center; justify-content:center;
+      position:fixed; top:14px; left:14px; z-index:50;
+      width:42px; height:42px; border-radius:10px; border:1px solid var(--line-strong);
+      background:var(--paper); color:var(--accent); font-size:20px; cursor:pointer;
+      box-shadow:0 2px 8px rgba(60,40,20,.12);
+    }
+    .sidebar{
+      position:fixed; left:0; top:0; z-index:60; height:100vh;
+      transform:translateX(-105%); transition:transform .25s ease;
+      box-shadow:4px 0 24px rgba(0,0,0,.12); background:var(--bg);
+    }
+    .sidebar.open{transform:translateX(0);}
+    .overlay.show{display:block; position:fixed; inset:0; background:rgba(0,0,0,.32); z-index:55;}
+    .content{padding:0 16px;}
+    .doc{padding:64px 0 100px;}
+    body{font-size:16px;}
+    h1{font-size:23px;}
+    .ko,.terms{padding-left:16px; padding-right:16px;}
+  }
+
+  /* ===== 인쇄 ===== */
+  @media print{
+    .sidebar,.menu-btn,.overlay{display:none !important;}
+    .content{padding:0;}
+    body{background:#fff; font-size:11pt;}
+    details.en{display:none;}          /* 인쇄본은 한국어 위주 */
+    .ko,.terms,.callout,.table-wrap{break-inside:avoid; box-shadow:none;}
+    a{color:var(--ink);}
+  }
+  .home-btn{position:fixed; top:16px; right:18px; z-index:70;
+    display:inline-flex; align-items:center; gap:6px; text-decoration:none;
+    background:var(--paper); color:var(--accent); border:1px solid var(--line-strong);
+    border-radius:999px; padding:8px 14px; font-size:13.5px; font-weight:700;
+    box-shadow:0 2px 8px rgba(60,40,20,.12); transition:background .12s,color .12s;}
+  .home-btn:hover{background:var(--accent); color:#fff; border-color:var(--accent);}
+  @media (max-width:900px){ .home-btn{top:14px; right:14px; padding:8px 12px; font-size:12.5px;} }
+  @media print{ .home-btn{display:none !important;} }
+</style>
+</head>
+<body>
+<a class="home-btn" href="../index.html" title="전체 목차로 돌아가기">← 전체 목차</a>
+
+<button class="menu-btn" id="menuBtn" aria-label="목차 열기">☰</button>
+<div class="overlay" id="overlay"></div>
+
+<div class="layout">
+  <nav class="sidebar" id="sidebar"><div class="toc-brand">Stanford CME295 · Lecture 7</div><p class="toc-title">섹션 2. 지식 베이스와 2단계 검색</p><ul class="toc"><li><a href="#overview">1. 강의 개요</a></li><li><a href="#goals">2. 학습 목표</a></li><li><a href="#body">3. 본문</a></li><li><a class="sub" href="#block1">블록 1 · 지식 베이스: 청크와 임베딩, 하이퍼파라미터</a></li><li><a class="sub" href="#block2">블록 2 · 두 단계 검색: 후보 검색과 랭킹</a></li><li><a class="sub" href="#block3">블록 3 · 후보 검색: 의미 기반 유사도 검색</a></li><li><a href="#glossary">4. 핵심 용어집</a></li><li><a href="#review">5. 복습 문제</a></li><li><a href="#appendix">부록. 실무 적용 포인트 (NLP·LLM 기술 내용 한정)</a></li></ul></nav>
+  <main class="content"><article class="doc"><h1>CME295 Transformers &amp; LLMs — Lecture 7 한국어 교재</h1><p class="subtitle">섹션 2. 지식 베이스와 2단계 검색</p><div class="source-banner"><span>📄</span><span><b>원문 출처</b>: Stanford CME295, Autumn 2025, Lecture 7, 타임스탬프 <span class="ts">16:28</span>~<span class="ts">33:29</span></span></div><section id="overview"><h2>1. 강의 개요</h2><ul><li>지식 베이스를 만드는 법 — 문서를 청크(chunk)로 나누고 임베딩을 계산하며, 임베딩 크기·청크 크기·중첩이라는 하이퍼파라미터를 다룬다.</li><li>검색을 두 단계(후보 검색 candidate retrieval·랭킹 ranking)로 나누는 이유를 본다.</li><li>후보 검색의 핵심인 의미 기반 유사도 검색(코사인 유사도·ANN·bi-encoder·Sentence-BERT)을 설명한다.</li></ul></section><section id="goals"><h2>2. 학습 목표</h2><ol><li>청크·임베딩과 세 하이퍼파라미터(임베딩 크기·청크 크기·중첩)의 트레이드오프를 설명할 수 있다.</li><li>검색이 후보 검색(recall↑)과 랭킹(정확도↑) 두 단계로 나뉘는 이유를 안다.</li><li>의미 기반 유사도 검색의 작동(코사인 유사도·ANN·bi-encoder·Sentence-BERT)을 이해한다.</li></ol></section><section id="body"><h2>3. 본문</h2><div id="block1"><h3><span class="badge">블록 1</span>지식 베이스: 청크와 임베딩, 하이퍼파라미터</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">19:41</span> collect the set of documents (...) divide them into (...) chunks (...) a subset of the document which has a given maximum length (...) hundreds of tokens. (...) <span class="ts">20:43</span> compute embeddings corresponding to each of these chunks. (...) <span class="ts">21:13</span> the size of the embedding (...) bigger (...) for (...) more complex (documents) (...) on the order of thousands (...) 1,500. (...) <span class="ts">21:44</span> chunk size (...) around 500 tokens. (...) <span class="ts">22:46</span> how much overlap (...) in between your chunks (...) low hundreds of (tokens).</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>지식 베이스를 만들려면 — 유용할 문서들을 모아 청크(chunk)로 나눕니다. 청크는 문서의 부분 조각으로, 토큰 수로 잰 최대 길이(보통 수백 토큰)를 갖습니다. 그리고 각 청크에 대응하는 임베딩(embedding)을 계산합니다. (검색 하면 임베딩을 떠올리세요.)</p>
+<p>조정할 하이퍼파라미터 세 가지(모두 트레이드오프):</p>
+<ol><li><strong>임베딩 크기</strong>: 문서가 복잡·미묘하면 큰 게 좋지만, 크면 공간·연산이 늘어남. 보통 수천(예: 1,500).</li><li><strong>청크 크기</strong>: 너무 작으면 맥락이 끊기고, 너무 크면 임베딩이 내용을 의미 있게 담지 못함. 보통 수백 토큰(예: 500).</li><li><strong>중첩(overlap)</strong>: 청크를 자를 때 앞 청크의 일부를 겹치게 둠 — 현재 청크 이해에 필요한 앞 내용을 담기 위해. 보통 수십~수백 토큰.</li></ol></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>청크<span class="en-term">(chunk)</span></dt><dd>문서를 나눈 조각(보통 수백 토큰).</dd><dt>임베딩<span class="en-term">(embedding)</span></dt><dd>청크를 의미를 담은 벡터로 표현. (Lecture 3·4 참고)</dd><dt>임베딩 크기/청크 크기/중첩<span class="en-term">(overlap)</span></dt><dd>세 하이퍼파라미터. 각각 트레이드오프.</dd></dl></div>
+</div>
+<div id="block2"><h3><span class="badge">블록 2</span>두 단계 검색: 후보 검색과 랭킹</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">23:47</span> given a prompt how can you retrieve relevant documents (...) two steps (...) <span class="ts">24:18</span> candidate retrieval (...) go from (...) many many chunks (...) to a much smaller set of potentially relevant candidates (...) maximize recall. (...) <span class="ts">24:49</span> a second stage (...) sometimes optional (...) ranking (...) really rank them (...) a bit more compute (intensive) (...) smaller set of candidates.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>프롬프트가 주어졌을 때 관련 문서를 검색하는 것은 보통 두 단계입니다(검색·추천 시스템과 유사).</p>
+<ol><li><strong>후보 검색(candidate retrieval)</strong>: 수많은 청크에서 '잠재적으로 관련 있는' 소수(예: 100여 개)로 좁힙니다. 이 단계는 재현율(recall)을 최대화 — 빠르고 거칠게, 가능한 한 많은 후보를 건집니다.</li><li><strong>랭킹(ranking)</strong>: (선택적이지만) 후보들을 진짜 관련 순으로 정렬해 상위가 정말 관련 있게 합니다. 후보가 적으니 더 무거운(연산 집약적) 방법을 쓸 수 있습니다.</li></ol></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>후보 검색<span class="en-term">(candidate retrieval)</span></dt><dd>대량에서 소수 후보로 좁히는 1단계. 재현율 중시.</dd><dt>랭킹<span class="en-term">(ranking)</span></dt><dd>후보를 관련 순으로 정렬하는 2단계. 정확도 중시.</dd><dt>재현율<span class="en-term">(recall)</span></dt><dd>관련 있는 것 중 건진 비율. 후보 검색의 목표.</dd></dl></div>
+</div>
+<div id="block3"><h3><span class="badge">블록 3</span>후보 검색: 의미 기반 유사도 검색</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">28:05</span> leverage the embeddings (...) by doing a semantic similarity search (...) <span class="ts">28:35</span> cosine similarity (...) represent our query with an (embedding) (...) find the most relevant chunks (...) keep top (...) 100. (...) <span class="ts">29:40</span> approximate nearest neighbor (...) partition the embeddings (...) avoid (...) a naive linear search. (...) <span class="ts">30:45</span> by encoder (...) passing the query through an encoder and (...) the chunk through an encoder (...) <span class="ts">31:52</span> sentence (BERT) (...) a loss function that will incentivize having a high cosine similarity for relevant entities and low cosine similarity for (...) not relevant.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>후보 검색은 의미 기반 유사도 검색(semantic similarity search)으로 합니다. 질의(query)를 임베딩으로 표현하고, 이미 계산해 둔 청크 임베딩들과 코사인 유사도(cosine similarity)를 계산해, 가장 비슷한 상위 청크(예: 100개)만 남깁니다.</p>
+<p>세부 개념:</p>
+<ul><li><strong>ANN(Approximate Nearest Neighbor, 근사 최근접 이웃)</strong>: 지식 베이스가 거대하면 모든 청크와 일일이 비교(선형 탐색)하기 비쌉니다. 그래서 임베딩을 미리 분할해 두고 근사적으로 빠르게 찾는 ANN 기법(전용 라이브러리 다수)을 씁니다.</li><li><strong>bi-encoder(이중 인코더)</strong>: 질의와 청크를 각각 따로 인코더에 통과시켜 임베딩을 얻고 비교하는 구조. (보통 BERT류 encoder-only 모델 사용)</li><li><strong>Sentence-BERT(SBERT)</strong>: BERT의 확장으로, 유사도 검색에 맞는 문장 임베딩을 만듭니다 — 관련 있는 것끼리는 코사인 유사도가 높고, 무관한 것끼리는 낮도록 손실 함수를 설계해 학습합니다. (읽기 쉬운 논문이라 추천)</li></ul></div>
+<div class="callout note"><div class="c-title">⚠️ 참고</div><p>임베딩 모델은 사전학습된 것을 쓰거나(보통), 직접 학습할 수 있습니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>의미 기반 유사도 검색<span class="en-term">(semantic similarity search)</span></dt><dd>단어 일치가 아니라 의미가 비슷한 것을 찾음.</dd><dt>코사인 유사도<span class="en-term">(cosine similarity)</span></dt><dd>두 임베딩의 방향(각도)으로 유사도 측정. (Lecture 3 참고)</dd><dt>ANN<span class="en-term">(근사 최근접 이웃)</span></dt><dd>임베딩을 분할해 빠르게 유사 항목을 찾는 기법.</dd><dt>bi-encoder<span class="en-term">(이중 인코더)</span></dt><dd>질의·청크를 각각 인코딩해 비교. 후보 검색용.</dd><dt>Sentence-BERT<span class="en-term">(SBERT)</span></dt><dd>유사도 검색용 문장 임베딩을 만드는 BERT 확장.</dd></dl></div>
+</div></section><section id="glossary"><h2>4. 핵심 용어집</h2><div class="table-wrap"><table><thead><tr><th>영문</th><th>한국어</th><th>발음</th><th>뜻</th></tr></thead><tbody><tr><td>chunk</td><td>청크</td><td>—</td><td>문서를 나눈 조각</td></tr><tr><td>embedding</td><td>임베딩</td><td>—</td><td>의미를 담은 벡터</td></tr><tr><td>overlap</td><td>중첩</td><td>—</td><td>청크 간 겹치는 부분</td></tr><tr><td>candidate retrieval</td><td>후보 검색</td><td>—</td><td>대량→소수(재현율 중시)</td></tr><tr><td>ranking</td><td>랭킹</td><td>—</td><td>후보 정렬(정확도 중시)</td></tr><tr><td>recall</td><td>재현율</td><td>—</td><td>관련 중 건진 비율</td></tr><tr><td>semantic similarity search</td><td>의미 기반 유사도 검색</td><td>—</td><td>의미로 찾기</td></tr><tr><td>cosine similarity</td><td>코사인 유사도</td><td>—</td><td>방향으로 유사도 측정</td></tr><tr><td>ANN</td><td>근사 최근접 이웃</td><td>—</td><td>빠른 유사 검색</td></tr><tr><td>bi-encoder</td><td>이중 인코더</td><td>—</td><td>질의·청크 각각 인코딩</td></tr><tr><td>Sentence-BERT (SBERT)</td><td>센텐스버트</td><td>—</td><td>유사도용 문장 임베딩</td></tr></tbody></table></div></section><section id="review"><h2>5. 복습 문제</h2><div class="callout review"><div class="c-title">✏️ 스스로 점검</div><ol><li>청크 크기·임베딩 크기·중첩은 각각 어떤 트레이드오프가 있는가?</li><li>검색을 후보 검색과 랭킹 두 단계로 나누는 이유는? 각 단계가 중시하는 것은?</li><li>의미 기반 유사도 검색은 무엇으로 유사도를 재며, ANN·bi-encoder·Sentence-BERT는 각각 무엇인가?</li></ol></div></section><section id="appendix"><h2>부록. 실무 적용 포인트 <span style="font-size:14px;font-weight:500;color:var(--muted);">(NLP·LLM 기술 내용 한정)</span></h2><div class="callout practice"><div class="c-title">💡 현장에서 써먹기</div><ul><li><strong>의미 기반 검색은 "단어가 안 맞아도 뜻으로 찾는" 능력의 토대다.</strong> 키워드가 정확히 일치하지 않아도 의미가 비슷한 문서·민원·사례를 찾아낸다. 내부 자료 검색·유사 사례 조회 기능의 핵심 원리다(Lecture 4 부록과 연결).</li><li><strong>청크·중첩 설정은 "자료를 어떻게 잘라 넣느냐가 검색 품질을 좌우한다"를 보여준다.</strong> 너무 잘게 자르면 맥락이 끊기고, 너무 크면 검색 정밀도가 떨어진다. 내부 문서를 RAG에 올릴 때 적절한 청크 크기·중첩을 정하는 것이 답 품질에 직결된다.</li><li><strong>2단계 검색은 "빠르게 후보를 거른 뒤 정밀하게 고른다"는 효율 설계다.</strong> 전수 비교 대신 후보를 좁히고 그 안에서 정밀 랭킹하는 방식은, 대용량 자료를 다룰 때 속도·정확도를 함께 잡는 실무 패턴이다.</li></ul></div><div class="next"><strong><strong>다음 섹션 예고</strong>·&lt;/strong&gt; · 키워드 검색(BM25)·하이브리드, 청크 맥락 보강·프롬프트 캐싱, 랭킹(cross-encoder)과 검색 평가 지표(NDCG·MRR 등). <span class="ts">33:29</span> 이후.</div></section></article></main>
+</div>
+
+<!-- KaTeX 자동 렌더 -->
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}],throwOnError:false});"></script>
+
+<!-- Mermaid -->
+<script type="module">
+  try{
+    const m = await import('https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs');
+    m.default.initialize({startOnLoad:true, theme:'base', themeVariables:{
+      fontFamily:'Pretendard, sans-serif', primaryColor:'#fffdfb', primaryBorderColor:'#d8d0c5',
+      primaryTextColor:'#1a1a1a', lineColor:'#b9554f', fontSize:'14px'
+    }});
+  }catch(e){ /* 오프라인이면 도식은 코드로 표시 */ }
+</script>
+
+<!-- 목차 활성표시 + 모바일 드로어 -->
+<script>
+  // 모바일 드로어
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('overlay');
+  const btn = document.getElementById('menuBtn');
+  const toggle = (on)=>{ sb.classList.toggle('open',on); ov.classList.toggle('show',on); };
+  btn.addEventListener('click',()=>toggle(!sb.classList.contains('open')));
+  ov.addEventListener('click',()=>toggle(false));
+  document.querySelectorAll('.toc a').forEach(a=>a.addEventListener('click',()=>{ if(window.innerWidth<=900) toggle(false); }));
+
+  // 현재 위치 강조
+  const links = [...document.querySelectorAll('.toc a')];
+  const map = {}; links.forEach(a=>{ const id=a.getAttribute('href').slice(1); map[id]=a; });
+  const targets = Object.keys(map).map(id=>document.getElementById(id)).filter(Boolean);
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(en=>{
+      if(en.isIntersecting){
+        links.forEach(l=>l.classList.remove('active'));
+        const a = map[en.target.id]; if(a) a.classList.add('active');
+      }
+    });
+  },{rootMargin:'-15% 0px -75% 0px', threshold:0});
+  targets.forEach(t=>io.observe(t));
+</script>
+
+</body>
+</html>

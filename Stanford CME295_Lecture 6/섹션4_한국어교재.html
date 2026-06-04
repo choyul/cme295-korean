@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CME295 Lecture 6 · 섹션 4. RL로 추론 모델 만들기와 GRPO</title>
+
+<!-- 폰트: Pretendard (CDN, 없으면 시스템 폰트 폴백) -->
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<!-- 수식: KaTeX -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
+
+<style>
+  :root{
+    --bg:#FBF9F6;
+    --paper:#ffffff;
+    --ink:#1a1a1a;
+    --ink-soft:#4a4744;
+    --muted:#7a756f;
+    --accent:#8C1515;          /* Stanford 카디널 */
+    --accent-soft:#b9554f;
+    --tint:#f6ebe9;            /* 카디널 옅은 틴트 */
+    --tint-2:#f3efe9;          /* 따뜻한 회색 */
+    --line:#e7e1d9;
+    --line-strong:#d8d0c5;
+    --radius:10px;
+    --maxw:760px;
+    --sidew:268px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Pretendard","Pretendard Variable",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    line-height:1.78;
+    font-size:16.5px;
+    -webkit-font-smoothing:antialiased;
+    word-break:keep-all;
+  }
+
+  /* ===== 레이아웃 ===== */
+  .layout{display:flex; align-items:flex-start;}
+  .sidebar{
+    width:var(--sidew); flex:0 0 var(--sidew);
+    position:sticky; top:0; height:100vh; overflow-y:auto;
+    padding:28px 18px 40px; border-right:1px solid var(--line);
+    background:rgba(251,249,246,.85); backdrop-filter:saturate(120%) blur(2px);
+  }
+  .content{flex:1 1 auto; min-width:0; display:flex; justify-content:center; padding:0 24px;}
+  .doc{width:100%; max-width:var(--maxw); padding:48px 0 120px;}
+
+  /* ===== 사이드바 목차 ===== */
+  .toc-brand{font-size:12px; letter-spacing:.04em; color:var(--accent); font-weight:700; text-transform:uppercase; margin-bottom:4px;}
+  .toc-title{font-size:15px; font-weight:700; margin:0 0 18px; line-height:1.4; color:var(--ink);}
+  .toc{list-style:none; margin:0; padding:0; font-size:13.5px;}
+  .toc li{margin:1px 0;}
+  .toc a{display:block; padding:5px 10px; border-radius:7px; color:var(--ink-soft); text-decoration:none; border-left:2px solid transparent;}
+  .toc a:hover{background:var(--tint-2); color:var(--ink);}
+  .toc a.sub{padding-left:22px; font-size:13px; color:var(--muted);}
+  .toc a.active{color:var(--accent); background:var(--tint); border-left-color:var(--accent); font-weight:600;}
+
+  /* ===== 타이포 ===== */
+  h1{font-size:27px; line-height:1.32; font-weight:800; letter-spacing:-.01em; margin:0 0 6px;}
+  .subtitle{font-size:18px; font-weight:700; color:var(--accent); margin:0 0 22px;}
+  h2{font-size:21px; font-weight:800; letter-spacing:-.01em; margin:46px 0 14px; padding-bottom:9px; border-bottom:2px solid var(--line-strong);}
+  h3{font-size:17.5px; font-weight:700; margin:34px 0 12px; color:var(--ink);}
+  h3 .badge{display:inline-block; font-size:12px; font-weight:700; color:#fff; background:var(--accent); border-radius:6px; padding:2px 8px; margin-right:8px; vertical-align:middle;}
+  p{margin:12px 0;}
+  strong{font-weight:700;}
+  a{color:var(--accent);}
+  ul,ol{margin:12px 0; padding-left:22px;}
+  li{margin:6px 0;}
+  hr{display:none;}
+
+  /* ===== 출처 배너 ===== */
+  .source-banner{
+    display:flex; gap:10px; align-items:baseline;
+    background:var(--tint); border-left:4px solid var(--accent);
+    border-radius:0 var(--radius) var(--radius) 0;
+    padding:12px 16px; margin:0 0 8px; font-size:13.5px; color:var(--ink-soft);
+  }
+  .source-banner b{color:var(--accent);}
+
+  /* ===== 한국어 번역 카드 ===== */
+  .ko{
+    background:var(--paper); border:1px solid var(--line);
+    border-left:4px solid var(--accent); border-radius:var(--radius);
+    padding:6px 22px; margin:16px 0;
+    box-shadow:0 1px 2px rgba(60,40,20,.04);
+  }
+  .ko > .label, .terms > .label{
+    display:inline-block; font-size:11.5px; font-weight:800; letter-spacing:.06em;
+    color:var(--accent); text-transform:uppercase; margin:14px 0 -4px;
+  }
+
+  /* ===== 영문 원문 토글 ===== */
+  details.en{
+    background:var(--tint-2); border:1px solid var(--line); border-radius:var(--radius);
+    margin:14px 0; overflow:hidden;
+  }
+  details.en > summary{
+    cursor:pointer; list-style:none; padding:11px 16px;
+    font-size:13.5px; font-weight:700; color:var(--muted);
+    display:flex; align-items:center; gap:8px; user-select:none;
+  }
+  details.en > summary::-webkit-details-marker{display:none;}
+  details.en > summary .chev{transition:transform .2s; color:var(--accent-soft);}
+  details.en[open] > summary .chev{transform:rotate(90deg);}
+  details.en[open] > summary{border-bottom:1px solid var(--line);}
+  .en-body{padding:4px 18px 14px; font-size:14px; line-height:1.7; color:#5c574f; font-style:normal;}
+  .en-body p{margin:10px 0;}
+  .ts{
+    display:inline-block; font-family:"SFMono-Regular",ui-monospace,Menlo,Consolas,monospace;
+    font-size:11.5px; font-style:normal; color:var(--accent);
+    background:var(--tint); border:1px solid #e6cfcc; border-radius:5px;
+    padding:0 5px; margin:0 2px; vertical-align:baseline;
+  }
+
+  /* ===== 용어 설명 ===== */
+  .terms{
+    border:1px solid var(--line); border-left:3px solid var(--accent-soft);
+    border-radius:var(--radius); background:#fffdfb; padding:4px 20px 8px; margin:16px 0;
+  }
+  .terms dl{margin:8px 0;}
+  .terms dt{font-weight:700; color:var(--ink); margin-top:8px;}
+  .terms dt .en-term{color:var(--accent); font-weight:600;}
+  .terms dd{margin:1px 0 6px; color:var(--ink-soft); font-size:15px;}
+
+  /* ===== 표 ===== */
+  .table-wrap{overflow-x:auto; margin:16px 0; border:1px solid var(--line); border-radius:var(--radius);}
+  table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:520px;}
+  thead th{background:var(--accent); color:#fff; font-weight:700; text-align:left; padding:11px 14px; white-space:nowrap;}
+  tbody td{padding:9px 14px; border-top:1px solid var(--line);}
+  tbody tr:nth-child(even){background:var(--tint-2);}
+  tbody td:first-child{font-family:ui-monospace,Menlo,monospace; font-size:13px; color:var(--accent);}
+
+  /* ===== 콜아웃 ===== */
+  .callout{border-radius:var(--radius); padding:14px 20px 6px; margin:18px 0;}
+  .callout .c-title{font-weight:800; margin:6px 0 2px; display:flex; align-items:center; gap:8px;}
+  .callout.review{background:#fff; border:1px solid var(--line-strong);}
+  .callout.review ol{counter-reset:none;}
+  .callout.note{background:var(--tint-2); border-left:4px solid var(--muted); border-radius:0 var(--radius) var(--radius) 0; padding-bottom:12px;}
+  .callout.practice{background:var(--tint); border:1px solid #e6cfcc; padding-bottom:14px;}
+  .callout.practice li{margin:12px 0;}
+  .next{margin-top:40px; padding:14px 18px; background:var(--tint-2); border-radius:var(--radius); font-size:14px; color:var(--ink-soft);}
+
+  /* 수식 / 도식 */
+  .katex-display{margin:14px 0; overflow-x:auto; overflow-y:hidden; padding:6px 0;}
+  .diagram{background:#fffdfb; border:1px solid var(--line); border-radius:var(--radius); padding:14px; margin:16px 0; text-align:center;}
+  .diagram .cap{font-size:12.5px; color:var(--muted); margin-top:6px;}
+  .mermaid{display:flex; justify-content:center;}
+
+  /* ===== 모바일 ===== */
+  .menu-btn{display:none;}
+  .overlay{display:none;}
+  @media (max-width:900px){
+    .menu-btn{
+      display:flex; align-items:center; justify-content:center;
+      position:fixed; top:14px; left:14px; z-index:50;
+      width:42px; height:42px; border-radius:10px; border:1px solid var(--line-strong);
+      background:var(--paper); color:var(--accent); font-size:20px; cursor:pointer;
+      box-shadow:0 2px 8px rgba(60,40,20,.12);
+    }
+    .sidebar{
+      position:fixed; left:0; top:0; z-index:60; height:100vh;
+      transform:translateX(-105%); transition:transform .25s ease;
+      box-shadow:4px 0 24px rgba(0,0,0,.12); background:var(--bg);
+    }
+    .sidebar.open{transform:translateX(0);}
+    .overlay.show{display:block; position:fixed; inset:0; background:rgba(0,0,0,.32); z-index:55;}
+    .content{padding:0 16px;}
+    .doc{padding:64px 0 100px;}
+    body{font-size:16px;}
+    h1{font-size:23px;}
+    .ko,.terms{padding-left:16px; padding-right:16px;}
+  }
+
+  /* ===== 인쇄 ===== */
+  @media print{
+    .sidebar,.menu-btn,.overlay{display:none !important;}
+    .content{padding:0;}
+    body{background:#fff; font-size:11pt;}
+    details.en{display:none;}          /* 인쇄본은 한국어 위주 */
+    .ko,.terms,.callout,.table-wrap{break-inside:avoid; box-shadow:none;}
+    a{color:var(--ink);}
+  }
+  .home-btn{position:fixed; top:16px; right:18px; z-index:70;
+    display:inline-flex; align-items:center; gap:6px; text-decoration:none;
+    background:var(--paper); color:var(--accent); border:1px solid var(--line-strong);
+    border-radius:999px; padding:8px 14px; font-size:13.5px; font-weight:700;
+    box-shadow:0 2px 8px rgba(60,40,20,.12); transition:background .12s,color .12s;}
+  .home-btn:hover{background:var(--accent); color:#fff; border-color:var(--accent);}
+  @media (max-width:900px){ .home-btn{top:14px; right:14px; padding:8px 12px; font-size:12.5px;} }
+  @media print{ .home-btn{display:none !important;} }
+</style>
+</head>
+<body>
+<a class="home-btn" href="../index.html" title="전체 목차로 돌아가기">← 전체 목차</a>
+
+<button class="menu-btn" id="menuBtn" aria-label="목차 열기">☰</button>
+<div class="overlay" id="overlay"></div>
+
+<div class="layout">
+  <nav class="sidebar" id="sidebar"><div class="toc-brand">Stanford CME295 · Lecture 6</div><p class="toc-title">섹션 4. RL로 추론 모델 만들기와 GRPO</p><ul class="toc"><li><a href="#overview">1. 강의 개요</a></li><li><a href="#goals">2. 학습 목표</a></li><li><a href="#body">3. 본문</a></li><li><a class="sub" href="#block1">블록 1 · 왜 SFT가 아니라 RL인가</a></li><li><a class="sub" href="#block2">블록 2 · 두 가지 보상으로 RL 돌리기</a></li><li><a class="sub" href="#block3">블록 3 · 사고량 제어: 동적 예산·budget forcing</a></li><li><a class="sub" href="#block4">블록 4 · GRPO: 그룹 상대 정책 최적화</a></li><li><a href="#glossary">4. 핵심 용어집</a></li><li><a href="#review">5. 복습 문제</a></li><li><a href="#appendix">부록. 실무 적용 포인트 (NLP·LLM 기술 내용 한정)</a></li></ul></nav>
+  <main class="content"><article class="doc"><h1>CME295 Transformers &amp; LLMs — Lecture 6 한국어 교재</h1><p class="subtitle">섹션 4. RL로 추론 모델 만들기와 GRPO</p><div class="source-banner"><span>📄</span><span><b>원문 출처</b>: Stanford CME295, Autumn 2025, Lecture 6, 타임스탬프 <span class="ts">47:28</span>~<span class="ts">1:05:53</span></span></div><section id="overview"><h2>1. 강의 개요</h2><ul><li>추론 사슬을 대규모로 만들려면 SFT가 왜 부적합한지(추론 사슬 작성의 어려움 등)와, 검증 가능한 보상으로 RL을 돌리는 발상을 본다.</li><li>추론 사슬 존재 여부 + 정답 여부라는 두 보상만으로 RL을 돌리면 추론 성능이 오른다는 결과(DeepSeek-R1-Zero)를 다룬다.</li><li>추론 학습의 RL 알고리즘 GRPO를 소개하고, PPO와 달리 가치 함수 없이 '그룹 상대 비교'로 어드밴티지를 계산하는 핵심을 설명한다.</li></ul></section><section id="goals"><h2>2. 학습 목표</h2><ol><li>추론 사슬을 SFT로 가르치기 어려운 이유와, RL이 적합한 이유(검증 가능한 보상)를 설명할 수 있다.</li><li>두 가지 보상(형식·정답)만으로 RL을 돌려 추론력이 오른다는 결과를 안다.</li><li>GRPO가 PPO와 달리 가치 함수 없이 그룹 상대 어드밴티지를 쓴다는 핵심을 이해한다.</li></ol></section><section id="body"><h2>3. 본문</h2><div id="block1"><h3><span class="badge">블록 1</span>왜 SFT가 아니라 RL인가</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">49:03</span> reasoning chains writing is a very tough task (...) SFT (...) you need high quality data (...) write all these reasoning chains (...) very hard (...) <span class="ts">50:06</span> the way the model reasons may be different from the way we (do) (...) <span class="ts">50:36</span> these reasoning tasks they have a very natural reward(s) which is (...) verifiable. (...) <span class="ts">51:10</span> SFT is not the great way to start from scratch. Well (...) try RL then.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>추론 사슬을 대규모로 만들려면 어떻게 할까요? 추론 사슬, 특히 긴 사슬을 쓰는 것은 매우 어려운 일입니다. 도구함을 뒤져보면 SFT가 떠오르지만, 세 가지 이유로 부적합합니다.</p>
+<ol><li><strong>SFT는 고품질 데이터가 필요</strong>한데, 추론 사슬이 없으면 처음부터 다 작성해야 합니다(매우 어려움).</li><li><strong>모델이 추론하는 방식이 사람과 다를 수 있어</strong>, 사람이 쓴 추론 사슬이 모델에게 최선이 아닐 수 있습니다.</li><li>반면 <strong>추론 과제는 검증 가능한(verifiable) 자연스러운 보상</strong>이 있습니다 — 코딩은 테스트 통과 여부, 수학은 정답 일치 여부.</li></ol>
+<p>즉 보상 신호가 있고 SFT는 맨바닥 시작에 부적합하니 → RL을 씁니다. 지난 강의에서 LLM에 대한 RL을 배웠으니 시기도 좋습니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>추론 사슬 작성의 어려움</dt><dd>사람이 긴 추론 사슬을 다 쓰는 건 비현실적 → SFT 부적합.</dd><dt>검증 가능한 보상<span class="en-term">(verifiable reward)</span></dt><dd>정답 여부를 자동 확인 가능. RL에 적합.</dd></dl></div>
+</div>
+<div id="block2"><h3><span class="badge">블록 2</span>두 가지 보상으로 RL 돌리기</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">51:40</span> we first want to have a reward that checks whether the reasoning chain is there (...) checking the presence (...) of the think start and end token. (...) <span class="ts">52:12</span> the second reward (...) to check that the solution (...) actually works. (...) <span class="ts">53:17</span> if you plot the performance (...) as you perform your RL steps, the performance (...) increase (...) <span class="ts">53:49</span> coming from (...) deepseek R1 (...) R1(-)0 (...) only with these two verifiable (rewards).</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>RL을 돌리되 보상을 두 가지로 둡니다.</p>
+<ol><li><strong>형식 보상</strong>: 추론 사슬이 있는지 확인. <code>&lt;think&gt;</code> 시작·끝 토큰의 존재 여부로 검사(모델에게 추론을 그 안에 넣도록 지시).</li><li><strong>정답 보상</strong>: 해법이 실제로 작동하는지. 코딩은 모든 테스트 통과, 수학은 정답 일치로 검증.</li></ol>
+<p>요약: 추론 사슬 토큰이 있는지 + 결과가 맞는지를 결합한 보상으로 RL을 돌립니다. 둘 다 모델 없이 쉽게 확인됩니다. 이렇게 RL을 돌리면, 벤치마크(예: AIME) 성능이 RL 단계가 진행될수록 실제로 오릅니다. 이 그래프는 DeepSeek-R1-Zero 학습에서 온 것으로, 검증 가능한 두 보상만으로도 모델이 의미 있게 추론을 배운다는 것을 보여줍니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>형식 보상</dt><dd><code>&lt;think&gt;</code> 토큰 존재로 추론 사슬 여부를 검사하는 보상.</dd><dt>정답 보상</dt><dd>테스트 통과/정답 일치로 주는 보상.</dd><dt>DeepSeek-R1-Zero</dt><dd>SFT 없이 검증 가능 보상만으로 RL을 돌린 모델(개념 증명).</dd></dl></div>
+</div>
+<div id="block3"><h3><span class="badge">블록 3</span>사고량 제어: 동적 예산·budget forcing</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">54:22</span> not all prompts are equal (...) some prompts that do not need the model to think too much (...) dynamic budget (...) overthink (...) a quick classifier (...) <span class="ts">55:26</span> limited context window (...) cannot think too much (...) <span class="ts">55:58</span> budget forcing (...) S1 (...) introduce some tokens midway to force it to think more (...) such tokens are (...) wait(s) (...) <span class="ts">57:02</span> thinking token actually not be tokens but be hidden representations.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>모델에게 생각하라고 시키면, 모든 프롬프트가 같지 않다는 문제가 있습니다 — 깊이 생각할 필요 없는 것도 있고 필요한 것도 있습니다. 그래서 사고량 제어 연구가 활발합니다.</p>
+<ul><li><strong>동적 예산(dynamic budget)</strong>: 과도한 사고(overthink)를 막기. 프롬프트에 빠른 분류기를 돌려 고사고/저사고 문제인지 판단하는 식(아직 열린 문제).</li><li><strong>컨텍스트 한계</strong>: 컨텍스트 창이 제한적이라 너무 오래 생각할 수 없음. 남은 길이를 의식해야 함.</li><li><strong>budget forcing(예산 강제)</strong>: s1 논문이 도입. 더 생각하게 하려면 중간에 "wait" 같은 토큰을 끼워 넣어 추론을 이어가게 하고(모델이 "잠깐, 다른 게 있다"며 다른 경로 탐색), 멈추려면 "시간이 다 됐으니 내 답은…" 같은 토큰으로 답하게 함.</li><li><strong>연속 사고(latent reasoning)</strong>: 사고 토큰을 언어 토큰이 아니라 더 의미 있고 압축된 은닉 표현으로 두는 연구 방향(활발한 연구 영역).</li></ul></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>동적 예산<span class="en-term">(dynamic budget)</span></dt><dd>문제 난도에 따라 사고량을 조절.</dd><dt>과도한 사고<span class="en-term">(overthink)</span></dt><dd>불필요하게 길게 생각하는 것.</dd><dt>budget forcing</dt><dd>"wait" 등 토큰을 끼워 사고를 늘리거나 멈추는 기법(s1 논문).</dd><dt>연속/잠재 사고<span class="en-term">(latent reasoning)</span></dt><dd>사고를 토큰이 아닌 은닉 표현으로 하는 연구.</dd></dl></div>
+</div>
+<div id="block4"><h3><span class="badge">블록 4</span>GRPO: 그룹 상대 정책 최적화</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">58:36</span> GRPO (...) released in 2024 (...) the go-to RL algorithm for (...) reasoning (...) <span class="ts">59:09</span> group relative policy optimization (...) maximize advantages (...) do not want to deviate too much (...) <span class="ts">1:00:10</span> the key (...) difference lies in how it computes the advantage (...) <span class="ts">1:01:40</span> PO (...) you had to train a value function jointly (...) the big bottleneck. (...) <span class="ts">1:01:40</span> GRPO (...) take a completion (...) compute its reward and (...) compare it with the average of rewards of completions for that same prompt.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>추론 학습에 쓰는 RL 알고리즘은 GRPO(Group Relative Policy Optimization, 그룹 상대 정책 최적화)입니다(2024년 공개, 추론 학습의 표준). GRPO도 PPO처럼 두 가지를 합니다 — ① 어드밴티지 최대화, ② 직전/기본 모델에서 너무 벗어나지 않기.</p>
+<p>차이는 어드밴티지를 계산하는 방식입니다. PPO는 어드밴티지를 위해 가치 함수(value function)를 정책과 함께 학습해야 했고(일반화 어드밴티지 추정, GAE), 이게 큰 병목이었습니다. GRPO는 가치 함수를 쓰지 않습니다. 대신 — 같은 프롬프트에 대해 여러 완성 응답을 생성하고, 한 완성의 보상을 그 그룹(같은 프롬프트의 다른 완성들)의 평균 보상과 비교합니다. 그 상대적 비교가 어드밴티지가 됩니다.</p>
+<p>직관: 쉬운 문제는 대부분 높은 보상이 나오니 한 응답의 높은 보상이 큰 의미가 없지만, 어려운 문제에서 정답을 맞히면(그룹 평균보다 훨씬 높으면) 그 토큰들을 크게 강화합니다. 즉 보상을 '그룹 대비 상대값'으로 맥락화합니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>GRPO<span class="en-term">(그룹 상대 정책 최적화)</span></dt><dd>추론 학습의 표준 RL. 가치 함수 없이 그룹 상대 어드밴티지 사용.</dd><dt>그룹 상대 어드밴티지</dt><dd>한 완성의 보상을 같은 프롬프트의 다른 완성들 평균과 비교한 값.</dd><dt>PPO와의 핵심 차이</dt><dd>PPO는 가치 함수 학습 필요, GRPO는 불필요(여러 완성을 샘플링).</dd></dl></div>
+</div></section><section id="glossary"><h2>4. 핵심 용어집</h2><div class="table-wrap"><table><thead><tr><th>영문</th><th>한국어</th><th>발음</th><th>뜻</th></tr></thead><tbody><tr><td>verifiable reward</td><td>검증 가능한 보상</td><td>—</td><td>정답 자동 확인 보상</td></tr><tr><td>형식/정답 보상</td><td>format/correctness reward</td><td>—</td><td>추론 사슬 존재 / 정답 여부</td></tr><tr><td>DeepSeek-R1-Zero</td><td>—</td><td>—</td><td>SFT 없이 RL만으로 추론(개념 증명)</td></tr><tr><td>dynamic budget</td><td>동적 예산</td><td>—</td><td>난도별 사고량 조절</td></tr><tr><td>budget forcing</td><td>예산 강제</td><td>—</td><td>wait 등으로 사고 늘림/멈춤(s1)</td></tr><tr><td>latent reasoning</td><td>잠재 사고</td><td>—</td><td>토큰 아닌 은닉 표현으로 사고</td></tr><tr><td>GRPO</td><td>그룹 상대 정책 최적화</td><td>—</td><td>가치 함수 없는 RL(추론 표준)</td></tr><tr><td>value function</td><td>가치 함수</td><td>—</td><td>PPO가 학습해야 하는 병목(GRPO엔 없음)</td></tr></tbody></table></div></section><section id="review"><h2>5. 복습 문제</h2><div class="callout review"><div class="c-title">✏️ 스스로 점검</div><ol><li>추론 사슬을 SFT로 가르치기 어려운 세 가지 이유는? 왜 RL이 적합한가?</li><li>RL에 쓰는 두 가지 보상(형식·정답)은 각각 무엇을 검사하는가?</li><li>GRPO가 PPO와 다른 핵심(가치 함수 없이 그룹 상대 어드밴티지)을 설명하라.</li></ol></div></section><section id="appendix"><h2>부록. 실무 적용 포인트 <span style="font-size:14px;font-weight:500;color:var(--muted);">(NLP·LLM 기술 내용 한정)</span></h2><div class="callout practice"><div class="c-title">💡 현장에서 써먹기</div><ul><li><strong>'검증 가능한 보상으로 RL'은 "정답이 자동 확인되는 일은 AI를 스스로 개선시킬 수 있다"를 뜻한다.</strong> 코딩·수학처럼 채점이 자동화되는 영역에서 모델이 빠르게 강해진 이유다. 행정에서 정답·규칙이 명확한 과제(서식 검증 등)는 자동 채점 루프를 붙이기 좋은 후보임을 시사한다.</li><li><strong>사고량 제어(동적 예산)는 "쉬운 질문에 과한 추론은 낭비"라는 실무 감각을 준다.</strong> 추론 모델은 간단한 질문에도 길게 생각해 비용·시간을 쓸 수 있다. 질문 난도에 맞춰 추론 모드를 켜고 끄거나, 간단한 일은 일반 모델에 맡기는 운영이 효율적이다.</li></ul></div><div class="next"><strong><strong>다음 섹션 예고</strong>·&lt;/strong&gt; · GRPO와 PPO를 그림·수식으로 자세히 비교하고, 출력이 길어지는 편향 문제와 그 보정(DAPO·Dr.GRPO 등). <span class="ts">1:05:53</span> 이후.</div></section></article></main>
+</div>
+
+<!-- KaTeX 자동 렌더 -->
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}],throwOnError:false});"></script>
+
+<!-- Mermaid -->
+<script type="module">
+  try{
+    const m = await import('https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs');
+    m.default.initialize({startOnLoad:true, theme:'base', themeVariables:{
+      fontFamily:'Pretendard, sans-serif', primaryColor:'#fffdfb', primaryBorderColor:'#d8d0c5',
+      primaryTextColor:'#1a1a1a', lineColor:'#b9554f', fontSize:'14px'
+    }});
+  }catch(e){ /* 오프라인이면 도식은 코드로 표시 */ }
+</script>
+
+<!-- 목차 활성표시 + 모바일 드로어 -->
+<script>
+  // 모바일 드로어
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('overlay');
+  const btn = document.getElementById('menuBtn');
+  const toggle = (on)=>{ sb.classList.toggle('open',on); ov.classList.toggle('show',on); };
+  btn.addEventListener('click',()=>toggle(!sb.classList.contains('open')));
+  ov.addEventListener('click',()=>toggle(false));
+  document.querySelectorAll('.toc a').forEach(a=>a.addEventListener('click',()=>{ if(window.innerWidth<=900) toggle(false); }));
+
+  // 현재 위치 강조
+  const links = [...document.querySelectorAll('.toc a')];
+  const map = {}; links.forEach(a=>{ const id=a.getAttribute('href').slice(1); map[id]=a; });
+  const targets = Object.keys(map).map(id=>document.getElementById(id)).filter(Boolean);
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(en=>{
+      if(en.isIntersecting){
+        links.forEach(l=>l.classList.remove('active'));
+        const a = map[en.target.id]; if(a) a.classList.add('active');
+      }
+    });
+  },{rootMargin:'-15% 0px -75% 0px', threshold:0});
+  targets.forEach(t=>io.observe(t));
+</script>
+
+</body>
+</html>

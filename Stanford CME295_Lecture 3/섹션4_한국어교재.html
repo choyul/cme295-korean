@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CME295 Lecture 3 · 섹션 4. 프롬프팅 전략</title>
+
+<!-- 폰트: Pretendard (CDN, 없으면 시스템 폰트 폴백) -->
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<!-- 수식: KaTeX -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
+
+<style>
+  :root{
+    --bg:#FBF9F6;
+    --paper:#ffffff;
+    --ink:#1a1a1a;
+    --ink-soft:#4a4744;
+    --muted:#7a756f;
+    --accent:#8C1515;          /* Stanford 카디널 */
+    --accent-soft:#b9554f;
+    --tint:#f6ebe9;            /* 카디널 옅은 틴트 */
+    --tint-2:#f3efe9;          /* 따뜻한 회색 */
+    --line:#e7e1d9;
+    --line-strong:#d8d0c5;
+    --radius:10px;
+    --maxw:760px;
+    --sidew:268px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Pretendard","Pretendard Variable",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    line-height:1.78;
+    font-size:16.5px;
+    -webkit-font-smoothing:antialiased;
+    word-break:keep-all;
+  }
+
+  /* ===== 레이아웃 ===== */
+  .layout{display:flex; align-items:flex-start;}
+  .sidebar{
+    width:var(--sidew); flex:0 0 var(--sidew);
+    position:sticky; top:0; height:100vh; overflow-y:auto;
+    padding:28px 18px 40px; border-right:1px solid var(--line);
+    background:rgba(251,249,246,.85); backdrop-filter:saturate(120%) blur(2px);
+  }
+  .content{flex:1 1 auto; min-width:0; display:flex; justify-content:center; padding:0 24px;}
+  .doc{width:100%; max-width:var(--maxw); padding:48px 0 120px;}
+
+  /* ===== 사이드바 목차 ===== */
+  .toc-brand{font-size:12px; letter-spacing:.04em; color:var(--accent); font-weight:700; text-transform:uppercase; margin-bottom:4px;}
+  .toc-title{font-size:15px; font-weight:700; margin:0 0 18px; line-height:1.4; color:var(--ink);}
+  .toc{list-style:none; margin:0; padding:0; font-size:13.5px;}
+  .toc li{margin:1px 0;}
+  .toc a{display:block; padding:5px 10px; border-radius:7px; color:var(--ink-soft); text-decoration:none; border-left:2px solid transparent;}
+  .toc a:hover{background:var(--tint-2); color:var(--ink);}
+  .toc a.sub{padding-left:22px; font-size:13px; color:var(--muted);}
+  .toc a.active{color:var(--accent); background:var(--tint); border-left-color:var(--accent); font-weight:600;}
+
+  /* ===== 타이포 ===== */
+  h1{font-size:27px; line-height:1.32; font-weight:800; letter-spacing:-.01em; margin:0 0 6px;}
+  .subtitle{font-size:18px; font-weight:700; color:var(--accent); margin:0 0 22px;}
+  h2{font-size:21px; font-weight:800; letter-spacing:-.01em; margin:46px 0 14px; padding-bottom:9px; border-bottom:2px solid var(--line-strong);}
+  h3{font-size:17.5px; font-weight:700; margin:34px 0 12px; color:var(--ink);}
+  h3 .badge{display:inline-block; font-size:12px; font-weight:700; color:#fff; background:var(--accent); border-radius:6px; padding:2px 8px; margin-right:8px; vertical-align:middle;}
+  p{margin:12px 0;}
+  strong{font-weight:700;}
+  a{color:var(--accent);}
+  ul,ol{margin:12px 0; padding-left:22px;}
+  li{margin:6px 0;}
+  hr{display:none;}
+
+  /* ===== 출처 배너 ===== */
+  .source-banner{
+    display:flex; gap:10px; align-items:baseline;
+    background:var(--tint); border-left:4px solid var(--accent);
+    border-radius:0 var(--radius) var(--radius) 0;
+    padding:12px 16px; margin:0 0 8px; font-size:13.5px; color:var(--ink-soft);
+  }
+  .source-banner b{color:var(--accent);}
+
+  /* ===== 한국어 번역 카드 ===== */
+  .ko{
+    background:var(--paper); border:1px solid var(--line);
+    border-left:4px solid var(--accent); border-radius:var(--radius);
+    padding:6px 22px; margin:16px 0;
+    box-shadow:0 1px 2px rgba(60,40,20,.04);
+  }
+  .ko > .label, .terms > .label{
+    display:inline-block; font-size:11.5px; font-weight:800; letter-spacing:.06em;
+    color:var(--accent); text-transform:uppercase; margin:14px 0 -4px;
+  }
+
+  /* ===== 영문 원문 토글 ===== */
+  details.en{
+    background:var(--tint-2); border:1px solid var(--line); border-radius:var(--radius);
+    margin:14px 0; overflow:hidden;
+  }
+  details.en > summary{
+    cursor:pointer; list-style:none; padding:11px 16px;
+    font-size:13.5px; font-weight:700; color:var(--muted);
+    display:flex; align-items:center; gap:8px; user-select:none;
+  }
+  details.en > summary::-webkit-details-marker{display:none;}
+  details.en > summary .chev{transition:transform .2s; color:var(--accent-soft);}
+  details.en[open] > summary .chev{transform:rotate(90deg);}
+  details.en[open] > summary{border-bottom:1px solid var(--line);}
+  .en-body{padding:4px 18px 14px; font-size:14px; line-height:1.7; color:#5c574f; font-style:normal;}
+  .en-body p{margin:10px 0;}
+  .ts{
+    display:inline-block; font-family:"SFMono-Regular",ui-monospace,Menlo,Consolas,monospace;
+    font-size:11.5px; font-style:normal; color:var(--accent);
+    background:var(--tint); border:1px solid #e6cfcc; border-radius:5px;
+    padding:0 5px; margin:0 2px; vertical-align:baseline;
+  }
+
+  /* ===== 용어 설명 ===== */
+  .terms{
+    border:1px solid var(--line); border-left:3px solid var(--accent-soft);
+    border-radius:var(--radius); background:#fffdfb; padding:4px 20px 8px; margin:16px 0;
+  }
+  .terms dl{margin:8px 0;}
+  .terms dt{font-weight:700; color:var(--ink); margin-top:8px;}
+  .terms dt .en-term{color:var(--accent); font-weight:600;}
+  .terms dd{margin:1px 0 6px; color:var(--ink-soft); font-size:15px;}
+
+  /* ===== 표 ===== */
+  .table-wrap{overflow-x:auto; margin:16px 0; border:1px solid var(--line); border-radius:var(--radius);}
+  table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:520px;}
+  thead th{background:var(--accent); color:#fff; font-weight:700; text-align:left; padding:11px 14px; white-space:nowrap;}
+  tbody td{padding:9px 14px; border-top:1px solid var(--line);}
+  tbody tr:nth-child(even){background:var(--tint-2);}
+  tbody td:first-child{font-family:ui-monospace,Menlo,monospace; font-size:13px; color:var(--accent);}
+
+  /* ===== 콜아웃 ===== */
+  .callout{border-radius:var(--radius); padding:14px 20px 6px; margin:18px 0;}
+  .callout .c-title{font-weight:800; margin:6px 0 2px; display:flex; align-items:center; gap:8px;}
+  .callout.review{background:#fff; border:1px solid var(--line-strong);}
+  .callout.review ol{counter-reset:none;}
+  .callout.note{background:var(--tint-2); border-left:4px solid var(--muted); border-radius:0 var(--radius) var(--radius) 0; padding-bottom:12px;}
+  .callout.practice{background:var(--tint); border:1px solid #e6cfcc; padding-bottom:14px;}
+  .callout.practice li{margin:12px 0;}
+  .next{margin-top:40px; padding:14px 18px; background:var(--tint-2); border-radius:var(--radius); font-size:14px; color:var(--ink-soft);}
+
+  /* 수식 / 도식 */
+  .katex-display{margin:14px 0; overflow-x:auto; overflow-y:hidden; padding:6px 0;}
+  .diagram{background:#fffdfb; border:1px solid var(--line); border-radius:var(--radius); padding:14px; margin:16px 0; text-align:center;}
+  .diagram .cap{font-size:12.5px; color:var(--muted); margin-top:6px;}
+  .mermaid{display:flex; justify-content:center;}
+
+  /* ===== 모바일 ===== */
+  .menu-btn{display:none;}
+  .overlay{display:none;}
+  @media (max-width:900px){
+    .menu-btn{
+      display:flex; align-items:center; justify-content:center;
+      position:fixed; top:14px; left:14px; z-index:50;
+      width:42px; height:42px; border-radius:10px; border:1px solid var(--line-strong);
+      background:var(--paper); color:var(--accent); font-size:20px; cursor:pointer;
+      box-shadow:0 2px 8px rgba(60,40,20,.12);
+    }
+    .sidebar{
+      position:fixed; left:0; top:0; z-index:60; height:100vh;
+      transform:translateX(-105%); transition:transform .25s ease;
+      box-shadow:4px 0 24px rgba(0,0,0,.12); background:var(--bg);
+    }
+    .sidebar.open{transform:translateX(0);}
+    .overlay.show{display:block; position:fixed; inset:0; background:rgba(0,0,0,.32); z-index:55;}
+    .content{padding:0 16px;}
+    .doc{padding:64px 0 100px;}
+    body{font-size:16px;}
+    h1{font-size:23px;}
+    .ko,.terms{padding-left:16px; padding-right:16px;}
+  }
+
+  /* ===== 인쇄 ===== */
+  @media print{
+    .sidebar,.menu-btn,.overlay{display:none !important;}
+    .content{padding:0;}
+    body{background:#fff; font-size:11pt;}
+    details.en{display:none;}          /* 인쇄본은 한국어 위주 */
+    .ko,.terms,.callout,.table-wrap{break-inside:avoid; box-shadow:none;}
+    a{color:var(--ink);}
+  }
+  .home-btn{position:fixed; top:16px; right:18px; z-index:70;
+    display:inline-flex; align-items:center; gap:6px; text-decoration:none;
+    background:var(--paper); color:var(--accent); border:1px solid var(--line-strong);
+    border-radius:999px; padding:8px 14px; font-size:13.5px; font-weight:700;
+    box-shadow:0 2px 8px rgba(60,40,20,.12); transition:background .12s,color .12s;}
+  .home-btn:hover{background:var(--accent); color:#fff; border-color:var(--accent);}
+  @media (max-width:900px){ .home-btn{top:14px; right:14px; padding:8px 12px; font-size:12.5px;} }
+  @media print{ .home-btn{display:none !important;} }
+</style>
+</head>
+<body>
+<a class="home-btn" href="../index.html" title="전체 목차로 돌아가기">← 전체 목차</a>
+
+<button class="menu-btn" id="menuBtn" aria-label="목차 열기">☰</button>
+<div class="overlay" id="overlay"></div>
+
+<div class="layout">
+  <nav class="sidebar" id="sidebar"><div class="toc-brand">Stanford CME295 · Lecture 3</div><p class="toc-title">섹션 4. 프롬프팅 전략</p><ul class="toc"><li><a href="#overview">1. 강의 개요</a></li><li><a href="#goals">2. 학습 목표</a></li><li><a href="#body">3. 본문</a></li><li><a class="sub" href="#block1">블록 1 · 컨텍스트 길이와 컨텍스트 부패(context rot)</a></li><li><a class="sub" href="#block2">블록 2 · 프롬프트의 구조: 맥락·지시·입력·제약</a></li><li><a class="sub" href="#block3">블록 3 · 인컨텍스트 러닝: zero-shot과 few-shot</a></li><li><a class="sub" href="#block4">블록 4 · 사고연쇄(chain of thought)와 디버깅</a></li><li><a class="sub" href="#block5">블록 5 · self-consistency (다수결)</a></li><li><a href="#glossary">4. 핵심 용어집</a></li><li><a href="#review">5. 복습 문제</a></li><li><a href="#appendix">부록. 실무 적용 포인트 (NLP·LLM 기술 내용 한정)</a></li></ul></nav>
+  <main class="content"><article class="doc"><h1>CME295 Transformers &amp; LLMs — Lecture 3 한국어 교재</h1><p class="subtitle">섹션 4. 프롬프팅 전략</p><div class="source-banner"><span>📄</span><span><b>원문 출처</b>: Stanford CME295, Autumn 2025, Lecture 3, 타임스탬프 <span class="ts">1:06:44</span>~<span class="ts">1:24:54</span></span></div><section id="overview"><h2>1. 강의 개요</h2><ul><li>입력 길이를 재는 컨텍스트 길이(context length)와, 길다고 다 좋은 게 아니라는 컨텍스트 부패(context rot) 현상을 다룬다.</li><li>프롬프트의 일반적 구조(맥락·지시·입력·제약)와, 가중치를 바꾸지 않고 모델을 부리는 인컨텍스트 러닝(zero-shot/few-shot)을 본다.</li><li>답 전에 근거를 만들게 하는 사고연쇄(chain of thought)와, 여러 번 뽑아 다수결하는 self-consistency를 설명한다.</li></ul></section><section id="goals"><h2>2. 학습 목표</h2><ol><li>컨텍스트 길이가 무엇이며, 길이를 늘려도 정보 검색력이 떨어지는 컨텍스트 부패 현상을 설명할 수 있다.</li><li>zero-shot과 few-shot의 차이, 그리고 예시 제공과 추론 기반 지시의 트레이드오프를 안다.</li><li>사고연쇄(CoT)와 self-consistency가 응답 품질을 어떻게 높이는지 설명할 수 있다.</li></ol></section><section id="body"><h2>3. 본문</h2><div id="block1"><h3><span class="badge">블록 1</span>컨텍스트 길이와 컨텍스트 부패(context rot)</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">1:07:13</span> the length of your inputs measured in number of tokens (...) called context length, context size, window size (...) all these terms are equivalent. (...) <span class="ts">1:08:16</span> modern day LLMs they tend to be in the order of magnitude of tens of thousands hundreds of thousands or millions of input tokens (...) Gemini and others they're in the million territory. (...) <span class="ts">1:09:08</span> a phenomenon (...) dubbed as context rot (...) a test called needle in a ha(y)stack (...) in larger and larger pieces of text they bury the answer (...) with respect to an increasing context length that ability to (...) surface that answer decreases. (...) <span class="ts">1:09:49</span> a term of like distractors (...) basically contributes in decreasing the retrieval capability.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>입력의 길이를 토큰 수로 잰 것을 컨텍스트 길이(context length)라 합니다. 문헌에 따라 context size, window size 등으로도 불리는데(코딩 도구 cursor 등에서는 context length라 함), 모두 같은 뜻입니다. 한 번에 모델에 넣을 수 있는 토큰 분량입니다.</p>
+<p>요즘 LLM은 수만~수십만~수백만 토큰을 입력으로 받습니다(예: Gemini 등은 100만 단위). 새 LLM이 내세우는 '컨텍스트 길이' 수치가 바로 이것입니다.</p>
+<p>그런데 컨텍스트가 길면 다 해결될까요? 아닙니다. 올여름(2025년 기준) 한 논문이 컨텍스트 부패(context rot)라는 현상을 다뤘습니다. '건초더미 속 바늘(needle in a haystack)' 테스트 — 점점 더 긴 텍스트 속에 답을 숨겨 두고 모델이 그 답을 찾아내는지 봅니다. 결과는, 컨텍스트 길이가 늘수록 컨텍스트 안의 정보를 답에 연결해 끌어내는 능력이 떨어졌습니다. 또 산만요소(distractor, 잡음 텍스트)를 넣으면 검색 능력이 더 떨어졌습니다. 즉 컨텍스트의 '길이'뿐 아니라 '내용'도 중요합니다. 그래서 검색류 문제에서는 LLM에 보여줄 맥락을 최대한 정확히 추려 넣을 동기가 큽니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>컨텍스트 길이<span class="en-term">(context length)</span></dt><dd>한 번에 넣을 수 있는 입력 토큰 분량. (=context size, window size)</dd><dt>컨텍스트 부패<span class="en-term">(context rot)</span></dt><dd>컨텍스트가 길수록 정보 검색·활용 능력이 떨어지는 현상.</dd><dt>건초더미 속 바늘<span class="en-term">(needle in a haystack)</span></dt><dd>긴 텍스트에 답을 숨기고 찾게 하는 검색 능력 테스트.</dd><dt>산만요소<span class="en-term">(distractor)</span></dt><dd>검색을 방해하는 잡음 텍스트.</dd></dl></div>
+</div>
+<div id="block2"><h3><span class="badge">블록 2</span>프롬프트의 구조: 맥락·지시·입력·제약</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">1:11:37</span> what do prompts usually look like. So there is no formal theory (...) <span class="ts">1:12:07</span> a part that is setting up the context (...) instructions (...) some sort of function that take(s) as input something (...) you add some inputs (...) you may want to add some constraints. (...) <span class="ts">1:13:08</span> the context could be (...) you are chat GPT it is October 10th (...) The instructions can be (...) what the user queries alongside the input (...) constraints might be things that you don't see as a user (...) such as safety instructions (...) do not generate any content(s) that might lead to harm.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>프롬프트(prompt)는 보통 어떻게 구성될까요? 정해진 이론은 없지만, 대체로 네 부분으로 나눠 볼 수 있습니다.</p>
+<ol><li><strong>맥락(context)</strong>: 상황 설정. 모델에게 어떤 질의인지 분명히 함.</li><li><strong>지시(instructions)</strong>: 수행할 작업. 입력을 받는 '함수'처럼 작동.</li><li><strong>입력(inputs)</strong>: 지시에 넣을 실제 내용.</li><li><strong>제약(constraints)</strong>: 원하는 응답을 얻기 위한 제한.</li></ol>
+<p>실제 예: 우리가 매일 쓰는 LLM에서 — 맥락은 "너는 ChatGPT이고, 오늘은 10월 10일 오후 4시 44분이다" 같은 설정, 지시는 사용자의 질의와 입력, 제약은 사용자에게는 안 보이지만 프롬프트에 들어가는 것들(예: "해를 끼칠 수 있는 내용은 생성하지 마라" 같은 안전 지침)입니다. LLM에 들어가는 입력을 이 네 차원으로 나눠 보는 것이 좋은 사고 틀(mental model)이 됩니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>프롬프트<span class="en-term">(prompt)</span></dt><dd>LLM에 주는 입력 텍스트 전체.</dd><dt>맥락/지시/입력/제약<span class="en-term">(context/instructions/inputs/constraints)</span></dt><dd>프롬프트를 나눠 보는 네 부분.</dd><dt>안전 지침<span class="en-term">(safety instructions)</span></dt><dd>유해 출력을 막으려 프롬프트에 넣는 제약. 사용자에겐 보통 안 보임.</dd></dl></div>
+</div>
+<div id="block3"><h3><span class="badge">블록 3</span>인컨텍스트 러닝: zero-shot과 few-shot</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">1:14:22</span> get an LLM to do what we want without tuning any weights (...) a concept called in context learning where the learning is a bit of a term that is overloaded because you don't actually learn anything with respect to the weights. (...) <span class="ts">1:14:50</span> zero shot (...) you don't give anything other than your input (...) <span class="ts">1:15:28</span> you give examples of inputs and outputs (...) before asking the input that you're interested in (...) this is basically what we call a few shots setting. (...) <span class="ts">1:16:59</span> they're gaining more and more reasoning capabilities (...) generally better few shots but not always (...) <span class="ts">1:17:40</span> when you provide examples you constrain your model into given sets of examples that are finite (...) if you turn your instructions into something that is more reasoning based (...) it can use its reasoning abilities.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>가중치를 전혀 바꾸지 않고도 LLM이 원하는 일을 하게 만들 수 있습니다. 이를 인컨텍스트 러닝(in-context learning, ICL)이라 합니다. 여기서 '러닝(학습)'은 다소 오해를 부르는 말인데, LLM의 가중치를 실제로 학습시키는 게 아니라, 맥락(context)에 지식을 넣어 원하는 일을 시키는 것이기 때문입니다. 두 부류가 있습니다.</p>
+<ul><li><strong>제로샷(zero-shot)</strong>: 예시 없이 입력 질의만 주고 시킴.</li><li><strong>퓨샷(few-shot)</strong>: 관심 입력을 묻기 전에, 입력-출력 예시 여러 개를 함께 줌. (예: 곰인형 'Teddy'의 이야기 예시 몇 개를 주고, 새 곰인형 'Bob'의 이야기를 생성하게 함)</li></ul>
+<p>일반적으로 예시를 주면(few-shot) 모델이 원하는 작업으로 잘 유도되어 성능이 좋아집니다. 다만 예시를 모으는 비용이 들고, 컨텍스트에 토큰이 늘어 연산도 더 듭니다. 그리고 흥미로운 트레이드오프가 최근 모델에 있습니다 — 추론 능력(reasoning)이 좋아지면서, '일반적으로는' few-shot이 낫지만 늘 그렇지는 않습니다. 좋은 모델에서는 지시(instruction)를 잘 다듬으면, 예시를 주는 것과 비슷하거나 더 나은 성능이 나오기도 합니다. 예시를 주면 모델이 그 유한한 예시 집합에 맞춰지려 해서, 학습 때 못 본 분포에는 일반화가 어렵기 때문입니다. 반면 지시를 자연어로 추론 기반으로 풀어 설명하면, 모델이 자기 추론 능력으로 수행할 수 있습니다(예: 최근 'plan and solve' 논문 — 모델에게 스스로 계획하고 풀게 시키면 성능이 좋음).</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>인컨텍스트 러닝<span class="en-term">(in-context learning, ICL)</span></dt><dd>가중치를 바꾸지 않고, 맥락에 정보를 넣어 모델을 부리는 것.</dd><dt>제로샷<span class="en-term">(zero-shot)</span></dt><dd>예시 없이 지시만.</dd><dt>퓨샷<span class="en-term">(few-shot)</span></dt><dd>입력-출력 예시 여러 개를 함께 제공.</dd><dt>추론<span class="en-term">(reasoning)</span> 능력</dt><dd>모델이 단계적으로 사고해 문제를 푸는 능력. 최근 모델에서 강화됨.</dd></dl></div>
+</div>
+<div id="block4"><h3><span class="badge">블록 4</span>사고연쇄(chain of thought)와 디버깅</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">1:18:31</span> chain of thought where (...) if you force the model to come up with some rational(e) to some answer before actually giving it it would give higher performance. (...) it's basically what (...) led you to the answer. (...) <span class="ts">1:19:30</span> when you give the full chain of reasoning then it becomes clear (...) <span class="ts">1:20:06</span> you can see the reasoning that the model had before outputting a given response and you can debug (...) what went wrong. (...) <span class="ts">1:21:22</span> it will of course take more time to infer because you need to generate more tokens.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>사고연쇄(chain of thought, CoT)라는 기법이 있습니다. 모델에게 답을 내기 전에 그 답에 이르는 근거(rationale)를 먼저 만들게 강제하면 성능이 올라갑니다. 즉 '무엇이 그 답으로 이끌었는지'를 풀어 쓰게 하는 것입니다. 예를 들어 "곰인형이 몇 살이냐"를 숫자로 바로 답하게 하면 연결을 못 할 수 있지만, 추론 과정을 전부 쓰게 하면 왜 그 나이인지가 분명해집니다. 이는 인컨텍스트 러닝에서도 쓸 수 있습니다 — few-shot 예시에 추론 과정을 포함해 두면, 모델이 그 추론 형식에 맞춰 답합니다.</p>
+<p>부가 효과로 디버깅에 좋습니다. LLM을 디버깅할 때 옛날처럼 가중치·내부를 보지 않고, 토큰으로 나온 해석 가능한(interpretable) 추론 과정을 봅니다. 예를 들어 "내년에 곰인형이 몇 살이냐"를 물었는데 사고연쇄에 "지금은 2019년이다"라고 나오면, 우리가 맥락에 잘못된 날짜를 넣었음을 추적해 원인을 찾을 수 있습니다(근본 원인 분석, root causing). 다만 토큰을 더 생성하므로 추론에 시간이 더 듭니다 — 보통은 감수할 만한 트레이드오프입니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>사고연쇄<span class="en-term">(chain of thought, CoT)</span></dt><dd>답 전에 추론 과정을 먼저 쓰게 해 성능을 높이는 기법.</dd><dt>근거<span class="en-term">(rationale)</span></dt><dd>답에 이른 추론 과정.</dd><dt>해석 가능<span class="en-term">(interpretable)</span></dt><dd>사람이 읽고 이해할 수 있는 형태(토큰으로 나온 추론).</dd><dt>근본 원인 분석<span class="en-term">(root causing)</span></dt><dd>추론 과정을 보며 무엇이 잘못됐는지 추적.</dd></dl></div>
+</div>
+<div id="block5"><h3><span class="badge">블록 5</span>self-consistency (다수결)</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">1:21:46</span> to make co(t) even stronger. You can sample your model several times look at the answers it generates and then do some majority voting to select the answer that was predicted most of the times. (...) <span class="ts">1:22:18</span> self-consistency where (...) you sample responses multiple times and then parse the actual answer (...) by majority voting you can come up to an answer in a more robust way. (...) <span class="ts">1:23:54</span> you sample it in parallel (...) <span class="ts">1:24:25</span> the latency of this process is equal roughly to the maximum latency of either parallel generation (...) none of these go into the context of each other.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>사고연쇄를 더 강하게 만드는 법이 있습니다. 모델을 여러 번 샘플링해 여러 답을 받은 뒤, 가장 많이 나온 답을 다수결(majority voting)로 고릅니다. 이를 self-consistency(자기일관성)라 합니다. 여러 번 응답을 뽑고, 각 응답에서 실제 답만 추려낸 뒤(추론 과정은 걸러내고), 다수결로 더 견고한(robust) 답을 정합니다.</p>
+<ul><li>답을 추리는 법: 프롬프트에 "실제 답을 맨 마지막에 두라"고 지시해 마지막 부분만 뽑거나, 정규식(regex)으로 추출하거나, 다른 LLM에게 답을 추출시킬 수도 있습니다.</li><li>더 나은지 확인하려면 벤치마크와 정답 라벨이 필요합니다(원 논문은 산술·수학 문제에서 검증).</li><li>여러 응답은 병렬(parallel)로 뽑습니다. 서로의 컨텍스트에 들어가지 않고 독립적으로 생성된 뒤 마지막에 답을 취합합니다. 그래서 전체 지연시간은 대략 병렬 생성 중 가장 느린 하나의 시간과 비슷합니다.</li></ul></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>self-consistency<span class="en-term">(자기일관성)</span></dt><dd>여러 번 샘플링한 답을 다수결로 골라 견고성을 높이는 기법.</dd><dt>다수결<span class="en-term">(majority voting)</span></dt><dd>가장 많이 나온 답을 선택.</dd><dt>견고한<span class="en-term">(robust)</span></dt><dd>변동에 덜 흔들리고 안정적인.</dd><dt>병렬 생성<span class="en-term">(parallel)</span></dt><dd>여러 응답을 동시에 뽑아 지연시간을 절약.</dd></dl></div>
+</div></section><section id="glossary"><h2>4. 핵심 용어집</h2><div class="table-wrap"><table><thead><tr><th>영문</th><th>한국어</th><th>발음</th><th>뜻</th></tr></thead><tbody><tr><td>context length</td><td>컨텍스트 길이</td><td>—</td><td>한 번에 넣는 입력 토큰 분량</td></tr><tr><td>context rot</td><td>컨텍스트 부패</td><td>—</td><td>길수록 검색·활용력 저하</td></tr><tr><td>needle in a haystack</td><td>건초더미 속 바늘</td><td>—</td><td>긴 텍스트 속 답 찾기 테스트</td></tr><tr><td>distractor</td><td>산만요소</td><td>디스트랙터</td><td>검색 방해 잡음 텍스트</td></tr><tr><td>prompt</td><td>프롬프트</td><td>프롬프트</td><td>LLM에 주는 입력 전체</td></tr><tr><td>context/instructions/inputs/constraints</td><td>맥락/지시/입력/제약</td><td>—</td><td>프롬프트 4부분</td></tr><tr><td>in-context learning (ICL)</td><td>인컨텍스트 러닝</td><td>—</td><td>가중치 안 바꾸고 맥락으로 부리기</td></tr><tr><td>zero-shot / few-shot</td><td>제로샷/퓨샷</td><td>—</td><td>예시 없이 / 예시 여럿 주기</td></tr><tr><td>reasoning</td><td>추론</td><td>리저닝</td><td>단계적 사고로 문제 풀기</td></tr><tr><td>chain of thought (CoT)</td><td>사고연쇄</td><td>—</td><td>답 전에 근거 쓰게 함</td></tr><tr><td>rationale</td><td>근거</td><td>래셔널</td><td>답에 이른 추론 과정</td></tr><tr><td>self-consistency</td><td>자기일관성</td><td>—</td><td>여러 답 다수결로 선택</td></tr><tr><td>majority voting</td><td>다수결</td><td>—</td><td>가장 많은 답 선택</td></tr></tbody></table></div></section><section id="review"><h2>5. 복습 문제</h2><div class="callout review"><div class="c-title">✏️ 스스로 점검</div><ol><li>컨텍스트 길이를 늘리면 다 해결되는가? '컨텍스트 부패'와 '건초더미 속 바늘' 테스트로 설명하라.</li><li>zero-shot과 few-shot의 차이는? 최근 모델에서 예시 제공이 늘 최선은 아닌 이유는?</li><li>사고연쇄(CoT)는 왜 성능을 높이며 디버깅에 어떻게 쓰이는가? self-consistency는 CoT를 어떻게 더 강화하는가?</li></ol></div></section><section id="appendix"><h2>부록. 실무 적용 포인트 <span style="font-size:14px;font-weight:500;color:var(--muted);">(NLP·LLM 기술 내용 한정)</span></h2><div class="callout practice"><div class="c-title">💡 현장에서 써먹기</div><ul><li><strong>컨텍스트 부패는 "긴 자료를 통째로 넣지 말라"는 실무 지침의 근거다.</strong> 긴 보고서·자료를 다 넣으면 정작 핵심 정보를 못 찾을 수 있다. 필요한 부분만 추려 넣고, 핵심 정보 사이에 잡음(무관한 텍스트)을 줄이는 것이 답 품질을 높인다 — 검색·요약 업무에서 특히 중요하다.</li><li><strong>프롬프트의 네 부분(맥락·지시·입력·제약)은 좋은 지시문을 쓰는 체크리스트다.</strong> AI에 일을 시킬 때 "상황 설명 → 할 일 → 대상 자료 → 지켜야 할 제약"을 의식적으로 갖추면 결과가 안정된다. 공문·보고서 초안 요청 등에 바로 적용할 수 있는 틀이다.</li><li><strong>few-shot(예시 제공)과 사고연쇄(CoT)는 결과 품질을 끌어올리는 가장 손쉬운 두 기법이다.</strong> 원하는 출력의 예시 1~2개를 보여주거나, "단계적으로 근거를 들어 설명한 뒤 답하라"고 지시하면 정확도가 올라간다. 분류·판단·계산이 섞인 행정 업무에서 유용하다.</li><li><strong>self-consistency는 "중요한 판단은 한 번에 의존하지 말라"는 발상과 통한다.</strong> 같은 질문을 여러 번 물어 다수결로 보는 방식이 더 견고하다. 중요한 산출물은 한 번의 응답에 의존하지 말고 여러 번 생성해 비교·확인하는 것이 안전하다(Lecture 1 부록과 연결).</li></ul></div><div class="next"><strong><strong>다음 섹션 예고</strong>·&lt;/strong&gt; · 마지막 — 거대한 LLM을 빠르게 생성시키는 추론 효율화 기법들. KV 캐시, PagedAttention, MLA, speculative decoding, multi-token prediction. <span class="ts">1:24:54</span> 이후.</div></section></article></main>
+</div>
+
+<!-- KaTeX 자동 렌더 -->
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}],throwOnError:false});"></script>
+
+<!-- Mermaid -->
+<script type="module">
+  try{
+    const m = await import('https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs');
+    m.default.initialize({startOnLoad:true, theme:'base', themeVariables:{
+      fontFamily:'Pretendard, sans-serif', primaryColor:'#fffdfb', primaryBorderColor:'#d8d0c5',
+      primaryTextColor:'#1a1a1a', lineColor:'#b9554f', fontSize:'14px'
+    }});
+  }catch(e){ /* 오프라인이면 도식은 코드로 표시 */ }
+</script>
+
+<!-- 목차 활성표시 + 모바일 드로어 -->
+<script>
+  // 모바일 드로어
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('overlay');
+  const btn = document.getElementById('menuBtn');
+  const toggle = (on)=>{ sb.classList.toggle('open',on); ov.classList.toggle('show',on); };
+  btn.addEventListener('click',()=>toggle(!sb.classList.contains('open')));
+  ov.addEventListener('click',()=>toggle(false));
+  document.querySelectorAll('.toc a').forEach(a=>a.addEventListener('click',()=>{ if(window.innerWidth<=900) toggle(false); }));
+
+  // 현재 위치 강조
+  const links = [...document.querySelectorAll('.toc a')];
+  const map = {}; links.forEach(a=>{ const id=a.getAttribute('href').slice(1); map[id]=a; });
+  const targets = Object.keys(map).map(id=>document.getElementById(id)).filter(Boolean);
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(en=>{
+      if(en.isIntersecting){
+        links.forEach(l=>l.classList.remove('active'));
+        const a = map[en.target.id]; if(a) a.classList.add('active');
+      }
+    });
+  },{rootMargin:'-15% 0px -75% 0px', threshold:0});
+  targets.forEach(t=>io.observe(t));
+</script>
+
+</body>
+</html>

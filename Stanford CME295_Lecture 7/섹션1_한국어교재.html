@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CME295 Lecture 7 · 섹션 1. RAG의 동기와 개요</title>
+
+<!-- 폰트: Pretendard (CDN, 없으면 시스템 폰트 폴백) -->
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<!-- 수식: KaTeX -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
+
+<style>
+  :root{
+    --bg:#FBF9F6;
+    --paper:#ffffff;
+    --ink:#1a1a1a;
+    --ink-soft:#4a4744;
+    --muted:#7a756f;
+    --accent:#8C1515;          /* Stanford 카디널 */
+    --accent-soft:#b9554f;
+    --tint:#f6ebe9;            /* 카디널 옅은 틴트 */
+    --tint-2:#f3efe9;          /* 따뜻한 회색 */
+    --line:#e7e1d9;
+    --line-strong:#d8d0c5;
+    --radius:10px;
+    --maxw:760px;
+    --sidew:268px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Pretendard","Pretendard Variable",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    line-height:1.78;
+    font-size:16.5px;
+    -webkit-font-smoothing:antialiased;
+    word-break:keep-all;
+  }
+
+  /* ===== 레이아웃 ===== */
+  .layout{display:flex; align-items:flex-start;}
+  .sidebar{
+    width:var(--sidew); flex:0 0 var(--sidew);
+    position:sticky; top:0; height:100vh; overflow-y:auto;
+    padding:28px 18px 40px; border-right:1px solid var(--line);
+    background:rgba(251,249,246,.85); backdrop-filter:saturate(120%) blur(2px);
+  }
+  .content{flex:1 1 auto; min-width:0; display:flex; justify-content:center; padding:0 24px;}
+  .doc{width:100%; max-width:var(--maxw); padding:48px 0 120px;}
+
+  /* ===== 사이드바 목차 ===== */
+  .toc-brand{font-size:12px; letter-spacing:.04em; color:var(--accent); font-weight:700; text-transform:uppercase; margin-bottom:4px;}
+  .toc-title{font-size:15px; font-weight:700; margin:0 0 18px; line-height:1.4; color:var(--ink);}
+  .toc{list-style:none; margin:0; padding:0; font-size:13.5px;}
+  .toc li{margin:1px 0;}
+  .toc a{display:block; padding:5px 10px; border-radius:7px; color:var(--ink-soft); text-decoration:none; border-left:2px solid transparent;}
+  .toc a:hover{background:var(--tint-2); color:var(--ink);}
+  .toc a.sub{padding-left:22px; font-size:13px; color:var(--muted);}
+  .toc a.active{color:var(--accent); background:var(--tint); border-left-color:var(--accent); font-weight:600;}
+
+  /* ===== 타이포 ===== */
+  h1{font-size:27px; line-height:1.32; font-weight:800; letter-spacing:-.01em; margin:0 0 6px;}
+  .subtitle{font-size:18px; font-weight:700; color:var(--accent); margin:0 0 22px;}
+  h2{font-size:21px; font-weight:800; letter-spacing:-.01em; margin:46px 0 14px; padding-bottom:9px; border-bottom:2px solid var(--line-strong);}
+  h3{font-size:17.5px; font-weight:700; margin:34px 0 12px; color:var(--ink);}
+  h3 .badge{display:inline-block; font-size:12px; font-weight:700; color:#fff; background:var(--accent); border-radius:6px; padding:2px 8px; margin-right:8px; vertical-align:middle;}
+  p{margin:12px 0;}
+  strong{font-weight:700;}
+  a{color:var(--accent);}
+  ul,ol{margin:12px 0; padding-left:22px;}
+  li{margin:6px 0;}
+  hr{display:none;}
+
+  /* ===== 출처 배너 ===== */
+  .source-banner{
+    display:flex; gap:10px; align-items:baseline;
+    background:var(--tint); border-left:4px solid var(--accent);
+    border-radius:0 var(--radius) var(--radius) 0;
+    padding:12px 16px; margin:0 0 8px; font-size:13.5px; color:var(--ink-soft);
+  }
+  .source-banner b{color:var(--accent);}
+
+  /* ===== 한국어 번역 카드 ===== */
+  .ko{
+    background:var(--paper); border:1px solid var(--line);
+    border-left:4px solid var(--accent); border-radius:var(--radius);
+    padding:6px 22px; margin:16px 0;
+    box-shadow:0 1px 2px rgba(60,40,20,.04);
+  }
+  .ko > .label, .terms > .label{
+    display:inline-block; font-size:11.5px; font-weight:800; letter-spacing:.06em;
+    color:var(--accent); text-transform:uppercase; margin:14px 0 -4px;
+  }
+
+  /* ===== 영문 원문 토글 ===== */
+  details.en{
+    background:var(--tint-2); border:1px solid var(--line); border-radius:var(--radius);
+    margin:14px 0; overflow:hidden;
+  }
+  details.en > summary{
+    cursor:pointer; list-style:none; padding:11px 16px;
+    font-size:13.5px; font-weight:700; color:var(--muted);
+    display:flex; align-items:center; gap:8px; user-select:none;
+  }
+  details.en > summary::-webkit-details-marker{display:none;}
+  details.en > summary .chev{transition:transform .2s; color:var(--accent-soft);}
+  details.en[open] > summary .chev{transform:rotate(90deg);}
+  details.en[open] > summary{border-bottom:1px solid var(--line);}
+  .en-body{padding:4px 18px 14px; font-size:14px; line-height:1.7; color:#5c574f; font-style:normal;}
+  .en-body p{margin:10px 0;}
+  .ts{
+    display:inline-block; font-family:"SFMono-Regular",ui-monospace,Menlo,Consolas,monospace;
+    font-size:11.5px; font-style:normal; color:var(--accent);
+    background:var(--tint); border:1px solid #e6cfcc; border-radius:5px;
+    padding:0 5px; margin:0 2px; vertical-align:baseline;
+  }
+
+  /* ===== 용어 설명 ===== */
+  .terms{
+    border:1px solid var(--line); border-left:3px solid var(--accent-soft);
+    border-radius:var(--radius); background:#fffdfb; padding:4px 20px 8px; margin:16px 0;
+  }
+  .terms dl{margin:8px 0;}
+  .terms dt{font-weight:700; color:var(--ink); margin-top:8px;}
+  .terms dt .en-term{color:var(--accent); font-weight:600;}
+  .terms dd{margin:1px 0 6px; color:var(--ink-soft); font-size:15px;}
+
+  /* ===== 표 ===== */
+  .table-wrap{overflow-x:auto; margin:16px 0; border:1px solid var(--line); border-radius:var(--radius);}
+  table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:520px;}
+  thead th{background:var(--accent); color:#fff; font-weight:700; text-align:left; padding:11px 14px; white-space:nowrap;}
+  tbody td{padding:9px 14px; border-top:1px solid var(--line);}
+  tbody tr:nth-child(even){background:var(--tint-2);}
+  tbody td:first-child{font-family:ui-monospace,Menlo,monospace; font-size:13px; color:var(--accent);}
+
+  /* ===== 콜아웃 ===== */
+  .callout{border-radius:var(--radius); padding:14px 20px 6px; margin:18px 0;}
+  .callout .c-title{font-weight:800; margin:6px 0 2px; display:flex; align-items:center; gap:8px;}
+  .callout.review{background:#fff; border:1px solid var(--line-strong);}
+  .callout.review ol{counter-reset:none;}
+  .callout.note{background:var(--tint-2); border-left:4px solid var(--muted); border-radius:0 var(--radius) var(--radius) 0; padding-bottom:12px;}
+  .callout.practice{background:var(--tint); border:1px solid #e6cfcc; padding-bottom:14px;}
+  .callout.practice li{margin:12px 0;}
+  .next{margin-top:40px; padding:14px 18px; background:var(--tint-2); border-radius:var(--radius); font-size:14px; color:var(--ink-soft);}
+
+  /* 수식 / 도식 */
+  .katex-display{margin:14px 0; overflow-x:auto; overflow-y:hidden; padding:6px 0;}
+  .diagram{background:#fffdfb; border:1px solid var(--line); border-radius:var(--radius); padding:14px; margin:16px 0; text-align:center;}
+  .diagram .cap{font-size:12.5px; color:var(--muted); margin-top:6px;}
+  .mermaid{display:flex; justify-content:center;}
+
+  /* ===== 모바일 ===== */
+  .menu-btn{display:none;}
+  .overlay{display:none;}
+  @media (max-width:900px){
+    .menu-btn{
+      display:flex; align-items:center; justify-content:center;
+      position:fixed; top:14px; left:14px; z-index:50;
+      width:42px; height:42px; border-radius:10px; border:1px solid var(--line-strong);
+      background:var(--paper); color:var(--accent); font-size:20px; cursor:pointer;
+      box-shadow:0 2px 8px rgba(60,40,20,.12);
+    }
+    .sidebar{
+      position:fixed; left:0; top:0; z-index:60; height:100vh;
+      transform:translateX(-105%); transition:transform .25s ease;
+      box-shadow:4px 0 24px rgba(0,0,0,.12); background:var(--bg);
+    }
+    .sidebar.open{transform:translateX(0);}
+    .overlay.show{display:block; position:fixed; inset:0; background:rgba(0,0,0,.32); z-index:55;}
+    .content{padding:0 16px;}
+    .doc{padding:64px 0 100px;}
+    body{font-size:16px;}
+    h1{font-size:23px;}
+    .ko,.terms{padding-left:16px; padding-right:16px;}
+  }
+
+  /* ===== 인쇄 ===== */
+  @media print{
+    .sidebar,.menu-btn,.overlay{display:none !important;}
+    .content{padding:0;}
+    body{background:#fff; font-size:11pt;}
+    details.en{display:none;}          /* 인쇄본은 한국어 위주 */
+    .ko,.terms,.callout,.table-wrap{break-inside:avoid; box-shadow:none;}
+    a{color:var(--ink);}
+  }
+  .home-btn{position:fixed; top:16px; right:18px; z-index:70;
+    display:inline-flex; align-items:center; gap:6px; text-decoration:none;
+    background:var(--paper); color:var(--accent); border:1px solid var(--line-strong);
+    border-radius:999px; padding:8px 14px; font-size:13.5px; font-weight:700;
+    box-shadow:0 2px 8px rgba(60,40,20,.12); transition:background .12s,color .12s;}
+  .home-btn:hover{background:var(--accent); color:#fff; border-color:var(--accent);}
+  @media (max-width:900px){ .home-btn{top:14px; right:14px; padding:8px 12px; font-size:12.5px;} }
+  @media print{ .home-btn{display:none !important;} }
+</style>
+</head>
+<body>
+<a class="home-btn" href="../index.html" title="전체 목차로 돌아가기">← 전체 목차</a>
+
+<button class="menu-btn" id="menuBtn" aria-label="목차 열기">☰</button>
+<div class="overlay" id="overlay"></div>
+
+<div class="layout">
+  <nav class="sidebar" id="sidebar"><div class="toc-brand">Stanford CME295 · Lecture 7</div><p class="toc-title">섹션 1. RAG의 동기와 개요</p><ul class="toc"><li><a href="#overview">1. 강의 개요</a></li><li><a href="#goals">2. 학습 목표</a></li><li><a href="#body">3. 본문</a></li><li><a class="sub" href="#block1">블록 1 · 복습: 추론 모델과 GRPO</a></li><li><a class="sub" href="#block2">블록 2 · RAG가 필요한 이유: 지식 컷오프와 그 해결책의 한계</a></li><li><a class="sub" href="#block3">블록 3 · needle in a haystack와 비용</a></li><li><a class="sub" href="#block4">블록 4 · RAG: retrieve·augment·generate</a></li><li><a href="#glossary">4. 핵심 용어집</a></li><li><a href="#review">5. 복습 문제</a></li><li><a href="#appendix">부록. 실무 적용 포인트 (NLP·LLM 기술 내용 한정)</a></li></ul></nav>
+  <main class="content"><article class="doc"><h1>CME295 Transformers &amp; LLMs — Lecture 7 한국어 교재</h1><p class="subtitle">섹션 1. RAG의 동기와 개요</p><div class="source-banner"><span>📄</span><span><b>원문 출처</b>: Stanford CME295, Autumn 2025, Lecture 7 (RAG, Tool Calling &amp; Agents), 타임스탬프 <span class="ts">00:05</span>~<span class="ts">16:28</span></span></div><section id="overview"><h2>1. 강의 개요</h2><ul><li>Lecture 6(추론·GRPO·길이 편향)을 복습하고, LLM을 외부 시스템·지식과 연결하는 실용 기법(RAG·도구 호출·에이전트)으로 들어간다.</li><li>LLM의 지식 컷오프 문제와, 재학습·전체 맥락 투입이 왜 부적합한지(비용·context 한계·needle-in-haystack)를 본다.</li><li>해결책 RAG(검색 증강 생성)의 개념과 세 단계(retrieve·augment·generate)를 소개한다.</li></ul></section><section id="goals"><h2>2. 학습 목표</h2><ol><li>LLM의 지식 컷오프 한계와, 재학습·전체 맥락 투입이 부적합한 이유를 설명할 수 있다.</li><li>needle-in-haystack 실험이 보여주는 '긴 맥락의 검색 저하'를 안다.</li><li>RAG의 세 단계(retrieve→augment→generate)를 설명할 수 있다.</li></ol></section><section id="body"><h2>3. 본문</h2><div id="block1"><h3><span class="badge">블록 1</span>복습: 추론 모델과 GRPO</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">01:42</span> reasoning models (...) take a prompt as input and then (...) output (...) a reasoning chain (...) and then a response. (...) <span class="ts">02:13</span> GRPO (...) group relative policy optimization (...) does not (...) train a value function. (...) <span class="ts">04:49</span> length bias (...) DAP(O) (...) a normalization factor that was not dependent on where the token was located (...) GRPO done right.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>지난 강의 복습입니다. 추론 모델은 프롬프트를 받아 (사용자에겐 보통 숨겨진) 추론 사슬과 응답을 함께 출력합니다. 이를 학습시키는 핵심 RL 알고리즘이 GRPO(그룹 상대 정책 최적화)로, 가치 함수를 학습하지 않는 점이 특징입니다. 같은 프롬프트의 여러 완성에 대한 보상으로 그룹 상대 어드밴티지를 계산합니다. 또 추론 학습 중 출력이 계속 길어지는 길이 편향(length bias)을 봤고, DAPO·Dr. GRPO 같은 보정(토큰 위치에 의존하지 않는 정규화)을 다뤘습니다. (Lecture 6 참고)</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>GRPO / 길이 편향 / DAPO</dt><dd>Lecture 6 섹션 4~5 참고.</dd></dl></div>
+</div>
+<div id="block2"><h3><span class="badge">블록 2</span>RAG가 필요한 이유: 지식 컷오프와 그 해결책의 한계</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">06:54</span> the pre-training data (...) is (...) a month ago (...) prompt your model about the winner of the elections (...) it will (...) output the incorrect answer (...) <span class="ts">08:30</span> why not just (...) continue training (...) it's very tricky to change the knowledge (...) without causing regression (...) <span class="ts">09:35</span> people (...) prefer to not do additional training to inject knowledge. (...) <span class="ts">10:07</span> context length (...) is limited (...) hundreds of thousands of tokens (...) <span class="ts">11:08</span> if you feed a lot of irrelevant information (...) the performance of the LLM will actually (degrade).</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>LLM은 학습 데이터의 지식 컷오프(knowledge cutoff) 이후를 모릅니다. 예를 들어 컷오프 한 달 후 치러진 선거 당선자를 물으면 답하지 못하거나 틀립니다. 외부 출처와 연결돼 있지 않고 학습 지식만 쓰기 때문입니다.</p>
+<p>"그럼 그냥 이후 데이터로 더 학습하면?" — 여러 문제가 있습니다.</p>
+<ol><li><strong>재학습의 위험</strong>: LLM 지식을 바꾸면 다른 부분이 퇴행(regression)하기 쉬워, 보통 피합니다.</li><li><strong>유지보수 부담</strong>: 용도별로 파인튜닝한 모델 각각에 지식을 주입해야 해 비현실적입니다.</li></ol>
+<p>"그럼 컷오프 이후 정보를 전부 프롬프트에 넣으면?" — 이것도 문제입니다.</p>
+<ol><li><strong>컨텍스트 길이 한계</strong>: 보통 수십만 토큰(≈ 책 수백 페이지) 수준이라, 전부 넣기엔 부족합니다.</li><li><strong>무관한 정보의 해악</strong>: 관련 없는 정보를 잔뜩 넣으면 오히려 성능이 떨어집니다.</li></ol></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>지식 컷오프<span class="en-term">(knowledge cutoff)</span></dt><dd>학습 데이터의 시간 한계. 이후를 모름. (Lecture 4 참고)</dd><dt>퇴행<span class="en-term">(regression)</span></dt><dd>재학습으로 다른 능력이 나빠지는 것.</dd><dt>컨텍스트 길이 한계</dt><dd>한 번에 넣을 수 있는 토큰 분량의 한계.</dd></dl></div>
+</div>
+<div id="block3"><h3><span class="badge">블록 3</span>needle in a haystack와 비용</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">11:41</span> needle in a haststack test (...) you give a big prompt (...) place a fact in the prompt and (...) ask your model what that fact was. (...) <span class="ts">12:43</span> the length of the prompt and the position at which you put the fact are both important (...) for prompts that exceeded a certain amount of tokens, the LLM actually had trouble retrieving (...) <span class="ts">13:46</span> you pay (...) per token (...) <span class="ts">14:20</span> a dollar per million token.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p><strong>needle in a haystack(건초더미 속 바늘) 실험</strong>: 큰 프롬프트(건초더미) 속에 사실(바늘)을 하나 심고, 모델에게 그 사실을 묻습니다. 프롬프트 길이와 사실의 위치를 바꿔 실험한 결과(예: GPT-4) — 둘 다 중요했습니다. 프롬프트가 일정 길이를 넘으면 모델이 정답을 잘 못 찾았고, 특히 사실이 프롬프트 전반부에 있을 때 더 못 찾았습니다. 즉 컨텍스트가 무한해도 '전부 넣기'는 문제가 됩니다.</p>
+<p><strong>비용</strong>: LLM 호출은 토큰당 과금(약 100만 토큰당 1달러 규모)이라, 프롬프트가 클수록 더 냅니다. 비싸지 않아 보여도 누적되면 큽니다.</p>
+<p>결론: 새 정보를 통째로 넣지 말고, '관련 있는 정보만' 찾아 넣는 더 영리한 방법이 필요합니다 — 그것이 RAG입니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>needle in a haystack<span class="en-term">(건초더미 속 바늘)</span></dt><dd>긴 프롬프트 속 한 사실을 모델이 찾아내는지 보는 실험. 길수록·전반부일수록 검색 저하. (Lecture 3 context rot과 연결)</dd><dt>토큰당 과금</dt><dd>프롬프트가 길수록 비용↑.</dd></dl></div>
+</div>
+<div id="block4"><h3><span class="badge">블록 4</span>RAG: retrieve·augment·generate</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">14:53</span> instead of putting all the new information all at once (...) we only somehow find the relevant information and put that in the prompt (...) rag (...) retrieval augmented (generation). (...) <span class="ts">16:28</span> three main steps (...) retrieve relevant documents (...) augment your prompt (...) feed that prompt to the LLM to generate the response.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>RAG는 Retrieval-Augmented Generation(검색 증강 생성)의 약자입니다. 핵심: 모든 정보를 프롬프트에 넣는 대신, 관련 있는(relevant) 부분만 찾아 넣어 프롬프트를 보강합니다. 세 단계입니다.</p>
+<ol><li><strong>Retrieve(검색)</strong>: 프롬프트에 답하는 데 도움이 될 관련 문서를, 지식 베이스(knowledge base)에서 찾아옵니다.</li><li><strong>Augment(보강)</strong>: 찾아온 정보를 프롬프트에 넣습니다. (예: "이 선거 당선자는? + [선거 정보·당선자]"를 함께 LLM에 줌 — 즉 답을 프롬프트 안에 제공)</li><li><strong>Generate(생성)</strong>: 그 보강된 프롬프트를 LLM에 줘 응답을 생성합니다.</li></ol>
+<p>핵심은 검색 단계입니다 — 관련 문서를 잘 찾아야 합니다(잘못 찾으면 답도 틀림).</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>RAG<span class="en-term">(검색 증강 생성)</span></dt><dd>관련 정보를 검색해 프롬프트에 넣어 답하게 하는 기법.</dd><dt>retrieve / augment / generate</dt><dd>검색 / 보강 / 생성 세 단계.</dd><dt>지식 베이스<span class="en-term">(knowledge base)</span></dt><dd>검색 대상 문서들의 저장소.</dd></dl></div>
+</div></section><section id="glossary"><h2>4. 핵심 용어집</h2><div class="table-wrap"><table><thead><tr><th>영문</th><th>한국어</th><th>발음</th><th>뜻</th></tr></thead><tbody><tr><td>knowledge cutoff</td><td>지식 컷오프</td><td>—</td><td>학습 데이터 시간 한계</td></tr><tr><td>regression</td><td>퇴행</td><td>—</td><td>재학습으로 다른 능력 저하</td></tr><tr><td>context length</td><td>컨텍스트 길이</td><td>—</td><td>한 번에 넣을 토큰 분량</td></tr><tr><td>needle in a haystack</td><td>건초더미 속 바늘</td><td>—</td><td>긴 프롬프트 속 사실 검색 실험</td></tr><tr><td>RAG</td><td>검색 증강 생성</td><td>—</td><td>관련 정보 검색해 프롬프트 보강</td></tr><tr><td>retrieve/augment/generate</td><td>검색/보강/생성</td><td>—</td><td>RAG 세 단계</td></tr><tr><td>knowledge base</td><td>지식 베이스</td><td>—</td><td>검색 대상 문서 저장소</td></tr><tr><td>relevant</td><td>관련 있는</td><td>—</td><td>RAG의 핵심 — 관련 정보만</td></tr></tbody></table></div></section><section id="review"><h2>5. 복습 문제</h2><div class="callout review"><div class="c-title">✏️ 스스로 점검</div><ol><li>LLM의 지식 컷오프 문제는 무엇이며, 재학습으로 해결하기 어려운 이유 두 가지는?</li><li>needle in a haystack 실험이 보여준 두 가지(프롬프트 길이·사실 위치)의 영향은?</li><li>RAG의 세 단계(retrieve·augment·generate)를 선거 당선자 예로 설명하라.</li></ol></div></section><section id="appendix"><h2>부록. 실무 적용 포인트 <span style="font-size:14px;font-weight:500;color:var(--muted);">(NLP·LLM 기술 내용 한정)</span></h2><div class="callout practice"><div class="c-title">💡 현장에서 써먹기</div><ul><li><strong>RAG는 "최신 정보·내부 자료를 LLM에 안전하게 주입하는" 핵심 방법이다.</strong> 지식 컷오프 때문에 모델이 모르는 최신 조례·통계·내부 문서를, 재학습 없이 검색해 프롬프트에 넣어 답하게 한다. 봉화군 내부 자료(사업계획·조례·통계)를 LLM이 참고하게 만드는 가장 현실적 경로다.</li><li><strong>needle in a haystack는 "긴 자료를 통째로 넣지 말라"는 지침의 근거다.</strong> 자료가 길수록, 핵심이 앞쪽에 있을수록 모델이 못 찾는다. 관련 부분만 추려 넣는 RAG식 접근이 답 품질·비용 모두에 유리하다(Lecture 3·6과 연결).</li><li><strong>토큰당 과금은 "프롬프트를 짧게"라는 비용 원칙이다.</strong> 무관한 내용을 줄이고 핵심만 넣으면 비용도, 정확도도 좋아진다.</li></ul></div><div class="next"><strong><strong>다음 섹션 예고</strong>·&lt;/strong&gt; · RAG 검색의 토대 — 지식 베이스(청크·임베딩)와 2단계 검색(후보 검색·랭킹), 의미 기반 유사도 검색. <span class="ts">16:28</span> 이후.</div></section></article></main>
+</div>
+
+<!-- KaTeX 자동 렌더 -->
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}],throwOnError:false});"></script>
+
+<!-- Mermaid -->
+<script type="module">
+  try{
+    const m = await import('https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs');
+    m.default.initialize({startOnLoad:true, theme:'base', themeVariables:{
+      fontFamily:'Pretendard, sans-serif', primaryColor:'#fffdfb', primaryBorderColor:'#d8d0c5',
+      primaryTextColor:'#1a1a1a', lineColor:'#b9554f', fontSize:'14px'
+    }});
+  }catch(e){ /* 오프라인이면 도식은 코드로 표시 */ }
+</script>
+
+<!-- 목차 활성표시 + 모바일 드로어 -->
+<script>
+  // 모바일 드로어
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('overlay');
+  const btn = document.getElementById('menuBtn');
+  const toggle = (on)=>{ sb.classList.toggle('open',on); ov.classList.toggle('show',on); };
+  btn.addEventListener('click',()=>toggle(!sb.classList.contains('open')));
+  ov.addEventListener('click',()=>toggle(false));
+  document.querySelectorAll('.toc a').forEach(a=>a.addEventListener('click',()=>{ if(window.innerWidth<=900) toggle(false); }));
+
+  // 현재 위치 강조
+  const links = [...document.querySelectorAll('.toc a')];
+  const map = {}; links.forEach(a=>{ const id=a.getAttribute('href').slice(1); map[id]=a; });
+  const targets = Object.keys(map).map(id=>document.getElementById(id)).filter(Boolean);
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(en=>{
+      if(en.isIntersecting){
+        links.forEach(l=>l.classList.remove('active'));
+        const a = map[en.target.id]; if(a) a.classList.add('active');
+      }
+    });
+  },{rootMargin:'-15% 0px -75% 0px', threshold:0});
+  targets.forEach(t=>io.observe(t));
+</script>
+
+</body>
+</html>

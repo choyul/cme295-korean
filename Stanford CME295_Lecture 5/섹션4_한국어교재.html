@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CME295 Lecture 5 · 섹션 4. 보상 모델 (Bradley-Terry와 손실 함수)</title>
+
+<!-- 폰트: Pretendard (CDN, 없으면 시스템 폰트 폴백) -->
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<!-- 수식: KaTeX -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
+
+<style>
+  :root{
+    --bg:#FBF9F6;
+    --paper:#ffffff;
+    --ink:#1a1a1a;
+    --ink-soft:#4a4744;
+    --muted:#7a756f;
+    --accent:#8C1515;          /* Stanford 카디널 */
+    --accent-soft:#b9554f;
+    --tint:#f6ebe9;            /* 카디널 옅은 틴트 */
+    --tint-2:#f3efe9;          /* 따뜻한 회색 */
+    --line:#e7e1d9;
+    --line-strong:#d8d0c5;
+    --radius:10px;
+    --maxw:760px;
+    --sidew:268px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Pretendard","Pretendard Variable",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    line-height:1.78;
+    font-size:16.5px;
+    -webkit-font-smoothing:antialiased;
+    word-break:keep-all;
+  }
+
+  /* ===== 레이아웃 ===== */
+  .layout{display:flex; align-items:flex-start;}
+  .sidebar{
+    width:var(--sidew); flex:0 0 var(--sidew);
+    position:sticky; top:0; height:100vh; overflow-y:auto;
+    padding:28px 18px 40px; border-right:1px solid var(--line);
+    background:rgba(251,249,246,.85); backdrop-filter:saturate(120%) blur(2px);
+  }
+  .content{flex:1 1 auto; min-width:0; display:flex; justify-content:center; padding:0 24px;}
+  .doc{width:100%; max-width:var(--maxw); padding:48px 0 120px;}
+
+  /* ===== 사이드바 목차 ===== */
+  .toc-brand{font-size:12px; letter-spacing:.04em; color:var(--accent); font-weight:700; text-transform:uppercase; margin-bottom:4px;}
+  .toc-title{font-size:15px; font-weight:700; margin:0 0 18px; line-height:1.4; color:var(--ink);}
+  .toc{list-style:none; margin:0; padding:0; font-size:13.5px;}
+  .toc li{margin:1px 0;}
+  .toc a{display:block; padding:5px 10px; border-radius:7px; color:var(--ink-soft); text-decoration:none; border-left:2px solid transparent;}
+  .toc a:hover{background:var(--tint-2); color:var(--ink);}
+  .toc a.sub{padding-left:22px; font-size:13px; color:var(--muted);}
+  .toc a.active{color:var(--accent); background:var(--tint); border-left-color:var(--accent); font-weight:600;}
+
+  /* ===== 타이포 ===== */
+  h1{font-size:27px; line-height:1.32; font-weight:800; letter-spacing:-.01em; margin:0 0 6px;}
+  .subtitle{font-size:18px; font-weight:700; color:var(--accent); margin:0 0 22px;}
+  h2{font-size:21px; font-weight:800; letter-spacing:-.01em; margin:46px 0 14px; padding-bottom:9px; border-bottom:2px solid var(--line-strong);}
+  h3{font-size:17.5px; font-weight:700; margin:34px 0 12px; color:var(--ink);}
+  h3 .badge{display:inline-block; font-size:12px; font-weight:700; color:#fff; background:var(--accent); border-radius:6px; padding:2px 8px; margin-right:8px; vertical-align:middle;}
+  p{margin:12px 0;}
+  strong{font-weight:700;}
+  a{color:var(--accent);}
+  ul,ol{margin:12px 0; padding-left:22px;}
+  li{margin:6px 0;}
+  hr{display:none;}
+
+  /* ===== 출처 배너 ===== */
+  .source-banner{
+    display:flex; gap:10px; align-items:baseline;
+    background:var(--tint); border-left:4px solid var(--accent);
+    border-radius:0 var(--radius) var(--radius) 0;
+    padding:12px 16px; margin:0 0 8px; font-size:13.5px; color:var(--ink-soft);
+  }
+  .source-banner b{color:var(--accent);}
+
+  /* ===== 한국어 번역 카드 ===== */
+  .ko{
+    background:var(--paper); border:1px solid var(--line);
+    border-left:4px solid var(--accent); border-radius:var(--radius);
+    padding:6px 22px; margin:16px 0;
+    box-shadow:0 1px 2px rgba(60,40,20,.04);
+  }
+  .ko > .label, .terms > .label{
+    display:inline-block; font-size:11.5px; font-weight:800; letter-spacing:.06em;
+    color:var(--accent); text-transform:uppercase; margin:14px 0 -4px;
+  }
+
+  /* ===== 영문 원문 토글 ===== */
+  details.en{
+    background:var(--tint-2); border:1px solid var(--line); border-radius:var(--radius);
+    margin:14px 0; overflow:hidden;
+  }
+  details.en > summary{
+    cursor:pointer; list-style:none; padding:11px 16px;
+    font-size:13.5px; font-weight:700; color:var(--muted);
+    display:flex; align-items:center; gap:8px; user-select:none;
+  }
+  details.en > summary::-webkit-details-marker{display:none;}
+  details.en > summary .chev{transition:transform .2s; color:var(--accent-soft);}
+  details.en[open] > summary .chev{transform:rotate(90deg);}
+  details.en[open] > summary{border-bottom:1px solid var(--line);}
+  .en-body{padding:4px 18px 14px; font-size:14px; line-height:1.7; color:#5c574f; font-style:normal;}
+  .en-body p{margin:10px 0;}
+  .ts{
+    display:inline-block; font-family:"SFMono-Regular",ui-monospace,Menlo,Consolas,monospace;
+    font-size:11.5px; font-style:normal; color:var(--accent);
+    background:var(--tint); border:1px solid #e6cfcc; border-radius:5px;
+    padding:0 5px; margin:0 2px; vertical-align:baseline;
+  }
+
+  /* ===== 용어 설명 ===== */
+  .terms{
+    border:1px solid var(--line); border-left:3px solid var(--accent-soft);
+    border-radius:var(--radius); background:#fffdfb; padding:4px 20px 8px; margin:16px 0;
+  }
+  .terms dl{margin:8px 0;}
+  .terms dt{font-weight:700; color:var(--ink); margin-top:8px;}
+  .terms dt .en-term{color:var(--accent); font-weight:600;}
+  .terms dd{margin:1px 0 6px; color:var(--ink-soft); font-size:15px;}
+
+  /* ===== 표 ===== */
+  .table-wrap{overflow-x:auto; margin:16px 0; border:1px solid var(--line); border-radius:var(--radius);}
+  table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:520px;}
+  thead th{background:var(--accent); color:#fff; font-weight:700; text-align:left; padding:11px 14px; white-space:nowrap;}
+  tbody td{padding:9px 14px; border-top:1px solid var(--line);}
+  tbody tr:nth-child(even){background:var(--tint-2);}
+  tbody td:first-child{font-family:ui-monospace,Menlo,monospace; font-size:13px; color:var(--accent);}
+
+  /* ===== 콜아웃 ===== */
+  .callout{border-radius:var(--radius); padding:14px 20px 6px; margin:18px 0;}
+  .callout .c-title{font-weight:800; margin:6px 0 2px; display:flex; align-items:center; gap:8px;}
+  .callout.review{background:#fff; border:1px solid var(--line-strong);}
+  .callout.review ol{counter-reset:none;}
+  .callout.note{background:var(--tint-2); border-left:4px solid var(--muted); border-radius:0 var(--radius) var(--radius) 0; padding-bottom:12px;}
+  .callout.practice{background:var(--tint); border:1px solid #e6cfcc; padding-bottom:14px;}
+  .callout.practice li{margin:12px 0;}
+  .next{margin-top:40px; padding:14px 18px; background:var(--tint-2); border-radius:var(--radius); font-size:14px; color:var(--ink-soft);}
+
+  /* 수식 / 도식 */
+  .katex-display{margin:14px 0; overflow-x:auto; overflow-y:hidden; padding:6px 0;}
+  .diagram{background:#fffdfb; border:1px solid var(--line); border-radius:var(--radius); padding:14px; margin:16px 0; text-align:center;}
+  .diagram .cap{font-size:12.5px; color:var(--muted); margin-top:6px;}
+  .mermaid{display:flex; justify-content:center;}
+
+  /* ===== 모바일 ===== */
+  .menu-btn{display:none;}
+  .overlay{display:none;}
+  @media (max-width:900px){
+    .menu-btn{
+      display:flex; align-items:center; justify-content:center;
+      position:fixed; top:14px; left:14px; z-index:50;
+      width:42px; height:42px; border-radius:10px; border:1px solid var(--line-strong);
+      background:var(--paper); color:var(--accent); font-size:20px; cursor:pointer;
+      box-shadow:0 2px 8px rgba(60,40,20,.12);
+    }
+    .sidebar{
+      position:fixed; left:0; top:0; z-index:60; height:100vh;
+      transform:translateX(-105%); transition:transform .25s ease;
+      box-shadow:4px 0 24px rgba(0,0,0,.12); background:var(--bg);
+    }
+    .sidebar.open{transform:translateX(0);}
+    .overlay.show{display:block; position:fixed; inset:0; background:rgba(0,0,0,.32); z-index:55;}
+    .content{padding:0 16px;}
+    .doc{padding:64px 0 100px;}
+    body{font-size:16px;}
+    h1{font-size:23px;}
+    .ko,.terms{padding-left:16px; padding-right:16px;}
+  }
+
+  /* ===== 인쇄 ===== */
+  @media print{
+    .sidebar,.menu-btn,.overlay{display:none !important;}
+    .content{padding:0;}
+    body{background:#fff; font-size:11pt;}
+    details.en{display:none;}          /* 인쇄본은 한국어 위주 */
+    .ko,.terms,.callout,.table-wrap{break-inside:avoid; box-shadow:none;}
+    a{color:var(--ink);}
+  }
+  .home-btn{position:fixed; top:16px; right:18px; z-index:70;
+    display:inline-flex; align-items:center; gap:6px; text-decoration:none;
+    background:var(--paper); color:var(--accent); border:1px solid var(--line-strong);
+    border-radius:999px; padding:8px 14px; font-size:13.5px; font-weight:700;
+    box-shadow:0 2px 8px rgba(60,40,20,.12); transition:background .12s,color .12s;}
+  .home-btn:hover{background:var(--accent); color:#fff; border-color:var(--accent);}
+  @media (max-width:900px){ .home-btn{top:14px; right:14px; padding:8px 12px; font-size:12.5px;} }
+  @media print{ .home-btn{display:none !important;} }
+</style>
+</head>
+<body>
+<a class="home-btn" href="../index.html" title="전체 목차로 돌아가기">← 전체 목차</a>
+
+<button class="menu-btn" id="menuBtn" aria-label="목차 열기">☰</button>
+<div class="overlay" id="overlay"></div>
+
+<div class="layout">
+  <nav class="sidebar" id="sidebar"><div class="toc-brand">Stanford CME295 · Lecture 5</div><p class="toc-title">섹션 4. 보상 모델 (Bradley-Terry와 손실 함수)</p><ul class="toc"><li><a href="#overview">1. 강의 개요</a></li><li><a href="#goals">2. 학습 목표</a></li><li><a href="#body">3. 본문</a></li><li><a class="sub" href="#block1">블록 1 · 보상 모델과 Bradley-Terry 공식</a></li><li><a class="sub" href="#block2">블록 2 · 손실 함수 유도 (음의 로그우도)</a></li><li><a class="sub" href="#block3">블록 3 · 쌍으로 학습, 하나로 추론</a></li><li><a class="sub" href="#block4">블록 4 · 보상 모델의 데이터·모델·정규화</a></li><li><a href="#glossary">4. 핵심 용어집</a></li><li><a href="#review">5. 복습 문제</a></li><li><a href="#appendix">부록. 실무 적용 포인트 (NLP·LLM 기술 내용 한정)</a></li></ul></nav>
+  <main class="content"><article class="doc"><h1>CME295 Transformers &amp; LLMs — Lecture 5 한국어 교재</h1><p class="subtitle">섹션 4. 보상 모델 (Bradley-Terry와 손실 함수)</p><div class="source-banner"><span>📄</span><span><b>원문 출처</b>: Stanford CME295, Autumn 2025, Lecture 5, 타임스탬프 <span class="ts">28:33</span>~<span class="ts">46:03</span></span></div><section id="overview"><h2>1. 강의 개요</h2><ul><li>RLHF의 첫 단계인 보상 모델(reward model)을 만드는 법 — 좋은/나쁜 응답에 점수를 매기는 모델을 다룬다.</li><li>두 응답의 우열 확률을 점수로 표현하는 Bradley-Terry 공식과, 거기서 손실 함수를 유도하는 과정을 본다.</li><li>보상 모델이 쌍 비교로 학습되지만 추론 때는 응답 하나에 점수 하나를 내는 점, 모델 선택·정규화를 설명한다.</li></ul></section><section id="goals"><h2>2. 학습 목표</h2><ol><li>보상 모델이 (프롬프트+응답)을 받아 점수를 내는 모델임을 안다.</li><li>Bradley-Terry 공식과 시그모이드(sigmoid)로 우열 확률을 표현하고, 음의 로그우도로 손실을 유도할 수 있다.</li><li>보상 모델이 쌍 비교로 학습되지만 추론은 점수 하나를 낸다는 점, 보상이 차원·정규화에 의존함을 이해한다.</li></ol></section><section id="body"><h2>3. 본문</h2><div id="block1"><h3><span class="badge">블록 1</span>보상 모델과 Bradley-Terry 공식</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">28:33</span> we want to construct a model that knows which output is good, which output is bad (...) consider (...) the prompt (too). (...) <span class="ts">29:33</span> a model that takes in the prompt and the good response and say it's (...) good (...) <span class="ts">29:33</span> the Bradley Terry formulation (...) <span class="ts">30:03</span> the probability (...) to have an output yi be better than an output yj is equal to an exponential of some score (...) with respect to i over (...) i plus (...) j. (...) <span class="ts">30:36</span> it's also equal to sigma of R(i) minus R(j) (...) sigmoid (...) 1 / 1 + exponential of minus x.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>보상 모델(reward model, RM)은 어떤 출력이 좋고 나쁜지를 아는 모델입니다. 응답만이 아니라 프롬프트도 함께 봐야 합니다(맥락이 필요하므로). 예를 들어 "곰인형과 할 새 활동을 제안해줘"라는 프롬프트에 대해, 좋은 응답에는 높은 점수를, 나쁜 응답에는 낮은 점수를 내는 모델을 원합니다.</p>
+<p>이를 만드는 데 쓰는 것이 Bradley-Terry 공식입니다. 출력 yᵢ가 yⱼ보다 나을 확률을:</p>
+<p>P(yᵢ &gt; yⱼ) = exp(Rᵢ) / (exp(Rᵢ) + exp(Rⱼ)) = σ(Rᵢ − Rⱼ)</p>
+<p>로 둡니다. 여기서 σ는 시그모이드(sigmoid), 즉 σ(x) = 1/(1+exp(−x))입니다. 시그모이드는 입력이 −∞면 0, +∞면 1에 가까워집니다. 따라서 i가 j보다 나으면 σ의 입력(Rᵢ−Rⱼ)이 크길 원합니다 — 즉 좋은 출력 i의 점수 Rᵢ는 높게, 나쁜 출력 j의 점수 Rⱼ는 낮게 만들고 싶습니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>보상 모델<span class="en-term">(reward model, RM)</span></dt><dd>(프롬프트+응답)을 받아 좋음/나쁨 점수를 내는 모델.</dd><dt>Bradley-Terry 공식</dt><dd>두 항목의 우열 확률을 각 점수의 지수비로 표현하는 식.</dd><dt>시그모이드<span class="en-term">(sigmoid, σ)</span></dt><dd>값을 0~1로 누르는 함수. σ(x)=1/(1+e⁻ˣ).</dd></dl></div>
+</div>
+<div id="block2"><h3><span class="badge">블록 2</span>손실 함수 유도 (음의 로그우도)</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">32:40</span> input (...) your prompt X and your winning output (...) yhat W (...) score R of X and Y W (...) the losing output (...) a second score. (...) <span class="ts">34:49</span> maximize the probability of (...) the data (...) <span class="ts">35:52</span> maximize the product of (...) n preference pairs (...) <span class="ts">36:54</span> take the log (...) <span class="ts">37:30</span> the sum of the log of sigma of r of the winning minus the one from the losing (...) <span class="ts">37:30</span> people in ML (...) like to minimize (...) so (...) a negative in front (...) <span class="ts">38:01</span> this will be our loss function.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>학습은 이렇게 합니다. 모델을 초기화하고, 한쪽에 (프롬프트 X + 승리 응답 ŷ_W)를 넣어 점수 R(X, ŷ_W)를, 다른 쪽에 (프롬프트 X + 패배 응답 ŷ_L)을 넣어 점수 R(X, ŷ_L)을 얻습니다. 이 두 점수를 함께 쓰는 손실이 필요합니다.</p>
+<p>유도: 데이터(선호 쌍들)가 일어날 확률을 최대화하는 파라미터 θ를 찾습니다. 쌍들이 서로 독립이라 보면, n개 쌍 각각의 'W가 L보다 나을 확률'의 곱을 최대화하려 합니다. Bradley-Terry로 이 확률은 σ(R_W − R_L)입니다.</p>
+<p>확률의 곱은 매우 작아져 불안정하므로 로그를 취합니다(곱의 최대화 = 로그합의 최대화). 그러면 Σ log σ(R_W − R_L)을 최대화하는 문제가 됩니다. ML에서는 보통 최소화를 선호하니 앞에 음수를 붙여:</p>
+<p><strong>손실 = −E[ log σ( R(X, ŷ_W) − R(X, ŷ_L) ) ]</strong></p>
+<p>이것이 보상 모델의 손실 함수입니다(음의 로그우도, 곧 일종의 교차 엔트로피).</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>승리/패배 응답<span class="en-term">(winning/losing output)</span></dt><dd>선호 쌍에서 더 나은 / 못한 응답.</dd><dt>음의 로그우도<span class="en-term">(negative log-likelihood)</span></dt><dd>데이터가 일어날 확률(우도)에 로그·음수를 취한 손실.</dd><dt>로그를 취하는 이유</dt><dd>확률의 곱이 0에 가까워지는 불안정을 피하고 합으로 다루기 위해.</dd></dl></div>
+</div>
+<div id="block3"><h3><span class="badge">블록 3</span>쌍으로 학습, 하나로 추론</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">38:33</span> the loss function is pairwise but the reward model (...) you don't need a pair (...) <span class="ts">39:00</span> you're training it pair-wise but (...) you have a reward model that takes in one prompt and its output and just outputs one (score). (...) <span class="ts">39:36</span> a high score for (...) winning (...) a low score for losing.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>핵심 아름다움: 손실은 쌍 비교(pairwise)지만, 보상 모델 자체는 예측에 쌍이 필요 없습니다. 쌍으로 학습하지만, 결국 (프롬프트 하나 + 응답 하나)를 받아 점수 하나를 내는 모델이 됩니다. 학습 결과 승리 예시엔 높은 점수, 패배 예시엔 낮은 점수를 내게 됩니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>쌍으로 학습, 하나로 추론</dt><dd>손실은 쌍 비교지만, 완성된 보상 모델은 응답 하나에 점수 하나를 냄.</dd></dl></div>
+</div>
+<div id="block4"><h3><span class="badge">블록 4</span>보상 모델의 데이터·모델·정규화</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">39:36</span> a set of data (...) on the tens of thousands or maybe even more (...) the label would be the preference rating (...) from humans if we're talking about RLHF. (...) <span class="ts">40:05</span> (a) decoder only (...) LLM and just have some classification heads (...) or (...) BER(T) (...) project the embedding of the CLS token. (...) <span class="ts">40:37</span> reward bench (...) <span class="ts">41:51</span> those rewards they are with respect to a given (dimension) (...) is the output (...) friendly (...) safe (...) <span class="ts">44:29</span> some normalization procedure that normalizes (...) across your batch.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><ul><li><strong>데이터</strong>: 보통 수만(tens of thousands) 개 이상. 라벨은 선호 평가이며, RLHF면 사람이 매긴 것.</li><li><strong>모델</strong>: 여러 선택지가 있습니다. 요즘은 decoder-only LLM에 분류 헤드를 붙여 점수를 내는 방식이 흔합니다(everything is an LLM). 또는 BERT 같은 encoder-only에서 CLS 토큰 임베딩을 투영할 수도 있습니다. (보상 모델 평가용 벤치마크로 RewardBench가 있음)</li><li><strong>차원(dimension)</strong>: 보상은 특정 차원에 대한 것입니다 — 출력이 친근한가, 안전한가 등. 차원별로 다른 보상 모델을 둘 수도, 종합 점수를 둘 수도 있습니다.</li><li><strong>사람 평가의 민감성</strong>: 평가자에게 주는 지침(guideline)이 객관적이고 명확해야 잡음이 줄어듭니다.</li><li><strong>정규화</strong>: 보상의 스케일 자체가 조정됩니다. 추론 시 배치(batch)에 걸쳐 정규화하는 절차가 있습니다. 회귀라기보다 확률적 공식에 가깝게 봅니다(선호 데이터가 낫다/못하다의 1/0이므로 분류적 성격도 있으나, 끝에 보상값을 씁니다).</li></ul></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>분류 헤드<span class="en-term">(classification head)</span></dt><dd>LLM 위에 얹어 점수를 내는 작은 층.</dd><dt>차원<span class="en-term">(dimension)</span></dt><dd>보상이 측정하는 측면(친근함·안전 등).</dd><dt>지침<span class="en-term">(guideline)</span></dt><dd>사람 평가자에게 주는 기준. 명확해야 잡음↓.</dd><dt>정규화<span class="en-term">(normalization)</span></dt><dd>보상 점수의 스케일을 배치에 걸쳐 맞춤.</dd></dl></div>
+</div></section><section id="glossary"><h2>4. 핵심 용어집</h2><div class="table-wrap"><table><thead><tr><th>영문</th><th>한국어</th><th>발음</th><th>뜻</th></tr></thead><tbody><tr><td>reward model (RM)</td><td>보상 모델</td><td>—</td><td>(프롬프트+응답)→점수</td></tr><tr><td>Bradley-Terry</td><td>브래들리-테리</td><td>—</td><td>우열 확률을 점수 지수비로</td></tr><tr><td>sigmoid (σ)</td><td>시그모이드</td><td>—</td><td>0~1로 누르는 함수</td></tr><tr><td>winning / losing</td><td>승리/패배 응답</td><td>—</td><td>선호 쌍의 나은/못한 응답</td></tr><tr><td>negative log-likelihood</td><td>음의 로그우도</td><td>—</td><td>보상 모델 손실</td></tr><tr><td>classification head</td><td>분류 헤드</td><td>—</td><td>LLM 위 점수 산출 층</td></tr><tr><td>dimension</td><td>차원</td><td>—</td><td>보상이 재는 측면(친근·안전)</td></tr><tr><td>RewardBench</td><td>리워드벤치</td><td>—</td><td>보상 모델 평가 벤치마크</td></tr><tr><td>normalization</td><td>정규화</td><td>—</td><td>보상 스케일 조정</td></tr></tbody></table></div></section><section id="review"><h2>5. 복습 문제</h2><div class="callout review"><div class="c-title">✏️ 스스로 점검</div><ol><li>보상 모델은 무엇을 입력받아 무엇을 출력하는가? 왜 응답만이 아니라 프롬프트도 넣는가?</li><li>Bradley-Terry 공식과 시그모이드로 우열 확률을 쓰고, 거기서 손실(−log σ(R_W−R_L))을 유도하라.</li><li>보상 모델이 '쌍으로 학습하지만 하나로 추론한다'는 말의 뜻은?</li></ol></div></section><section id="appendix"><h2>부록. 실무 적용 포인트 <span style="font-size:14px;font-weight:500;color:var(--muted);">(NLP·LLM 기술 내용 한정)</span></h2><div class="callout practice"><div class="c-title">💡 현장에서 써먹기</div><ul><li><strong>보상이 '차원별(친근·안전 등)'이라는 점은 "AI 품질은 한 숫자가 아니다"를 보여준다.</strong> 같은 응답도 친근함·안전성·정확성 등 측면마다 평가가 다르다. AI 도구 품질을 따질 때 단일 점수가 아니라 업무에 중요한 차원별로 봐야 한다는 안목을 준다(Lecture 4 평가 부분과 연결).</li><li><strong>사람 평가 지침의 명확성은 "검수 기준을 명문화하라"는 실무 교훈이다.</strong> 평가자에게 주는 기준이 모호하면 결과가 잡음투성이가 된다. 사람이 AI 출력을 검수·등급화하는 업무라면, 객관적이고 명확한 기준표를 먼저 만드는 것이 품질을 좌우한다.</li></ul></div><div class="next"><strong><strong>다음 섹션 예고</strong>·&lt;/strong&gt; · 두 번째 단계 — 보상 모델로 LLM을 정렬하는 RL. 보상 해킹·KL 발산·PPO(어드밴티지·가치 함수·PPO-clip)와 그 도전과제. <span class="ts">46:03</span> 이후.</div></section></article></main>
+</div>
+
+<!-- KaTeX 자동 렌더 -->
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}],throwOnError:false});"></script>
+
+<!-- Mermaid -->
+<script type="module">
+  try{
+    const m = await import('https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs');
+    m.default.initialize({startOnLoad:true, theme:'base', themeVariables:{
+      fontFamily:'Pretendard, sans-serif', primaryColor:'#fffdfb', primaryBorderColor:'#d8d0c5',
+      primaryTextColor:'#1a1a1a', lineColor:'#b9554f', fontSize:'14px'
+    }});
+  }catch(e){ /* 오프라인이면 도식은 코드로 표시 */ }
+</script>
+
+<!-- 목차 활성표시 + 모바일 드로어 -->
+<script>
+  // 모바일 드로어
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('overlay');
+  const btn = document.getElementById('menuBtn');
+  const toggle = (on)=>{ sb.classList.toggle('open',on); ov.classList.toggle('show',on); };
+  btn.addEventListener('click',()=>toggle(!sb.classList.contains('open')));
+  ov.addEventListener('click',()=>toggle(false));
+  document.querySelectorAll('.toc a').forEach(a=>a.addEventListener('click',()=>{ if(window.innerWidth<=900) toggle(false); }));
+
+  // 현재 위치 강조
+  const links = [...document.querySelectorAll('.toc a')];
+  const map = {}; links.forEach(a=>{ const id=a.getAttribute('href').slice(1); map[id]=a; });
+  const targets = Object.keys(map).map(id=>document.getElementById(id)).filter(Boolean);
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(en=>{
+      if(en.isIntersecting){
+        links.forEach(l=>l.classList.remove('active'));
+        const a = map[en.target.id]; if(a) a.classList.add('active');
+      }
+    });
+  },{rootMargin:'-15% 0px -75% 0px', threshold:0});
+  targets.forEach(t=>io.observe(t));
+</script>
+
+</body>
+</html>

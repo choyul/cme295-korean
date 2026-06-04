@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CME295 Lecture 4 · 섹션 2. 스케일링 법칙과 사전학습의 도전과제</title>
+
+<!-- 폰트: Pretendard (CDN, 없으면 시스템 폰트 폴백) -->
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<!-- 수식: KaTeX -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
+
+<style>
+  :root{
+    --bg:#FBF9F6;
+    --paper:#ffffff;
+    --ink:#1a1a1a;
+    --ink-soft:#4a4744;
+    --muted:#7a756f;
+    --accent:#8C1515;          /* Stanford 카디널 */
+    --accent-soft:#b9554f;
+    --tint:#f6ebe9;            /* 카디널 옅은 틴트 */
+    --tint-2:#f3efe9;          /* 따뜻한 회색 */
+    --line:#e7e1d9;
+    --line-strong:#d8d0c5;
+    --radius:10px;
+    --maxw:760px;
+    --sidew:268px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Pretendard","Pretendard Variable",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    line-height:1.78;
+    font-size:16.5px;
+    -webkit-font-smoothing:antialiased;
+    word-break:keep-all;
+  }
+
+  /* ===== 레이아웃 ===== */
+  .layout{display:flex; align-items:flex-start;}
+  .sidebar{
+    width:var(--sidew); flex:0 0 var(--sidew);
+    position:sticky; top:0; height:100vh; overflow-y:auto;
+    padding:28px 18px 40px; border-right:1px solid var(--line);
+    background:rgba(251,249,246,.85); backdrop-filter:saturate(120%) blur(2px);
+  }
+  .content{flex:1 1 auto; min-width:0; display:flex; justify-content:center; padding:0 24px;}
+  .doc{width:100%; max-width:var(--maxw); padding:48px 0 120px;}
+
+  /* ===== 사이드바 목차 ===== */
+  .toc-brand{font-size:12px; letter-spacing:.04em; color:var(--accent); font-weight:700; text-transform:uppercase; margin-bottom:4px;}
+  .toc-title{font-size:15px; font-weight:700; margin:0 0 18px; line-height:1.4; color:var(--ink);}
+  .toc{list-style:none; margin:0; padding:0; font-size:13.5px;}
+  .toc li{margin:1px 0;}
+  .toc a{display:block; padding:5px 10px; border-radius:7px; color:var(--ink-soft); text-decoration:none; border-left:2px solid transparent;}
+  .toc a:hover{background:var(--tint-2); color:var(--ink);}
+  .toc a.sub{padding-left:22px; font-size:13px; color:var(--muted);}
+  .toc a.active{color:var(--accent); background:var(--tint); border-left-color:var(--accent); font-weight:600;}
+
+  /* ===== 타이포 ===== */
+  h1{font-size:27px; line-height:1.32; font-weight:800; letter-spacing:-.01em; margin:0 0 6px;}
+  .subtitle{font-size:18px; font-weight:700; color:var(--accent); margin:0 0 22px;}
+  h2{font-size:21px; font-weight:800; letter-spacing:-.01em; margin:46px 0 14px; padding-bottom:9px; border-bottom:2px solid var(--line-strong);}
+  h3{font-size:17.5px; font-weight:700; margin:34px 0 12px; color:var(--ink);}
+  h3 .badge{display:inline-block; font-size:12px; font-weight:700; color:#fff; background:var(--accent); border-radius:6px; padding:2px 8px; margin-right:8px; vertical-align:middle;}
+  p{margin:12px 0;}
+  strong{font-weight:700;}
+  a{color:var(--accent);}
+  ul,ol{margin:12px 0; padding-left:22px;}
+  li{margin:6px 0;}
+  hr{display:none;}
+
+  /* ===== 출처 배너 ===== */
+  .source-banner{
+    display:flex; gap:10px; align-items:baseline;
+    background:var(--tint); border-left:4px solid var(--accent);
+    border-radius:0 var(--radius) var(--radius) 0;
+    padding:12px 16px; margin:0 0 8px; font-size:13.5px; color:var(--ink-soft);
+  }
+  .source-banner b{color:var(--accent);}
+
+  /* ===== 한국어 번역 카드 ===== */
+  .ko{
+    background:var(--paper); border:1px solid var(--line);
+    border-left:4px solid var(--accent); border-radius:var(--radius);
+    padding:6px 22px; margin:16px 0;
+    box-shadow:0 1px 2px rgba(60,40,20,.04);
+  }
+  .ko > .label, .terms > .label{
+    display:inline-block; font-size:11.5px; font-weight:800; letter-spacing:.06em;
+    color:var(--accent); text-transform:uppercase; margin:14px 0 -4px;
+  }
+
+  /* ===== 영문 원문 토글 ===== */
+  details.en{
+    background:var(--tint-2); border:1px solid var(--line); border-radius:var(--radius);
+    margin:14px 0; overflow:hidden;
+  }
+  details.en > summary{
+    cursor:pointer; list-style:none; padding:11px 16px;
+    font-size:13.5px; font-weight:700; color:var(--muted);
+    display:flex; align-items:center; gap:8px; user-select:none;
+  }
+  details.en > summary::-webkit-details-marker{display:none;}
+  details.en > summary .chev{transition:transform .2s; color:var(--accent-soft);}
+  details.en[open] > summary .chev{transform:rotate(90deg);}
+  details.en[open] > summary{border-bottom:1px solid var(--line);}
+  .en-body{padding:4px 18px 14px; font-size:14px; line-height:1.7; color:#5c574f; font-style:normal;}
+  .en-body p{margin:10px 0;}
+  .ts{
+    display:inline-block; font-family:"SFMono-Regular",ui-monospace,Menlo,Consolas,monospace;
+    font-size:11.5px; font-style:normal; color:var(--accent);
+    background:var(--tint); border:1px solid #e6cfcc; border-radius:5px;
+    padding:0 5px; margin:0 2px; vertical-align:baseline;
+  }
+
+  /* ===== 용어 설명 ===== */
+  .terms{
+    border:1px solid var(--line); border-left:3px solid var(--accent-soft);
+    border-radius:var(--radius); background:#fffdfb; padding:4px 20px 8px; margin:16px 0;
+  }
+  .terms dl{margin:8px 0;}
+  .terms dt{font-weight:700; color:var(--ink); margin-top:8px;}
+  .terms dt .en-term{color:var(--accent); font-weight:600;}
+  .terms dd{margin:1px 0 6px; color:var(--ink-soft); font-size:15px;}
+
+  /* ===== 표 ===== */
+  .table-wrap{overflow-x:auto; margin:16px 0; border:1px solid var(--line); border-radius:var(--radius);}
+  table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:520px;}
+  thead th{background:var(--accent); color:#fff; font-weight:700; text-align:left; padding:11px 14px; white-space:nowrap;}
+  tbody td{padding:9px 14px; border-top:1px solid var(--line);}
+  tbody tr:nth-child(even){background:var(--tint-2);}
+  tbody td:first-child{font-family:ui-monospace,Menlo,monospace; font-size:13px; color:var(--accent);}
+
+  /* ===== 콜아웃 ===== */
+  .callout{border-radius:var(--radius); padding:14px 20px 6px; margin:18px 0;}
+  .callout .c-title{font-weight:800; margin:6px 0 2px; display:flex; align-items:center; gap:8px;}
+  .callout.review{background:#fff; border:1px solid var(--line-strong);}
+  .callout.review ol{counter-reset:none;}
+  .callout.note{background:var(--tint-2); border-left:4px solid var(--muted); border-radius:0 var(--radius) var(--radius) 0; padding-bottom:12px;}
+  .callout.practice{background:var(--tint); border:1px solid #e6cfcc; padding-bottom:14px;}
+  .callout.practice li{margin:12px 0;}
+  .next{margin-top:40px; padding:14px 18px; background:var(--tint-2); border-radius:var(--radius); font-size:14px; color:var(--ink-soft);}
+
+  /* 수식 / 도식 */
+  .katex-display{margin:14px 0; overflow-x:auto; overflow-y:hidden; padding:6px 0;}
+  .diagram{background:#fffdfb; border:1px solid var(--line); border-radius:var(--radius); padding:14px; margin:16px 0; text-align:center;}
+  .diagram .cap{font-size:12.5px; color:var(--muted); margin-top:6px;}
+  .mermaid{display:flex; justify-content:center;}
+
+  /* ===== 모바일 ===== */
+  .menu-btn{display:none;}
+  .overlay{display:none;}
+  @media (max-width:900px){
+    .menu-btn{
+      display:flex; align-items:center; justify-content:center;
+      position:fixed; top:14px; left:14px; z-index:50;
+      width:42px; height:42px; border-radius:10px; border:1px solid var(--line-strong);
+      background:var(--paper); color:var(--accent); font-size:20px; cursor:pointer;
+      box-shadow:0 2px 8px rgba(60,40,20,.12);
+    }
+    .sidebar{
+      position:fixed; left:0; top:0; z-index:60; height:100vh;
+      transform:translateX(-105%); transition:transform .25s ease;
+      box-shadow:4px 0 24px rgba(0,0,0,.12); background:var(--bg);
+    }
+    .sidebar.open{transform:translateX(0);}
+    .overlay.show{display:block; position:fixed; inset:0; background:rgba(0,0,0,.32); z-index:55;}
+    .content{padding:0 16px;}
+    .doc{padding:64px 0 100px;}
+    body{font-size:16px;}
+    h1{font-size:23px;}
+    .ko,.terms{padding-left:16px; padding-right:16px;}
+  }
+
+  /* ===== 인쇄 ===== */
+  @media print{
+    .sidebar,.menu-btn,.overlay{display:none !important;}
+    .content{padding:0;}
+    body{background:#fff; font-size:11pt;}
+    details.en{display:none;}          /* 인쇄본은 한국어 위주 */
+    .ko,.terms,.callout,.table-wrap{break-inside:avoid; box-shadow:none;}
+    a{color:var(--ink);}
+  }
+  .home-btn{position:fixed; top:16px; right:18px; z-index:70;
+    display:inline-flex; align-items:center; gap:6px; text-decoration:none;
+    background:var(--paper); color:var(--accent); border:1px solid var(--line-strong);
+    border-radius:999px; padding:8px 14px; font-size:13.5px; font-weight:700;
+    box-shadow:0 2px 8px rgba(60,40,20,.12); transition:background .12s,color .12s;}
+  .home-btn:hover{background:var(--accent); color:#fff; border-color:var(--accent);}
+  @media (max-width:900px){ .home-btn{top:14px; right:14px; padding:8px 12px; font-size:12.5px;} }
+  @media print{ .home-btn{display:none !important;} }
+</style>
+</head>
+<body>
+<a class="home-btn" href="../index.html" title="전체 목차로 돌아가기">← 전체 목차</a>
+
+<button class="menu-btn" id="menuBtn" aria-label="목차 열기">☰</button>
+<div class="overlay" id="overlay"></div>
+
+<div class="layout">
+  <nav class="sidebar" id="sidebar"><div class="toc-brand">Stanford CME295 · Lecture 4</div><p class="toc-title">섹션 2. 스케일링 법칙과 사전학습의 도전과제</p><ul class="toc"><li><a href="#overview">1. 강의 개요</a></li><li><a href="#goals">2. 학습 목표</a></li><li><a href="#body">3. 본문</a></li><li><a class="sub" href="#block1">블록 1 · 스케일링 법칙 (scaling laws)</a></li><li><a class="sub" href="#block2">블록 2 · Chinchilla: 연산 예산의 최적 배분</a></li><li><a class="sub" href="#block3">블록 3 · 사전학습의 도전과제: 비용·지식 컷오프</a></li><li><a href="#glossary">4. 핵심 용어집</a></li><li><a href="#review">5. 복습 문제</a></li><li><a href="#appendix">부록. 실무 적용 포인트 (NLP·LLM 기술 내용 한정)</a></li></ul></nav>
+  <main class="content"><article class="doc"><h1>CME295 Transformers &amp; LLMs — Lecture 4 한국어 교재</h1><p class="subtitle">섹션 2. 스케일링 법칙과 사전학습의 도전과제</p><div class="source-banner"><span>📄</span><span><b>원문 출처</b>: Stanford CME295, Autumn 2025, Lecture 4, 타임스탬프 <span class="ts">16:21</span>~<span class="ts">24:45</span></span></div><section id="overview"><h2>1. 강의 개요</h2><ul><li>연산·데이터·모델 크기를 키울수록 성능이 좋아진다는 스케일링 법칙(scaling laws)을 다룬다.</li><li>고정된 연산 예산에서 모델 크기와 데이터 양의 최적 비율을 찾은 Chinchilla의 결과(데이터 ≈ 모델 크기의 20배)를 본다.</li><li>사전학습의 도전과제 — 막대한 비용, 지식 컷오프(knowledge cutoff), 표절 위험 — 를 정리한다.</li></ul></section><section id="goals"><h2>2. 학습 목표</h2><ol><li>스케일링 법칙의 핵심(연산·데이터·모델이 클수록 성능↑)과 '표본 효율'을 설명할 수 있다.</li><li>Chinchilla 최적 비율(데이터 ≈ 모델의 20배)의 의미와, GPT-3가 왜 '과소학습'으로 평가되는지 안다.</li><li>사전학습의 도전과제(비용·지식 컷오프)를 설명할 수 있다.</li></ol></section><section id="body"><h2>3. 본문</h2><div id="block1"><h3><span class="badge">블록 1</span>스케일링 법칙 (scaling laws)</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">16:53</span> one paper called scaling l(aws) for neural language models (...) published in 2020 (...) the more compute you have, the better your model learns about predicting the next (token). Same for data set size (...) And the bigger your model, the better it is. (...) <span class="ts">17:26</span> between 2019 and 2024, you were seeing models that were larger and larger (...) <span class="ts">17:57</span> bigger models tend to be more (...) sample efficient (...) for an equal amount of tokens (...) you will have a better performance with a bigger model.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>2020년 「Scaling Laws for Neural Language Models」 논문은 모델 크기와 학습량을 바꿔가며 성능 변화를 실험했습니다. 결과는 — 연산(compute)이 많을수록, 데이터셋이 클수록, 모델이 클수록 다음 토큰 예측을 더 잘합니다. 이 때문에 2019~2024년 사이 모델이 점점 더 커졌습니다.</p>
+<p>또 한 가지 발견은, 큰 모델일수록 표본 효율(sample efficient)이 좋다는 것입니다. 같은 양의 토큰을 처리했을 때, 큰 모델이 작은 모델보다 더 좋은 성능을 냅니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>스케일링 법칙<span class="en-term">(scaling laws)</span></dt><dd>연산·데이터·모델 크기를 키울수록 성능이 (예측 가능하게) 좋아진다는 경험적 법칙.</dd><dt>표본 효율<span class="en-term">(sample efficiency)</span></dt><dd>같은 데이터량으로 더 좋은 성능을 내는 정도. 큰 모델일수록 좋음.</dd></dl></div>
+</div>
+<div id="block2"><h3><span class="badge">블록 2</span>Chinchilla: 연산 예산의 최적 배분</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">18:28</span> you have a fixed compute and people also try to answer (...) how can you fix your training set size and your model size in a way that's more (optimal) (...) <span class="ts">18:59</span> there was always a sweet spot (...) <span class="ts">19:30</span> if you have an amount of training set size that's about 20 times the model size then you're spending your compute in (...) an optimal way. (...) <span class="ts">19:30</span> GPT3 (...) was like 175 billion parameters (...) but it's only trained on 300 billion tokens. So this one (...) is according to this really undertrained.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>연산은 무한하지 않고 비쌉니다. 그래서 "고정된 연산량에서 모델 크기와 데이터 양을 어떻게 정해야 가장 효율적인가"를 묻습니다. 한 연산량 단위를 고정하고 여러 크기의 모델을 여러 데이터량으로 학습해 보니, 늘 최적점(sweet spot)이 있었습니다.</p>
+<p>핵심 결론(흔히 Chinchilla 법칙): <strong>데이터 양이 모델 크기의 약 20배</strong>일 때 연산을 최적으로 쓰는 것입니다. 예를 들어 GPT-3는 약 1,750억(175 billion) 파라미터인데 3,000억(300 billion) 토큰으로만 학습됐습니다. 이 비율로 보면 GPT-3는 '과소학습(undertrained)'된 셈입니다(파라미터에 비해 데이터가 부족).</p></div>
+<div class="callout note"><div class="c-title">⚠️ 참고</div><p>참고: 이 실험은 LLM이 모두 같은 트랜스포머 기반 decoder-only 모델이라는 전제 위에 있습니다. 논문은 "아키텍처 변화보다 토큰 양과 모델 크기가 성능을 가장 좌우한다"고 말합니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>Chinchilla 법칙<span class="en-term">(Chinchilla optimal)</span></dt><dd>고정 연산에서 데이터 ≈ 모델 크기의 20배가 최적이라는 결과.</dd><dt>최적점<span class="en-term">(sweet spot)</span></dt><dd>연산을 가장 효율적으로 쓰는 모델·데이터 조합.</dd><dt>과소학습<span class="en-term">(undertrained)</span></dt><dd>모델 크기에 비해 학습 데이터가 부족한 상태(예: GPT-3).</dd></dl></div>
+</div>
+<div id="block3"><h3><span class="badge">블록 3</span>사전학습의 도전과제: 비용·지식 컷오프</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">22:06</span> pre-training has a lot of challenges. One of them is cost. (...) millions of dollars (...) tens of millions (...) or sometimes hundreds of millions of dollars. (...) the ecological cost. (...) <span class="ts">22:41</span> the step is on data that is up to the time at which you pre-train your model (...) this date is called the knowledge cutoff date. (...) your pre-trained base model (...) has no way to know by itself knowledge that occurred after this (date). (...) <span class="ts">23:41</span> what if it just generates something that it has seen at training time (...) plagiarism (...) <span class="ts">24:11</span> on the model cards you will always see (...) a line on knowledge cutoff dates.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>사전학습에는 여러 도전과제가 있습니다.</p>
+<ol><li><strong>비용</strong>: 최소 수백만 달러, 많게는 수천만~수억 달러가 듭니다. 시간도 많이 들고, 환경 영향(생태 비용)까지 고려됩니다.</li><li><strong>지식 컷오프(knowledge cutoff)</strong>: 학습은 데이터를 모은 시점까지의 정보로만 됩니다. 그 이후에 일어난 일을 사전학습 기본 모델(base model)은 스스로 알 수 없습니다. 이 시점을 지식 컷오프 날짜라 합니다. 학습 후 지식을 주입·편집하려는 시도가 많지만, 다른 영역을 망가뜨리지 않으면서 가중치를 바꾸는 깔끔한 방법은 없어 매우 어려운 문제입니다.</li><li><strong>표절(plagiarism) 위험</strong>: 다음 토큰을 예측하다 보면 학습 때 본 것을 그대로 생성할 위험이 있습니다.</li></ol></div>
+<div class="callout note"><div class="c-title">⚠️ 참고</div><p>모델 카드(model card)에는 늘 지식 컷오프 날짜가 적혀 있습니다. 예: GPT-5는 컷오프가 9월 30일로, 그쯤 사전학습이 됐음을 짐작할 수 있습니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>지식 컷오프<span class="en-term">(knowledge cutoff)</span></dt><dd>모델이 아는 정보의 시간 한계. 이후 사건은 스스로 모름.</dd><dt>기본 모델<span class="en-term">(base model)</span></dt><dd>사전학습만 끝낸 모델(아직 튜닝 전).</dd><dt>모델 카드<span class="en-term">(model card)</span></dt><dd>모델의 사양·컷오프 등을 적은 안내 문서.</dd><dt>표절<span class="en-term">(plagiarism)</span></dt><dd>학습 데이터를 그대로 출력할 위험.</dd></dl></div>
+</div></section><section id="glossary"><h2>4. 핵심 용어집</h2><div class="table-wrap"><table><thead><tr><th>영문</th><th>한국어</th><th>발음</th><th>뜻</th></tr></thead><tbody><tr><td>scaling laws</td><td>스케일링 법칙</td><td>—</td><td>클수록 성능↑(경험 법칙)</td></tr><tr><td>sample efficiency</td><td>표본 효율</td><td>—</td><td>적은 데이터로 좋은 성능</td></tr><tr><td>Chinchilla optimal</td><td>친칠라 최적</td><td>친칠라</td><td>데이터 ≈ 모델의 20배</td></tr><tr><td>sweet spot</td><td>최적점</td><td>스윗 스팟</td><td>연산 최적 조합</td></tr><tr><td>undertrained</td><td>과소학습</td><td>—</td><td>데이터 부족 상태</td></tr><tr><td>knowledge cutoff</td><td>지식 컷오프</td><td>—</td><td>모델이 아는 정보의 시간 한계</td></tr><tr><td>base model</td><td>기본 모델</td><td>베이스 모델</td><td>사전학습만 끝낸 모델</td></tr><tr><td>model card</td><td>모델 카드</td><td>—</td><td>모델 사양 안내 문서</td></tr></tbody></table></div></section><section id="review"><h2>5. 복습 문제</h2><div class="callout review"><div class="c-title">✏️ 스스로 점검</div><ol><li>스케일링 법칙의 핵심 결론은? '표본 효율'이 큰 모델에서 좋다는 것은 무슨 뜻인가?</li><li>Chinchilla 법칙에서 데이터와 모델 크기의 최적 비율은? GPT-3가 '과소학습'으로 평가되는 이유는?</li><li>지식 컷오프란 무엇이며, 왜 학습 후 지식 주입이 어려운가?</li></ol></div></section><section id="appendix"><h2>부록. 실무 적용 포인트 <span style="font-size:14px;font-weight:500;color:var(--muted);">(NLP·LLM 기술 내용 한정)</span></h2><div class="callout practice"><div class="c-title">💡 현장에서 써먹기</div><ul><li><strong>지식 컷오프는 "LLM이 최신 정보를 모를 수 있다"는 실무 한계의 정체다.</strong> 컷오프 이후의 사건·제도·통계를 모델은 스스로 알지 못한다. 최신 조례·정책·올해 통계가 걸린 업무에서는 모델 답을 그대로 믿지 말고, 최신 자료를 직접 제공(다음 강의의 검색·RAG)하거나 검증해야 한다.</li><li><strong>스케일링 법칙은 "왜 큰 모델이 대체로 더 똑똑한가"의 근거이자, 그 한계다.</strong> 크기가 성능과 대체로 비례하지만, 데이터 비율(Chinchilla)이 안 맞으면 큰 모델도 잠재력을 못 낸다. '파라미터 수가 크다=무조건 낫다'가 아니라는 점 — 모델 비교 시 학습량도 함께 봐야 한다는 안목을 준다.</li><li><strong>표절·지식 주입의 어려움은 "AI 출력의 출처·정확성을 별도로 확인해야 한다"는 지침과 통한다.</strong> 모델이 학습 데이터를 그대로 뱉을 수 있고, 특정 지식만 깔끔히 고치기 어렵다. 중요한 산출물은 사실 확인과 출처 표기를 병행하는 것이 안전하다.</li></ul></div><div class="next"><strong><strong>다음 섹션 예고</strong>·&lt;/strong&gt; · 이렇게 거대한 모델을 실제로 어떻게 학습시키나 — GPU 메모리의 한계와 분산 학습(데이터 병렬화·ZeRO·모델 병렬화). <span class="ts">24:45</span> 이후.</div></section></article></main>
+</div>
+
+<!-- KaTeX 자동 렌더 -->
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}],throwOnError:false});"></script>
+
+<!-- Mermaid -->
+<script type="module">
+  try{
+    const m = await import('https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs');
+    m.default.initialize({startOnLoad:true, theme:'base', themeVariables:{
+      fontFamily:'Pretendard, sans-serif', primaryColor:'#fffdfb', primaryBorderColor:'#d8d0c5',
+      primaryTextColor:'#1a1a1a', lineColor:'#b9554f', fontSize:'14px'
+    }});
+  }catch(e){ /* 오프라인이면 도식은 코드로 표시 */ }
+</script>
+
+<!-- 목차 활성표시 + 모바일 드로어 -->
+<script>
+  // 모바일 드로어
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('overlay');
+  const btn = document.getElementById('menuBtn');
+  const toggle = (on)=>{ sb.classList.toggle('open',on); ov.classList.toggle('show',on); };
+  btn.addEventListener('click',()=>toggle(!sb.classList.contains('open')));
+  ov.addEventListener('click',()=>toggle(false));
+  document.querySelectorAll('.toc a').forEach(a=>a.addEventListener('click',()=>{ if(window.innerWidth<=900) toggle(false); }));
+
+  // 현재 위치 강조
+  const links = [...document.querySelectorAll('.toc a')];
+  const map = {}; links.forEach(a=>{ const id=a.getAttribute('href').slice(1); map[id]=a; });
+  const targets = Object.keys(map).map(id=>document.getElementById(id)).filter(Boolean);
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(en=>{
+      if(en.isIntersecting){
+        links.forEach(l=>l.classList.remove('active'));
+        const a = map[en.target.id]; if(a) a.classList.add('active');
+      }
+    });
+  },{rootMargin:'-15% 0px -75% 0px', threshold:0});
+  targets.forEach(t=>io.observe(t));
+</script>
+
+</body>
+</html>

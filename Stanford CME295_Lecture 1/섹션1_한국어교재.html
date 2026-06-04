@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CME295 Lecture 1 · 섹션 1. 강의 도입 (강사 소개·수업 운영)</title>
+
+<!-- 폰트: Pretendard (CDN, 없으면 시스템 폰트 폴백) -->
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<!-- 수식: KaTeX -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
+
+<style>
+  :root{
+    --bg:#FBF9F6;
+    --paper:#ffffff;
+    --ink:#1a1a1a;
+    --ink-soft:#4a4744;
+    --muted:#7a756f;
+    --accent:#8C1515;          /* Stanford 카디널 */
+    --accent-soft:#b9554f;
+    --tint:#f6ebe9;            /* 카디널 옅은 틴트 */
+    --tint-2:#f3efe9;          /* 따뜻한 회색 */
+    --line:#e7e1d9;
+    --line-strong:#d8d0c5;
+    --radius:10px;
+    --maxw:760px;
+    --sidew:268px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Pretendard","Pretendard Variable",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    line-height:1.78;
+    font-size:16.5px;
+    -webkit-font-smoothing:antialiased;
+    word-break:keep-all;
+  }
+
+  /* ===== 레이아웃 ===== */
+  .layout{display:flex; align-items:flex-start;}
+  .sidebar{
+    width:var(--sidew); flex:0 0 var(--sidew);
+    position:sticky; top:0; height:100vh; overflow-y:auto;
+    padding:28px 18px 40px; border-right:1px solid var(--line);
+    background:rgba(251,249,246,.85); backdrop-filter:saturate(120%) blur(2px);
+  }
+  .content{flex:1 1 auto; min-width:0; display:flex; justify-content:center; padding:0 24px;}
+  .doc{width:100%; max-width:var(--maxw); padding:48px 0 120px;}
+
+  /* ===== 사이드바 목차 ===== */
+  .toc-brand{font-size:12px; letter-spacing:.04em; color:var(--accent); font-weight:700; text-transform:uppercase; margin-bottom:4px;}
+  .toc-title{font-size:15px; font-weight:700; margin:0 0 18px; line-height:1.4; color:var(--ink);}
+  .toc{list-style:none; margin:0; padding:0; font-size:13.5px;}
+  .toc li{margin:1px 0;}
+  .toc a{display:block; padding:5px 10px; border-radius:7px; color:var(--ink-soft); text-decoration:none; border-left:2px solid transparent;}
+  .toc a:hover{background:var(--tint-2); color:var(--ink);}
+  .toc a.sub{padding-left:22px; font-size:13px; color:var(--muted);}
+  .toc a.active{color:var(--accent); background:var(--tint); border-left-color:var(--accent); font-weight:600;}
+
+  /* ===== 타이포 ===== */
+  h1{font-size:27px; line-height:1.32; font-weight:800; letter-spacing:-.01em; margin:0 0 6px;}
+  .subtitle{font-size:18px; font-weight:700; color:var(--accent); margin:0 0 22px;}
+  h2{font-size:21px; font-weight:800; letter-spacing:-.01em; margin:46px 0 14px; padding-bottom:9px; border-bottom:2px solid var(--line-strong);}
+  h3{font-size:17.5px; font-weight:700; margin:34px 0 12px; color:var(--ink);}
+  h3 .badge{display:inline-block; font-size:12px; font-weight:700; color:#fff; background:var(--accent); border-radius:6px; padding:2px 8px; margin-right:8px; vertical-align:middle;}
+  p{margin:12px 0;}
+  strong{font-weight:700;}
+  a{color:var(--accent);}
+  ul,ol{margin:12px 0; padding-left:22px;}
+  li{margin:6px 0;}
+  hr{display:none;}
+
+  /* ===== 출처 배너 ===== */
+  .source-banner{
+    display:flex; gap:10px; align-items:baseline;
+    background:var(--tint); border-left:4px solid var(--accent);
+    border-radius:0 var(--radius) var(--radius) 0;
+    padding:12px 16px; margin:0 0 8px; font-size:13.5px; color:var(--ink-soft);
+  }
+  .source-banner b{color:var(--accent);}
+
+  /* ===== 한국어 번역 카드 ===== */
+  .ko{
+    background:var(--paper); border:1px solid var(--line);
+    border-left:4px solid var(--accent); border-radius:var(--radius);
+    padding:6px 22px; margin:16px 0;
+    box-shadow:0 1px 2px rgba(60,40,20,.04);
+  }
+  .ko > .label, .terms > .label{
+    display:inline-block; font-size:11.5px; font-weight:800; letter-spacing:.06em;
+    color:var(--accent); text-transform:uppercase; margin:14px 0 -4px;
+  }
+
+  /* ===== 영문 원문 토글 ===== */
+  details.en{
+    background:var(--tint-2); border:1px solid var(--line); border-radius:var(--radius);
+    margin:14px 0; overflow:hidden;
+  }
+  details.en > summary{
+    cursor:pointer; list-style:none; padding:11px 16px;
+    font-size:13.5px; font-weight:700; color:var(--muted);
+    display:flex; align-items:center; gap:8px; user-select:none;
+  }
+  details.en > summary::-webkit-details-marker{display:none;}
+  details.en > summary .chev{transition:transform .2s; color:var(--accent-soft);}
+  details.en[open] > summary .chev{transform:rotate(90deg);}
+  details.en[open] > summary{border-bottom:1px solid var(--line);}
+  .en-body{padding:4px 18px 14px; font-size:14px; line-height:1.7; color:#5c574f; font-style:normal;}
+  .en-body p{margin:10px 0;}
+  .ts{
+    display:inline-block; font-family:"SFMono-Regular",ui-monospace,Menlo,Consolas,monospace;
+    font-size:11.5px; font-style:normal; color:var(--accent);
+    background:var(--tint); border:1px solid #e6cfcc; border-radius:5px;
+    padding:0 5px; margin:0 2px; vertical-align:baseline;
+  }
+
+  /* ===== 용어 설명 ===== */
+  .terms{
+    border:1px solid var(--line); border-left:3px solid var(--accent-soft);
+    border-radius:var(--radius); background:#fffdfb; padding:4px 20px 8px; margin:16px 0;
+  }
+  .terms dl{margin:8px 0;}
+  .terms dt{font-weight:700; color:var(--ink); margin-top:8px;}
+  .terms dt .en-term{color:var(--accent); font-weight:600;}
+  .terms dd{margin:1px 0 6px; color:var(--ink-soft); font-size:15px;}
+
+  /* ===== 표 ===== */
+  .table-wrap{overflow-x:auto; margin:16px 0; border:1px solid var(--line); border-radius:var(--radius);}
+  table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:520px;}
+  thead th{background:var(--accent); color:#fff; font-weight:700; text-align:left; padding:11px 14px; white-space:nowrap;}
+  tbody td{padding:9px 14px; border-top:1px solid var(--line);}
+  tbody tr:nth-child(even){background:var(--tint-2);}
+  tbody td:first-child{font-family:ui-monospace,Menlo,monospace; font-size:13px; color:var(--accent);}
+
+  /* ===== 콜아웃 ===== */
+  .callout{border-radius:var(--radius); padding:14px 20px 6px; margin:18px 0;}
+  .callout .c-title{font-weight:800; margin:6px 0 2px; display:flex; align-items:center; gap:8px;}
+  .callout.review{background:#fff; border:1px solid var(--line-strong);}
+  .callout.review ol{counter-reset:none;}
+  .callout.note{background:var(--tint-2); border-left:4px solid var(--muted); border-radius:0 var(--radius) var(--radius) 0; padding-bottom:12px;}
+  .callout.practice{background:var(--tint); border:1px solid #e6cfcc; padding-bottom:14px;}
+  .callout.practice li{margin:12px 0;}
+  .next{margin-top:40px; padding:14px 18px; background:var(--tint-2); border-radius:var(--radius); font-size:14px; color:var(--ink-soft);}
+
+  /* 수식 / 도식 */
+  .katex-display{margin:14px 0; overflow-x:auto; overflow-y:hidden; padding:6px 0;}
+  .diagram{background:#fffdfb; border:1px solid var(--line); border-radius:var(--radius); padding:14px; margin:16px 0; text-align:center;}
+  .diagram .cap{font-size:12.5px; color:var(--muted); margin-top:6px;}
+  .mermaid{display:flex; justify-content:center;}
+
+  /* ===== 모바일 ===== */
+  .menu-btn{display:none;}
+  .overlay{display:none;}
+  @media (max-width:900px){
+    .menu-btn{
+      display:flex; align-items:center; justify-content:center;
+      position:fixed; top:14px; left:14px; z-index:50;
+      width:42px; height:42px; border-radius:10px; border:1px solid var(--line-strong);
+      background:var(--paper); color:var(--accent); font-size:20px; cursor:pointer;
+      box-shadow:0 2px 8px rgba(60,40,20,.12);
+    }
+    .sidebar{
+      position:fixed; left:0; top:0; z-index:60; height:100vh;
+      transform:translateX(-105%); transition:transform .25s ease;
+      box-shadow:4px 0 24px rgba(0,0,0,.12); background:var(--bg);
+    }
+    .sidebar.open{transform:translateX(0);}
+    .overlay.show{display:block; position:fixed; inset:0; background:rgba(0,0,0,.32); z-index:55;}
+    .content{padding:0 16px;}
+    .doc{padding:64px 0 100px;}
+    body{font-size:16px;}
+    h1{font-size:23px;}
+    .ko,.terms{padding-left:16px; padding-right:16px;}
+  }
+
+  /* ===== 인쇄 ===== */
+  @media print{
+    .sidebar,.menu-btn,.overlay{display:none !important;}
+    .content{padding:0;}
+    body{background:#fff; font-size:11pt;}
+    details.en{display:none;}          /* 인쇄본은 한국어 위주 */
+    .ko,.terms,.callout,.table-wrap{break-inside:avoid; box-shadow:none;}
+    a{color:var(--ink);}
+  }
+  .home-btn{position:fixed; top:16px; right:18px; z-index:70;
+    display:inline-flex; align-items:center; gap:6px; text-decoration:none;
+    background:var(--paper); color:var(--accent); border:1px solid var(--line-strong);
+    border-radius:999px; padding:8px 14px; font-size:13.5px; font-weight:700;
+    box-shadow:0 2px 8px rgba(60,40,20,.12); transition:background .12s,color .12s;}
+  .home-btn:hover{background:var(--accent); color:#fff; border-color:var(--accent);}
+  @media (max-width:900px){ .home-btn{top:14px; right:14px; padding:8px 12px; font-size:12.5px;} }
+  @media print{ .home-btn{display:none !important;} }
+</style>
+</head>
+<body>
+<a class="home-btn" href="../index.html" title="전체 목차로 돌아가기">← 전체 목차</a>
+
+<button class="menu-btn" id="menuBtn" aria-label="목차 열기">☰</button>
+<div class="overlay" id="overlay"></div>
+
+<div class="layout">
+  <nav class="sidebar" id="sidebar"><div class="toc-brand">Stanford CME295 · Lecture 1</div><p class="toc-title">섹션 1. 강의 도입 (강사 소개·수업 운영)</p><ul class="toc"><li><a href="#overview">1. 강의 개요</a></li><li><a href="#goals">2. 학습 목표</a></li><li><a href="#body">3. 본문</a></li><li><a class="sub" href="#block1">블록 1 · 강사 소개</a></li><li><a class="sub" href="#block2">블록 2 · 수업을 여는 이유와 기대</a></li><li><a class="sub" href="#block3">블록 3 · 이 수업이 맞는 사람</a></li><li><a class="sub" href="#block4">블록 4 · 수강 전제</a></li><li><a class="sub" href="#block5">블록 5 · 수업 일정·평가</a></li><li><a class="sub" href="#block6">블록 6 · 자료(슬라이드·교재·치트시트)</a></li><li><a class="sub" href="#block7">블록 7 · 공지 채널과 녹화 관련 안내</a></li><li><a class="sub" href="#block8">블록 8 · 질의응답과 수업 진행 방식</a></li><li><a href="#glossary">4. 핵심 용어집</a></li><li><a href="#review">5. 복습 문제</a></li><li><a href="#appendix">부록. 실무 적용 포인트 (NLP·LLM 기술 내용 한정)</a></li></ul></nav>
+  <main class="content"><article class="doc"><h1>CME295 Transformers &amp; LLMs — Lecture 1 한국어 교재</h1><p class="subtitle">섹션 1. 강의 도입 (강사 소개·수업 운영)</p><div class="source-banner"><span>📄</span><span><b>원문 출처</b>: Stanford CME295, Autumn 2025, Lecture 1, 타임스탬프 <span class="ts">00:05</span>~<span class="ts">10:42</span></span></div><section id="overview"><h2>1. 강의 개요</h2><ul><li>트랜스포머(Transformer)와 대규모 언어모델(LLM)을 다루는 스탠퍼드 CME295 강의의 첫 시간으로, 강사 소개와 수업 운영 안내가 중심이다.</li><li>이 수업의 목표는 ① LLM을 작동시키는 기반 구조(트랜스포머)를 이해하고, ② 이 모델들이 어떻게 학습되고 어디에 쓰이는지 아는 것이다.</li><li>도입부에서는 수강 전제, 일정, 평가 방식, 교재·자료, 공지 채널 등 실무적인 운영 사항을 정리한다.</li></ul></section><section id="goals"><h2>2. 학습 목표</h2><ol><li>이 강의가 다루는 두 축(트랜스포머 구조 이해 / LLM 학습·활용)을 구분해 설명할 수 있다.</li><li>수강에 필요한 최소 전제(머신러닝 기초, 선형대수 기초)가 무엇인지 안다.</li><li>수업 운영 체계(일정·평가·교재·공지)를 파악해, 본인 학습 계획을 세울 수 있다.</li></ol></section><section id="body"><h2>3. 본문</h2><div id="block1"><h3><span class="badge">블록 1</span>강사 소개</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">00:05</span> Cool. Hello everyone and welcome to CME 295 Transformers and large language models. So, my name is Afshin and I will be teaching this class with Shirvin who's in the back. (...) we're twin brothers and we actually had kind of a similar career backgrounds. So, we both went to a school in France called Telecom Paris. (...) on my end I went to MIT and then Shirvin went to Stanford to do the ICME master's program. (...) I first went to Uber and then Shirvin came to Uber as well and then Shirvin left to Google and I went to Google and then very recently I joined Netflix and Shirvin joined Netflix as well and we've been working on large language models.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>안녕하세요, CME295 '트랜스포머와 대규모 언어모델' 강의에 오신 것을 환영합니다. 제 이름은 Afshin이고, 뒤쪽에 있는 Shirvin과 함께 이 수업을 진행합니다. 저희는 쌍둥이 형제이고 경력 배경도 비슷합니다. 둘 다 프랑스의 Telecom Paris를 나왔고, 이후 저는 MIT로, Shirvin은 스탠퍼드 ICME 석사 과정으로 갔습니다. 산업계 경력도 비슷합니다. 저는 우버(Uber)에 먼저 갔고 Shirvin도 우버에 합류했으며, 이후 Shirvin이 구글로, 저도 구글로 옮겼고, 최근에는 둘 다 넷플릭스(Netflix)에 합류해 대규모 언어모델 업무를 해왔습니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>대규모 언어모델<span class="en-term">(LLM, Large Language Model)</span></dt><dd>방대한 텍스트로 학습해 사람 언어를 생성·이해하는 모델. ChatGPT, Gemini 등이 여기 속한다. 이 강의 전체의 핵심 주제다.</dd></dl></div>
+</div>
+<div id="block2"><h3><span class="badge">블록 2</span>수업을 여는 이유와 기대</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">01:06</span> since 2020, Shirvin and I have been specializing in NLP and we've been giving this class in a format of a workshop that was done in a yearly basis. (...) ChatGPT came in 2022 and suddenly there was a lot of interest for LLMs. (...) it's actually last spring that we started to offer this class as a Stanford course that is now called CME 295 and this is the second instance. (...) LLMs are basically everywhere now and I guess our goal here is two-fold. So, the first one is to learn about the underlying mechanism that makes all this work and we're going to see the transformer which is the foundational architecture that makes all this work. And then the second thing is to know how these LLMs are trained and where they are applied.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>2020년부터 Shirvin과 저는 NLP를 전문으로 해왔고, 이 내용을 매년 워크숍 형태로 강의해왔습니다. 2022년 ChatGPT가 나오면서 LLM에 대한 관심이 갑자기 커졌습니다. 이 내용을 정식 스탠퍼드 강의(CME295)로 처음 개설한 것은 지난 봄이고, 이번이 두 번째 개설입니다. 이제 LLM은 어디에나 있습니다. 이 수업의 목표는 두 가지입니다. 첫째, 이 모든 것을 작동하게 하는 기반 메커니즘, 즉 핵심 구조인 트랜스포머를 배우는 것. 둘째, 이 LLM들이 어떻게 학습되고 어디에 활용되는지를 아는 것입니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>NLP<span class="en-term">(Natural Language Processing, 자연어처리)</span></dt><dd>텍스트를 다루고 계산하는 분야. (다음 섹션에서 본격적으로 다룸)</dd><dt>트랜스포머<span class="en-term">(Transformer)</span></dt><dd>오늘날 LLM의 토대가 되는 기반 구조(아키텍처). 2017년 논문에서 제안됐다.</dd></dl></div>
+</div>
+<div id="block3"><h3><span class="badge">블록 3</span>이 수업이 맞는 사람</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">02:08</span> this class is great for people who just in general have an interest in this field either because you wanted to make it your career goal if you want to be a research scientist or an ML scientist or if you want to develop like a personal project that relies on LLMs to some extent. (...) Or just say if you're in a separate field and you just want to know how this whole AI GenAI LLMs thing works and how you can apply it to your domain.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>이 수업은 이 분야에 관심 있는 사람에게 적합합니다. 연구과학자나 ML 과학자를 직업 목표로 삼는 경우, LLM을 어느 정도 활용하는 개인 프로젝트를 만들고 싶은 경우, 또는 전혀 다른 분야에 있으면서 AI·생성형 AI(GenAI)·LLM이 대체 어떻게 작동하는지, 자기 분야에 어떻게 적용할 수 있는지 알고 싶은 경우 모두 해당합니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>ML<span class="en-term">(Machine Learning, 머신러닝)</span></dt><dd>데이터로 모델을 학습시키는 분야.</dd><dt>생성형 AI<span class="en-term">(GenAI, Generative AI)</span></dt><dd>텍스트·이미지 등 새로운 결과물을 생성하는 AI를 통칭하는 말.</dd></dl></div>
+</div>
+<div id="block4"><h3><span class="badge">블록 4</span>수강 전제</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">03:14</span> in terms of prerequisites I would say that at a very minimum you should have some foundations in ML like basically know whether how a model is trained what a neural network is and also some basics in linear algebra. So, basically how matrices are multiplied for instance. But even if you have kind of a developing competency in this field, I guess it's fine. We'll still be here to help you out.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>전제조건을 말하자면, 최소한 머신러닝 기초는 있어야 합니다. 모델이 어떻게 학습되는지, 신경망(neural network)이 무엇인지 정도는 알아야 하고, 선형대수 기초 — 예를 들어 행렬이 어떻게 곱해지는지 — 도 필요합니다. 다만 이 분야 역량을 아직 키워가는 중이어도 괜찮습니다. 저희가 도와드리겠습니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>신경망<span class="en-term">(neural network)</span></dt><dd>머신러닝에서 데이터의 패턴을 학습하는 기본 모델 구조.</dd><dt>선형대수<span class="en-term">(linear algebra)</span></dt><dd>행렬·벡터를 다루는 수학 분야. 모델 내부 계산의 토대.</dd></dl></div>
+</div>
+<div id="block5"><h3><span class="badge">블록 5</span>수업 일정·평가</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">03:47</span> this class will be held every Friday from 3:30 to 5:20 (...) this class is two units and you have the choice to either take it as a letter or a credit non-credit. (...) we're basically recording this class and if you cannot for some reason attend (...) we'll make sure (...) to make the recordings available either tonight (...) or on Saturday. (...) what we're doing for this quarter is to have two exams. So, one is the midterm which will be happening during our fifth instance which is October 24th. And then the second exam will be the final exam which will be held (...) in the week of the December 8th. So, date is still TBD.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>이 수업은 매주 금요일 오후 3시 30분부터 5시 20분까지 진행됩니다. 2학점이고, 등급 평가(letter)나 합격/불합격(credit/non-credit) 중에서 선택할 수 있습니다. 수업은 녹화되며, 부득이하게 참석하지 못하더라도 그날 밤이나 토요일에 녹화본을 볼 수 있게 하겠습니다. 이번 학기 평가는 시험 두 번으로 합니다. 하나는 중간고사로 다섯 번째 수업인 10월 24일에, 다른 하나는 기말고사로 12월 8일 주에 치릅니다. 날짜는 아직 미정(TBD)입니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>TBD<span class="en-term">(To Be Determined)</span></dt><dd>추후 결정, 미정.</dd></dl></div>
+</div>
+<div id="block6"><h3><span class="badge">블록 6</span>자료(슬라이드·교재·치트시트)</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">05:09</span> every time we have a lecture we'll be posting the slides and the recordings on the website. (...) we also have the syllabus in there (...) And the class textbook is the super study guide transformer LLMs. (...) we also did some kind of very short condensed version of this whole class that we called the VIP cheat sheet. So, this one is available on GitHub (...) and yeah, we also translated it into a number of languages now. By the way, if your language is not there, let us know.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>매 수업마다 슬라이드와 녹화본을 웹사이트에 올립니다. 강의계획서(syllabus)도 거기 있어서 다룰 주제를 미리 볼 수 있습니다. 교재는 『Super Study Guide: Transformers &amp; LLMs』입니다. 또 전체 수업을 아주 짧게 압축한 'VIP 치트시트(cheat sheet)'를 만들었고, 이것은 GitHub에 공개돼 있으며 여러 언어로 번역해 두었습니다. 혹시 본인 언어가 없으면 알려주세요.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>강의계획서<span class="en-term">(syllabus)</span></dt><dd>강의 주제·일정을 정리한 문서.</dd><dt>치트시트<span class="en-term">(cheat sheet)</span></dt><dd>핵심만 한 장 분량으로 압축한 요약 자료.</dd></dl></div>
+</div>
+<div id="block7"><h3><span class="badge">블록 7</span>공지 채널과 녹화 관련 안내</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">06:24</span> in terms of announcements, we'll be posting things on Canvas. (...) there is also a tab on Canvas that's called Ed. (...) just post your question and then Shirvin and I will be responding. (...) <span class="ts">06:51</span> given that we're recording this class (...) if you're asking a question, it may not be super clear for the viewer what your question was. So, I'm going to make an effort to just repeat your question.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>공지는 Canvas(학습관리시스템)에 올립니다. Canvas에는 'Ed'라는 탭도 있어서, 질문을 올리면 저희가 답합니다. 그리고 이 수업이 녹화되기 때문에, 누군가 질문을 하면 영상으로 보는 사람에게는 질문 내용이 잘 안 들릴 수 있습니다. 그래서 제가 질문을 한 번씩 다시 말해주려고 합니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>Canvas / Ed</dt><dd>대학에서 쓰는 학습관리시스템(LMS)과 그 안의 질의응답 게시판. (고유 서비스명)</dd></dl></div>
+</div>
+<div id="block8"><h3><span class="badge">블록 8</span>질의응답과 수업 진행 방식</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">07:13</span> the question is whether there are like coding parts in the exams. So, the answer is no. So, the exams will purely focus on concepts that we see in class. (...) <span class="ts">08:48</span> 50% is midterm, 50% is final. (...) <span class="ts">09:54</span> every time we're talking about something you will see that at the bottom of the slide there will be source. It's mostly (...) to credit whatever we're quoting but also for you to kind of dig into those material a little more (...) the field is full of abbreviations. (...) hopefully by the end of the class you will have a mental mapping of what these abbreviations mean.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>한 질문은 "시험에 코딩 문제가 있느냐"였는데, 답은 '없다'입니다. 시험은 수업에서 다룬 개념에만 초점을 맞춥니다. 평가 비중은 중간 50%, 기말 50%입니다. 그리고 무언가를 설명할 때마다 슬라이드 하단에 출처(source)가 표시됩니다. 이는 인용한 자료에 대한 출처 표기이자, 관심 있는 사람이 그 자료를 더 깊이 파고들 수 있게 하기 위한 것입니다. 또 이 분야는 약어(abbreviation)가 매우 많습니다. 수업이 끝날 즈음에는 이 약어들이 무엇을 뜻하는지 머릿속에 지도가 그려지길 바랍니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>출처<span class="en-term">(source)</span></dt><dd>인용 자료의 근거 표기. 슬라이드마다 하단에 명시.</dd></dl></div>
+</div></section><section id="glossary"><h2>4. 핵심 용어집</h2><div class="table-wrap"><table><thead><tr><th>영문</th><th>한국어</th><th>발음</th><th>뜻</th></tr></thead><tbody><tr><td>LLM (Large Language Model)</td><td>대규모 언어모델</td><td>엘엘엠</td><td>방대한 텍스트로 학습해 언어를 생성·이해하는 모델</td></tr><tr><td>NLP (Natural Language Processing)</td><td>자연어처리</td><td>엔엘피</td><td>텍스트를 다루고 계산하는 분야</td></tr><tr><td>Transformer</td><td>트랜스포머</td><td>트랜스포머</td><td>오늘날 LLM의 토대가 되는 기반 구조(2017년 제안)</td></tr><tr><td>ML (Machine Learning)</td><td>머신러닝</td><td>머신러닝</td><td>데이터로 모델을 학습시키는 분야</td></tr><tr><td>GenAI (Generative AI)</td><td>생성형 AI</td><td>젠에이아이</td><td>새로운 결과물을 생성하는 AI 통칭</td></tr><tr><td>neural network</td><td>신경망</td><td>뉴럴 네트워크</td><td>패턴을 학습하는 기본 모델 구조</td></tr><tr><td>linear algebra</td><td>선형대수</td><td>리니어 알지브라</td><td>행렬·벡터를 다루는 수학 분야</td></tr><tr><td>syllabus</td><td>강의계획서</td><td>실러버스</td><td>강의 주제·일정 문서</td></tr><tr><td>cheat sheet</td><td>치트시트</td><td>치트 시트</td><td>핵심만 압축한 한 장 요약</td></tr><tr><td>TBD (To Be Determined)</td><td>미정</td><td>티비디</td><td>추후 결정</td></tr></tbody></table></div></section><section id="review"><h2>5. 복습 문제</h2><div class="callout review"><div class="c-title">✏️ 스스로 점검</div><ol><li>이 강의가 내세운 두 가지 목표는 무엇인가? (힌트: 하나는 구조, 하나는 학습·활용)</li><li>강사가 말한 '최소 수강 전제' 두 가지는 무엇인가?</li><li>LLM·NLP·트랜스포머·생성형 AI(GenAI) 네 용어의 관계를 한 문장으로 정리해보라.</li></ol></div></section><section id="appendix"><h2>부록. 실무 적용 포인트 <span style="font-size:14px;font-weight:500;color:var(--muted);">(NLP·LLM 기술 내용 한정)</span></h2><div class="callout practice"><div class="c-title">💡 현장에서 써먹기</div><ul><li><strong>LLM·생성형 AI는 특정 분야 도구가 아니라 범용 도구다.</strong> 강사는 "LLM은 이제 어디에나 있고, 다른 분야 사람도 자기 영역에 적용할 수 있다"고 했다. 기술을 직접 개발하지 않아도 작동 원리를 알면, 도시재생·생활인구·공모사업 기획 같은 행정 업무에 어디를 자동화·보조할지 판단할 수 있다.</li><li><strong>NLP가 다루는 것은 결국 '텍스트 처리'다.</strong> 자연어처리(NLP)는 텍스트를 분류·추출·생성하는 분야다. 행정 업무 상당수가 텍스트 작업(민원 분류, 보고서 요약, 공문 작성)이라는 점에서, NLP가 어떤 텍스트 과제를 풀 수 있는지 알면 적용 지점을 찾기 쉽다. 구체적인 과제 유형(분류/다중분류/생성)은 다음 섹션에서 다룬다.</li></ul></div><div class="next"><strong><strong>다음 섹션 예고</strong>·&lt;/strong&gt; · NLP의 정의와 세 가지 과제 유형(분류 / 다중분류 / 생성), 평가지표 — <span class="ts">10:42</span> 이후 본론 시작.</div></section></article></main>
+</div>
+
+<!-- KaTeX 자동 렌더 -->
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}],throwOnError:false});"></script>
+
+<!-- Mermaid -->
+<script type="module">
+  try{
+    const m = await import('https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs');
+    m.default.initialize({startOnLoad:true, theme:'base', themeVariables:{
+      fontFamily:'Pretendard, sans-serif', primaryColor:'#fffdfb', primaryBorderColor:'#d8d0c5',
+      primaryTextColor:'#1a1a1a', lineColor:'#b9554f', fontSize:'14px'
+    }});
+  }catch(e){ /* 오프라인이면 도식은 코드로 표시 */ }
+</script>
+
+<!-- 목차 활성표시 + 모바일 드로어 -->
+<script>
+  // 모바일 드로어
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('overlay');
+  const btn = document.getElementById('menuBtn');
+  const toggle = (on)=>{ sb.classList.toggle('open',on); ov.classList.toggle('show',on); };
+  btn.addEventListener('click',()=>toggle(!sb.classList.contains('open')));
+  ov.addEventListener('click',()=>toggle(false));
+  document.querySelectorAll('.toc a').forEach(a=>a.addEventListener('click',()=>{ if(window.innerWidth<=900) toggle(false); }));
+
+  // 현재 위치 강조
+  const links = [...document.querySelectorAll('.toc a')];
+  const map = {}; links.forEach(a=>{ const id=a.getAttribute('href').slice(1); map[id]=a; });
+  const targets = Object.keys(map).map(id=>document.getElementById(id)).filter(Boolean);
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(en=>{
+      if(en.isIntersecting){
+        links.forEach(l=>l.classList.remove('active'));
+        const a = map[en.target.id]; if(a) a.classList.add('active');
+      }
+    });
+  },{rootMargin:'-15% 0px -75% 0px', threshold:0});
+  targets.forEach(t=>io.observe(t));
+</script>
+
+</body>
+</html>

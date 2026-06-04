@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CME295 Lecture 4 · 섹션 6. 평가·정렬과 효율적 파인튜닝 (LoRA·QLoRA)</title>
+
+<!-- 폰트: Pretendard (CDN, 없으면 시스템 폰트 폴백) -->
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<!-- 수식: KaTeX -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
+
+<style>
+  :root{
+    --bg:#FBF9F6;
+    --paper:#ffffff;
+    --ink:#1a1a1a;
+    --ink-soft:#4a4744;
+    --muted:#7a756f;
+    --accent:#8C1515;          /* Stanford 카디널 */
+    --accent-soft:#b9554f;
+    --tint:#f6ebe9;            /* 카디널 옅은 틴트 */
+    --tint-2:#f3efe9;          /* 따뜻한 회색 */
+    --line:#e7e1d9;
+    --line-strong:#d8d0c5;
+    --radius:10px;
+    --maxw:760px;
+    --sidew:268px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Pretendard","Pretendard Variable",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    line-height:1.78;
+    font-size:16.5px;
+    -webkit-font-smoothing:antialiased;
+    word-break:keep-all;
+  }
+
+  /* ===== 레이아웃 ===== */
+  .layout{display:flex; align-items:flex-start;}
+  .sidebar{
+    width:var(--sidew); flex:0 0 var(--sidew);
+    position:sticky; top:0; height:100vh; overflow-y:auto;
+    padding:28px 18px 40px; border-right:1px solid var(--line);
+    background:rgba(251,249,246,.85); backdrop-filter:saturate(120%) blur(2px);
+  }
+  .content{flex:1 1 auto; min-width:0; display:flex; justify-content:center; padding:0 24px;}
+  .doc{width:100%; max-width:var(--maxw); padding:48px 0 120px;}
+
+  /* ===== 사이드바 목차 ===== */
+  .toc-brand{font-size:12px; letter-spacing:.04em; color:var(--accent); font-weight:700; text-transform:uppercase; margin-bottom:4px;}
+  .toc-title{font-size:15px; font-weight:700; margin:0 0 18px; line-height:1.4; color:var(--ink);}
+  .toc{list-style:none; margin:0; padding:0; font-size:13.5px;}
+  .toc li{margin:1px 0;}
+  .toc a{display:block; padding:5px 10px; border-radius:7px; color:var(--ink-soft); text-decoration:none; border-left:2px solid transparent;}
+  .toc a:hover{background:var(--tint-2); color:var(--ink);}
+  .toc a.sub{padding-left:22px; font-size:13px; color:var(--muted);}
+  .toc a.active{color:var(--accent); background:var(--tint); border-left-color:var(--accent); font-weight:600;}
+
+  /* ===== 타이포 ===== */
+  h1{font-size:27px; line-height:1.32; font-weight:800; letter-spacing:-.01em; margin:0 0 6px;}
+  .subtitle{font-size:18px; font-weight:700; color:var(--accent); margin:0 0 22px;}
+  h2{font-size:21px; font-weight:800; letter-spacing:-.01em; margin:46px 0 14px; padding-bottom:9px; border-bottom:2px solid var(--line-strong);}
+  h3{font-size:17.5px; font-weight:700; margin:34px 0 12px; color:var(--ink);}
+  h3 .badge{display:inline-block; font-size:12px; font-weight:700; color:#fff; background:var(--accent); border-radius:6px; padding:2px 8px; margin-right:8px; vertical-align:middle;}
+  p{margin:12px 0;}
+  strong{font-weight:700;}
+  a{color:var(--accent);}
+  ul,ol{margin:12px 0; padding-left:22px;}
+  li{margin:6px 0;}
+  hr{display:none;}
+
+  /* ===== 출처 배너 ===== */
+  .source-banner{
+    display:flex; gap:10px; align-items:baseline;
+    background:var(--tint); border-left:4px solid var(--accent);
+    border-radius:0 var(--radius) var(--radius) 0;
+    padding:12px 16px; margin:0 0 8px; font-size:13.5px; color:var(--ink-soft);
+  }
+  .source-banner b{color:var(--accent);}
+
+  /* ===== 한국어 번역 카드 ===== */
+  .ko{
+    background:var(--paper); border:1px solid var(--line);
+    border-left:4px solid var(--accent); border-radius:var(--radius);
+    padding:6px 22px; margin:16px 0;
+    box-shadow:0 1px 2px rgba(60,40,20,.04);
+  }
+  .ko > .label, .terms > .label{
+    display:inline-block; font-size:11.5px; font-weight:800; letter-spacing:.06em;
+    color:var(--accent); text-transform:uppercase; margin:14px 0 -4px;
+  }
+
+  /* ===== 영문 원문 토글 ===== */
+  details.en{
+    background:var(--tint-2); border:1px solid var(--line); border-radius:var(--radius);
+    margin:14px 0; overflow:hidden;
+  }
+  details.en > summary{
+    cursor:pointer; list-style:none; padding:11px 16px;
+    font-size:13.5px; font-weight:700; color:var(--muted);
+    display:flex; align-items:center; gap:8px; user-select:none;
+  }
+  details.en > summary::-webkit-details-marker{display:none;}
+  details.en > summary .chev{transition:transform .2s; color:var(--accent-soft);}
+  details.en[open] > summary .chev{transform:rotate(90deg);}
+  details.en[open] > summary{border-bottom:1px solid var(--line);}
+  .en-body{padding:4px 18px 14px; font-size:14px; line-height:1.7; color:#5c574f; font-style:normal;}
+  .en-body p{margin:10px 0;}
+  .ts{
+    display:inline-block; font-family:"SFMono-Regular",ui-monospace,Menlo,Consolas,monospace;
+    font-size:11.5px; font-style:normal; color:var(--accent);
+    background:var(--tint); border:1px solid #e6cfcc; border-radius:5px;
+    padding:0 5px; margin:0 2px; vertical-align:baseline;
+  }
+
+  /* ===== 용어 설명 ===== */
+  .terms{
+    border:1px solid var(--line); border-left:3px solid var(--accent-soft);
+    border-radius:var(--radius); background:#fffdfb; padding:4px 20px 8px; margin:16px 0;
+  }
+  .terms dl{margin:8px 0;}
+  .terms dt{font-weight:700; color:var(--ink); margin-top:8px;}
+  .terms dt .en-term{color:var(--accent); font-weight:600;}
+  .terms dd{margin:1px 0 6px; color:var(--ink-soft); font-size:15px;}
+
+  /* ===== 표 ===== */
+  .table-wrap{overflow-x:auto; margin:16px 0; border:1px solid var(--line); border-radius:var(--radius);}
+  table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:520px;}
+  thead th{background:var(--accent); color:#fff; font-weight:700; text-align:left; padding:11px 14px; white-space:nowrap;}
+  tbody td{padding:9px 14px; border-top:1px solid var(--line);}
+  tbody tr:nth-child(even){background:var(--tint-2);}
+  tbody td:first-child{font-family:ui-monospace,Menlo,monospace; font-size:13px; color:var(--accent);}
+
+  /* ===== 콜아웃 ===== */
+  .callout{border-radius:var(--radius); padding:14px 20px 6px; margin:18px 0;}
+  .callout .c-title{font-weight:800; margin:6px 0 2px; display:flex; align-items:center; gap:8px;}
+  .callout.review{background:#fff; border:1px solid var(--line-strong);}
+  .callout.review ol{counter-reset:none;}
+  .callout.note{background:var(--tint-2); border-left:4px solid var(--muted); border-radius:0 var(--radius) var(--radius) 0; padding-bottom:12px;}
+  .callout.practice{background:var(--tint); border:1px solid #e6cfcc; padding-bottom:14px;}
+  .callout.practice li{margin:12px 0;}
+  .next{margin-top:40px; padding:14px 18px; background:var(--tint-2); border-radius:var(--radius); font-size:14px; color:var(--ink-soft);}
+
+  /* 수식 / 도식 */
+  .katex-display{margin:14px 0; overflow-x:auto; overflow-y:hidden; padding:6px 0;}
+  .diagram{background:#fffdfb; border:1px solid var(--line); border-radius:var(--radius); padding:14px; margin:16px 0; text-align:center;}
+  .diagram .cap{font-size:12.5px; color:var(--muted); margin-top:6px;}
+  .mermaid{display:flex; justify-content:center;}
+
+  /* ===== 모바일 ===== */
+  .menu-btn{display:none;}
+  .overlay{display:none;}
+  @media (max-width:900px){
+    .menu-btn{
+      display:flex; align-items:center; justify-content:center;
+      position:fixed; top:14px; left:14px; z-index:50;
+      width:42px; height:42px; border-radius:10px; border:1px solid var(--line-strong);
+      background:var(--paper); color:var(--accent); font-size:20px; cursor:pointer;
+      box-shadow:0 2px 8px rgba(60,40,20,.12);
+    }
+    .sidebar{
+      position:fixed; left:0; top:0; z-index:60; height:100vh;
+      transform:translateX(-105%); transition:transform .25s ease;
+      box-shadow:4px 0 24px rgba(0,0,0,.12); background:var(--bg);
+    }
+    .sidebar.open{transform:translateX(0);}
+    .overlay.show{display:block; position:fixed; inset:0; background:rgba(0,0,0,.32); z-index:55;}
+    .content{padding:0 16px;}
+    .doc{padding:64px 0 100px;}
+    body{font-size:16px;}
+    h1{font-size:23px;}
+    .ko,.terms{padding-left:16px; padding-right:16px;}
+  }
+
+  /* ===== 인쇄 ===== */
+  @media print{
+    .sidebar,.menu-btn,.overlay{display:none !important;}
+    .content{padding:0;}
+    body{background:#fff; font-size:11pt;}
+    details.en{display:none;}          /* 인쇄본은 한국어 위주 */
+    .ko,.terms,.callout,.table-wrap{break-inside:avoid; box-shadow:none;}
+    a{color:var(--ink);}
+  }
+  .home-btn{position:fixed; top:16px; right:18px; z-index:70;
+    display:inline-flex; align-items:center; gap:6px; text-decoration:none;
+    background:var(--paper); color:var(--accent); border:1px solid var(--line-strong);
+    border-radius:999px; padding:8px 14px; font-size:13.5px; font-weight:700;
+    box-shadow:0 2px 8px rgba(60,40,20,.12); transition:background .12s,color .12s;}
+  .home-btn:hover{background:var(--accent); color:#fff; border-color:var(--accent);}
+  @media (max-width:900px){ .home-btn{top:14px; right:14px; padding:8px 12px; font-size:12.5px;} }
+  @media print{ .home-btn{display:none !important;} }
+</style>
+</head>
+<body>
+<a class="home-btn" href="../index.html" title="전체 목차로 돌아가기">← 전체 목차</a>
+
+<button class="menu-btn" id="menuBtn" aria-label="목차 열기">☰</button>
+<div class="overlay" id="overlay"></div>
+
+<div class="layout">
+  <nav class="sidebar" id="sidebar"><div class="toc-brand">Stanford CME295 · Lecture 4</div><p class="toc-title">섹션 6. 평가·정렬과 효율적 파인튜닝 (LoRA·QLoRA)</p><ul class="toc"><li><a href="#overview">1. 강의 개요</a></li><li><a href="#goals">2. 학습 목표</a></li><li><a href="#body">3. 본문</a></li><li><a class="sub" href="#block1">블록 1 · 평가 ① 벤치마크와 그 함정</a></li><li><a class="sub" href="#block2">블록 2 · 평가 ② Chatbot Arena와 그 한계</a></li><li><a class="sub" href="#block3">블록 3 · 정렬(alignment)과 mid-training</a></li><li><a class="sub" href="#block4">블록 4 · LoRA: 효율적 파인튜닝</a></li><li><a class="sub" href="#block5">블록 5 · QLoRA: 양자화 + LoRA</a></li><li><a href="#glossary">4. 핵심 용어집</a></li><li><a href="#review">5. 복습 문제</a></li><li><a href="#appendix">부록. 실무 적용 포인트 (NLP·LLM 기술 내용 한정)</a></li></ul></nav>
+  <main class="content"><article class="doc"><h1>CME295 Transformers &amp; LLMs — Lecture 4 한국어 교재</h1><p class="subtitle">섹션 6. 평가·정렬과 효율적 파인튜닝 (LoRA·QLoRA)</p><div class="source-banner"><span>📄</span><span><b>원문 출처</b>: Stanford CME295, Autumn 2025, Lecture 4, 타임스탬프 <span class="ts">1:25:24</span>~(1:47:01, 끝)</span></div><section id="overview"><h2>1. 강의 개요</h2><ul><li>LLM을 어떻게 평가하나 — 벤치마크(MMLU 등)와 그 함정('테스트 과제 학습'), Chatbot Arena와 그 한계를 다룬다.</li><li>정렬(alignment)의 큰 그림(파인튜닝 + 선호 튜닝)과 최근 등장한 mid-training을 짚는다.</li><li>파인튜닝 비용을 줄이는 LoRA와, 양자화를 결합한 QLoRA를 설명한다.</li></ul></section><section id="goals"><h2>2. 학습 목표</h2><ol><li>벤치마크 평가의 함정('테스트 과제 학습')과 Chatbot Arena의 한계를 설명할 수 있다.</li><li>정렬(alignment) = 파인튜닝 + 선호 튜닝이며, mid-training이 어디에 위치하는지 안다.</li><li>LoRA가 가중치를 저랭크로 분해해 학습량을 줄이는 원리와, QLoRA의 추가 절약을 이해한다.</li></ol></section><section id="body"><h2>3. 본문</h2><div id="block1"><h3><span class="badge">블록 1</span>평가 ① 벤치마크와 그 함정</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">1:26:26</span> the evaluation part (...) some dimensions that are evaluated against (...) MMLU (...) massive multitask language understanding (...) reasoning (...) math reasoning (...) code generation. (...) <span class="ts">1:28:32</span> a paper (...) explores the phenomenon of training on the test task not the test set (...) it matters a lot if the model has been trained on data that relates to that kind of reasoning. (...) <span class="ts">1:29:33</span> if you want to compare models (...) you need to compare the training mixture (...) and ensure parity in terms of training on a test task.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>SFT의 도전과제 중 평가를 봅니다. 사람들은 중시하는 것을 차원별로 나눠 정량 점수를 냅니다. 예: 일반 언어 이해는 MMLU(Massive Multitask Language Understanding, 약 50여 과제), 그 외 추론·수학 추론·코드 생성 벤치마크가 있습니다(약자가 매우 많고 계속 늘어남).</p>
+<p>흥미로운 함정: 같은 종류 모델인데 어떤 벤치마크 점수가 뚜렷한 이유 없이 갑자기 치솟기도 합니다. 한 논문은 '테스트 세트(test set)가 아니라 테스트 과제(test task)에 학습하는' 현상을 다룹니다 — 수학 추론 벤치마크라면, 모델이 그런 추론과 관련된 데이터로 학습됐는지가 점수를 크게 좌우합니다. 그래서 모델을 비교하려면, 학습 데이터 혼합을 비교하고 '테스트 과제 학습' 여부의 동등성(parity)을 맞춰야 합니다. 한쪽만 테스트 과제를 학습했다면 공정한 비교가 아닙니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>벤치마크<span class="en-term">(benchmark)</span></dt><dd>모델 성능을 정량 평가하는 표준 시험.</dd><dt>MMLU</dt><dd>약 50여 과제의 일반 언어 이해 벤치마크. 자주 인용됨.</dd><dt>테스트 과제 학습<span class="en-term">(training on the test task)</span></dt><dd>평가하려는 과제와 닮은 데이터로 학습해 점수가 오르는 현상.</dd><dt>동등성<span class="en-term">(parity)</span></dt><dd>비교 조건을 같게 맞춤.</dd></dl></div>
+</div>
+<div id="block2"><h3><span class="badge">블록 2</span>평가 ② Chatbot Arena와 그 한계</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">1:31:10</span> JetBot (Chatbot) Arena (...) a website where models can be submitted and users (...) ask their questions and they're presented responses from two models and (...) judge which one is better (...) some ranking (...) user preference. (...) <span class="ts">1:32:13</span> it suffers from several issues (...) easily possible to rig such a leaderboard (...) if you ask GPT who are you it's going to say (...) I'm Chad GPT (...) detect what model was being evaluated. (...) <span class="ts">1:34:16</span> user preference (...) emojis (...) <span class="ts">1:35:17</span> safety side (...) a bias towards responses that actually responds to your query.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>벤치마크는 '테스트 과제 학습' 탓에 점수가 좋아도 사용자가 체감하는 가치와 다를 수 있습니다. 그래서 다른 평가법이 나왔는데, Chatbot Arena(챗봇 아레나)입니다. 모델을 올리면, 사용자가 질문하고 두 모델의 답을 보고 어느 쪽이 나은지 고릅니다. 쌍대 비교(pairwise)로 '사용자 선호' 순위를 매깁니다 — 일종의 '체감(vibes)'에 매긴 점수입니다.</p>
+<p>완벽할까요? 아닙니다. 여러 문제가 있습니다.</p>
+<ul><li><strong>초기 노이즈</strong>: 새 모델은 처음 어떤 모델과 비교되느냐에 따라 순위가 크게 흔들립니다(취약).</li><li><strong>조작 가능성(rig)</strong>: 모델에게 "너 누구냐" 물으면 자기 정체를 말합니다(GPT는 "나는 ChatGPT"). 한 논문은 이 단순 성질로 어떤 모델이 평가되는지 탐지해, 적대적 참가자가 순위를 조작할 수 있음을 보였습니다.</li><li><strong>사용자 선호 편향</strong>: 예컨대 이모지 선호는 사람마다 갈립니다. 평가하는 사람들의 분포가 실제 사용자 분포와 다를 수 있습니다(전문가는 이모지를 덜 선호하는 등).</li><li><strong>사실성 구분 불가</strong>: 사용자는 답이 사실인지 모를 수 있습니다(곰인형을 찬물 기계세탁하라는 답이 실행 가능해 보여 도움 된다 느끼지만 사실은 틀릴 수 있음).</li><li><strong>안전 편향</strong>: 거부당하는 걸 싫어해, 실제로 답해주는 응답을 선호하는 편향이 생깁니다(안전 원칙과 충돌).</li></ul>
+<p>결론: 평가는 어려운 문제이고, 하나의 숫자가 아니라 여러 각도의 조합으로, 자기 용도에 맞춰 강·약점을 봐야 합니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>Chatbot Arena<span class="en-term">(챗봇 아레나)</span></dt><dd>두 모델 답을 사용자가 비교 투표해 선호 순위를 매기는 평가 플랫폼.</dd><dt>쌍대 비교<span class="en-term">(pairwise)</span></dt><dd>둘씩 맞붙여 비교.</dd><dt>조작<span class="en-term">(rig)</span></dt><dd>순위를 부정하게 흔드는 것.</dd><dt>사용자 선호 편향</dt><dd>평가자 취향·분포가 결과를 왜곡하는 것.</dd></dl></div>
+</div>
+<div id="block3"><h3><span class="badge">블록 3</span>정렬(alignment)과 mid-training</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">1:36:24</span> a further step into aligning the model (...) called preference tuning. And then the combination of fine-tuning and preference tuning (...) is what we call alignment. (...) <span class="ts">1:36:55</span> one step (...) called mid training that has been emerging very recently which consists in a step just after pre-training in aligning the kind of data (...) to the tasks that you really care about (...) same pre-training objective but aligning the kind of task.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>정렬(alignment)의 큰 그림입니다. 다음 강의에서 모델을 원하는 방향으로 더 맞추는 선호 튜닝(preference tuning) 단계를 봅니다. 사전학습 뒤에 오는 파인튜닝 + 선호 튜닝의 결합을 정렬(alignment)이라 부릅니다.</p>
+<p>또 최근 떠오른 단계로 mid-training(중간 학습)이 있습니다. 사전학습 직후에, 사전학습과 같은 목표(다음 토큰 예측)를 쓰되, 학습 데이터의 종류를 정말 중요한 과제에 맞추는 단계입니다. 즉 위치는 사전학습과 파인튜닝 사이입니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>정렬<span class="en-term">(alignment)</span></dt><dd>사전학습 뒤 파인튜닝 + 선호 튜닝으로 모델을 원하는 방향에 맞추는 것.</dd><dt>선호 튜닝<span class="en-term">(preference tuning)</span></dt><dd>사람 선호에 맞추는 추가 단계(다음 강의 주제).</dd><dt>mid-training<span class="en-term">(중간 학습)</span></dt><dd>사전학습 직후, 같은 목표로 데이터 종류를 목표 과제에 맞추는 신생 단계.</dd></dl></div>
+</div>
+<div id="block4"><h3><span class="badge">블록 4</span>LoRA: 효율적 파인튜닝</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">1:37:59</span> LoRa (...) a technique to fine-tune your weights (...) in an efficient manner (...) <span class="ts">1:38:31</span> the (LoRA) technique decomposes the fine-tuning between the weights of the pre-trained model (frozen) and additional weights that it decomposes into a low rank multiplication (...) W0 is frozen (...) B and A are the matrices (...) to tune (...) the dimension of (...) R which is the rank (...) typically taken very small. (...) <span class="ts">1:39:36</span> much less weights to train. (...) <span class="ts">1:44:25</span> (rank R is) a design choice (...) (a) four is used commonly.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>파인튜닝의 도전과제 중 '연산 비용'을 줄이는 대표 기법이 LoRA(Low-Rank Adaptation, 저랭크 적응)입니다. 널리 쓰이며 연산을 크게 아낍니다.</p>
+<p>원리: 가중치 행렬 전체를 직접 파인튜닝하지 않고, 파인튜닝을 '사전학습 가중치 + 저랭크 곱'으로 분해합니다. 수식으로 W = W₀ + B·A 형태인데,</p>
+<ul><li><strong>W₀</strong>(사전학습 가중치)는 동결(frozen).</li><li><strong>B, A</strong>가 튜닝할 행렬. B는 (행 수 × R), A는 (R × 열 수)로, 가운데 차원 R이 이 행렬들의 랭크(rank)이며 매우 작게 잡습니다.</li></ul>
+<p>W의 차원은 보통 수백~수천인데 R은 보통 10 이하 정도입니다. 그래서 학습할 가중치가 훨씬 적어집니다. R은 설계 선택이며 흔히 4 같은 값을 씁니다. 보통 어텐션·FFN 모두에 LoRA를 붙이지만, 최근 연구는 성능 향상의 대부분이 FFN 블록에 LoRA를 둘 때 나온다고 봅니다.</p></div>
+<div class="callout note"><div class="c-title">⚠️ 참고</div><p>한 과제용 A·B는 그 과제에 특화됩니다. 같은 기본 모델 위에 스팸 탐지용 A·B, 감성 추출용 A·B를 따로 둘 수 있습니다. (경험칙: LoRA는 학습률을 ~10배 높게, 배치 크기는 너무 크지 않게 쓰는 경향)</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>LoRA<span class="en-term">(Low-Rank Adaptation, 저랭크 적응)</span></dt><dd>가중치를 'W₀(동결) + B·A(저랭크)'로 분해해 적은 파라미터만 학습하는 효율적 파인튜닝.</dd><dt>동결<span class="en-term">(frozen)</span></dt><dd>사전학습 가중치 W₀를 고정하고 학습하지 않음.</dd><dt>랭크<span class="en-term">(rank, R)</span></dt><dd>B·A의 작은 가운데 차원. 작을수록 학습 파라미터↓.</dd></dl></div>
+</div>
+<div id="block5"><h3><span class="badge">블록 5</span>QLoRA: 양자화 + LoRA</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">1:44:59</span> quantized (LoRA) (...) <span class="ts">1:45:32</span> quantize the weights of w0 into a (...) smart (format) and then (...) iterate on these matrices (...) a and b in full precision (...) bf16. (...) <span class="ts">1:45:58</span> a format called NF4 which assumes that the weights are distributed normally and it splits the space into quantiles rather than buckets of fixed size (...) <span class="ts">1:46:30</span> double quant(ization) (...) quantizes the weights and then (...) quantizes the quantization constants (...) <span class="ts">1:47:01</span> 16x VRAM savings.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>QLoRA(Quantized LoRA, 양자화 LoRA)는 LoRA에 양자화를 결합합니다. 동결된 가중치 W₀를 영리한 형식으로 양자화하고, 학습할 행렬 A·B는 고정밀도(BF16)로 다룹니다.</p>
+<p>영리한 점:</p>
+<ul><li><strong>NF4 형식</strong>: 가중치가 정규분포를 따른다고 가정하고, 고정 크기 구간이 아니라 분위수(quantile)로 공간을 나눠 각 구간에 비슷한 개수의 값이 들어가게 합니다. 인코딩 비트를 최적으로 씁니다.</li><li><strong>이중 양자화(double quantization)</strong>: 가중치를 양자화한 뒤, 그 양자화에 쓰인 상수(constant)까지 한 번 더 양자화합니다.</li></ul>
+<p>이 방법으로 VRAM(GPU 메모리)을 약 16배 절약했고, 이중 양자화로 약간 더 아꼈습니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>QLoRA<span class="en-term">(Quantized LoRA)</span></dt><dd>동결 가중치를 양자화하고 LoRA 행렬은 고정밀도로 학습하는 기법.</dd><dt>NF4</dt><dd>가중치 정규분포를 가정해 분위수로 나누는 4비트 양자화 형식.</dd><dt>이중 양자화<span class="en-term">(double quantization)</span></dt><dd>양자화 상수까지 한 번 더 양자화해 추가 절약.</dd><dt>VRAM</dt><dd>GPU 메모리.</dd></dl></div>
+</div></section><section id="glossary"><h2>4. 핵심 용어집</h2><div class="table-wrap"><table><thead><tr><th>영문</th><th>한국어</th><th>발음</th><th>뜻</th></tr></thead><tbody><tr><td>benchmark</td><td>벤치마크</td><td>—</td><td>표준 성능 시험</td></tr><tr><td>MMLU</td><td>엠엠엘유</td><td>—</td><td>일반 언어 이해 벤치마크</td></tr><tr><td>training on the test task</td><td>테스트 과제 학습</td><td>—</td><td>평가 과제 닮은 데이터로 점수↑</td></tr><tr><td>Chatbot Arena</td><td>챗봇 아레나</td><td>—</td><td>사용자 선호 비교 평가</td></tr><tr><td>alignment</td><td>정렬</td><td>얼라인먼트</td><td>파인튜닝+선호 튜닝</td></tr><tr><td>preference tuning</td><td>선호 튜닝</td><td>—</td><td>사람 선호에 맞춤(다음 강의)</td></tr><tr><td>mid-training</td><td>중간 학습</td><td>—</td><td>사전학습 직후 데이터 정렬 단계</td></tr><tr><td>LoRA</td><td>로라</td><td>로라</td><td>저랭크 분해로 효율 파인튜닝</td></tr><tr><td>frozen</td><td>동결</td><td>프로즌</td><td>가중치 고정</td></tr><tr><td>rank (R)</td><td>랭크</td><td>랭크</td><td>LoRA의 작은 가운데 차원</td></tr><tr><td>QLoRA</td><td>큐로라</td><td>큐로라</td><td>양자화+LoRA</td></tr><tr><td>NF4 / double quantization</td><td>NF4 / 이중 양자화</td><td>—</td><td>분위수 4비트 / 상수까지 양자화</td></tr></tbody></table></div></section><section id="review"><h2>5. 복습 문제</h2><div class="callout review"><div class="c-title">✏️ 스스로 점검</div><ol><li>벤치마크 점수가 사용자 체감과 다를 수 있는 이유('테스트 과제 학습')는? Chatbot Arena의 한계 두 가지를 들어라.</li><li>정렬(alignment)은 어떤 단계들의 결합인가? mid-training은 어디에 위치하는가?</li><li>LoRA가 학습 파라미터를 줄이는 원리(W₀ + B·A, 랭크 R)를 설명하라. QLoRA가 추가로 절약하는 방법은?</li></ol></div></section><section id="appendix"><h2>부록. 실무 적용 포인트 <span style="font-size:14px;font-weight:500;color:var(--muted);">(NLP·LLM 기술 내용 한정)</span></h2><div class="callout practice"><div class="c-title">💡 현장에서 써먹기</div><ul><li><strong>평가의 함정은 "벤치마크 1등 = 우리 업무에 최선"이 아님을 알려준다.</strong> 점수는 '테스트 과제 학습'으로 부풀 수 있고, Chatbot Arena 순위도 평가자 취향·조작에 취약하다. 모델 도입 시 공개 순위를 맹신하지 말고, 실제 업무 샘플로 직접 시험해 보는 것이 안전하다.</li><li><strong>사실성·안전 편향은 "사용자에게 좋아 보이는 답 ≠ 정확한 답"을 상기시킨다.</strong> Arena식 선호 평가는 실행 가능해 보이지만 틀린 답을 높이 칠 수 있다. 행정 업무처럼 사실성이 중요한 영역에서는 '그럴듯함'이 아니라 '정확함'을 별도로 검증해야 한다.</li><li><strong>LoRA·QLoRA는 "적은 자원으로도 업무 맞춤 모델을 만들 수 있다"는 실질적 길이다.</strong> 전체 가중치를 다시 학습하지 않고 작은 행렬만 학습(LoRA), 거기에 양자화까지(QLoRA) 더하면 메모리·비용이 크게 준다. 기관 단위에서 특정 업무(민원 분류 등)용 맞춤화를 현실적으로 검토할 수 있는 근거 기술이다.</li></ul></div></section></article></main>
+</div>
+
+<!-- KaTeX 자동 렌더 -->
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}],throwOnError:false});"></script>
+
+<!-- Mermaid -->
+<script type="module">
+  try{
+    const m = await import('https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs');
+    m.default.initialize({startOnLoad:true, theme:'base', themeVariables:{
+      fontFamily:'Pretendard, sans-serif', primaryColor:'#fffdfb', primaryBorderColor:'#d8d0c5',
+      primaryTextColor:'#1a1a1a', lineColor:'#b9554f', fontSize:'14px'
+    }});
+  }catch(e){ /* 오프라인이면 도식은 코드로 표시 */ }
+</script>
+
+<!-- 목차 활성표시 + 모바일 드로어 -->
+<script>
+  // 모바일 드로어
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('overlay');
+  const btn = document.getElementById('menuBtn');
+  const toggle = (on)=>{ sb.classList.toggle('open',on); ov.classList.toggle('show',on); };
+  btn.addEventListener('click',()=>toggle(!sb.classList.contains('open')));
+  ov.addEventListener('click',()=>toggle(false));
+  document.querySelectorAll('.toc a').forEach(a=>a.addEventListener('click',()=>{ if(window.innerWidth<=900) toggle(false); }));
+
+  // 현재 위치 강조
+  const links = [...document.querySelectorAll('.toc a')];
+  const map = {}; links.forEach(a=>{ const id=a.getAttribute('href').slice(1); map[id]=a; });
+  const targets = Object.keys(map).map(id=>document.getElementById(id)).filter(Boolean);
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(en=>{
+      if(en.isIntersecting){
+        links.forEach(l=>l.classList.remove('active'));
+        const a = map[en.target.id]; if(a) a.classList.add('active');
+      }
+    });
+  },{rootMargin:'-15% 0px -75% 0px', threshold:0});
+  targets.forEach(t=>io.observe(t));
+</script>
+
+</body>
+</html>

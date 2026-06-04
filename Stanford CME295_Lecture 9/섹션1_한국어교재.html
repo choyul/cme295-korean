@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CME295 Lecture 9 · 섹션 1. 전체 복습 ① — 트랜스포머부터 LLM 디코딩까지</title>
+
+<!-- 폰트: Pretendard (CDN, 없으면 시스템 폰트 폴백) -->
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<!-- 수식: KaTeX -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
+
+<style>
+  :root{
+    --bg:#FBF9F6;
+    --paper:#ffffff;
+    --ink:#1a1a1a;
+    --ink-soft:#4a4744;
+    --muted:#7a756f;
+    --accent:#8C1515;          /* Stanford 카디널 */
+    --accent-soft:#b9554f;
+    --tint:#f6ebe9;            /* 카디널 옅은 틴트 */
+    --tint-2:#f3efe9;          /* 따뜻한 회색 */
+    --line:#e7e1d9;
+    --line-strong:#d8d0c5;
+    --radius:10px;
+    --maxw:760px;
+    --sidew:268px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Pretendard","Pretendard Variable",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    line-height:1.78;
+    font-size:16.5px;
+    -webkit-font-smoothing:antialiased;
+    word-break:keep-all;
+  }
+
+  /* ===== 레이아웃 ===== */
+  .layout{display:flex; align-items:flex-start;}
+  .sidebar{
+    width:var(--sidew); flex:0 0 var(--sidew);
+    position:sticky; top:0; height:100vh; overflow-y:auto;
+    padding:28px 18px 40px; border-right:1px solid var(--line);
+    background:rgba(251,249,246,.85); backdrop-filter:saturate(120%) blur(2px);
+  }
+  .content{flex:1 1 auto; min-width:0; display:flex; justify-content:center; padding:0 24px;}
+  .doc{width:100%; max-width:var(--maxw); padding:48px 0 120px;}
+
+  /* ===== 사이드바 목차 ===== */
+  .toc-brand{font-size:12px; letter-spacing:.04em; color:var(--accent); font-weight:700; text-transform:uppercase; margin-bottom:4px;}
+  .toc-title{font-size:15px; font-weight:700; margin:0 0 18px; line-height:1.4; color:var(--ink);}
+  .toc{list-style:none; margin:0; padding:0; font-size:13.5px;}
+  .toc li{margin:1px 0;}
+  .toc a{display:block; padding:5px 10px; border-radius:7px; color:var(--ink-soft); text-decoration:none; border-left:2px solid transparent;}
+  .toc a:hover{background:var(--tint-2); color:var(--ink);}
+  .toc a.sub{padding-left:22px; font-size:13px; color:var(--muted);}
+  .toc a.active{color:var(--accent); background:var(--tint); border-left-color:var(--accent); font-weight:600;}
+
+  /* ===== 타이포 ===== */
+  h1{font-size:27px; line-height:1.32; font-weight:800; letter-spacing:-.01em; margin:0 0 6px;}
+  .subtitle{font-size:18px; font-weight:700; color:var(--accent); margin:0 0 22px;}
+  h2{font-size:21px; font-weight:800; letter-spacing:-.01em; margin:46px 0 14px; padding-bottom:9px; border-bottom:2px solid var(--line-strong);}
+  h3{font-size:17.5px; font-weight:700; margin:34px 0 12px; color:var(--ink);}
+  h3 .badge{display:inline-block; font-size:12px; font-weight:700; color:#fff; background:var(--accent); border-radius:6px; padding:2px 8px; margin-right:8px; vertical-align:middle;}
+  p{margin:12px 0;}
+  strong{font-weight:700;}
+  a{color:var(--accent);}
+  ul,ol{margin:12px 0; padding-left:22px;}
+  li{margin:6px 0;}
+  hr{display:none;}
+
+  /* ===== 출처 배너 ===== */
+  .source-banner{
+    display:flex; gap:10px; align-items:baseline;
+    background:var(--tint); border-left:4px solid var(--accent);
+    border-radius:0 var(--radius) var(--radius) 0;
+    padding:12px 16px; margin:0 0 8px; font-size:13.5px; color:var(--ink-soft);
+  }
+  .source-banner b{color:var(--accent);}
+
+  /* ===== 한국어 번역 카드 ===== */
+  .ko{
+    background:var(--paper); border:1px solid var(--line);
+    border-left:4px solid var(--accent); border-radius:var(--radius);
+    padding:6px 22px; margin:16px 0;
+    box-shadow:0 1px 2px rgba(60,40,20,.04);
+  }
+  .ko > .label, .terms > .label{
+    display:inline-block; font-size:11.5px; font-weight:800; letter-spacing:.06em;
+    color:var(--accent); text-transform:uppercase; margin:14px 0 -4px;
+  }
+
+  /* ===== 영문 원문 토글 ===== */
+  details.en{
+    background:var(--tint-2); border:1px solid var(--line); border-radius:var(--radius);
+    margin:14px 0; overflow:hidden;
+  }
+  details.en > summary{
+    cursor:pointer; list-style:none; padding:11px 16px;
+    font-size:13.5px; font-weight:700; color:var(--muted);
+    display:flex; align-items:center; gap:8px; user-select:none;
+  }
+  details.en > summary::-webkit-details-marker{display:none;}
+  details.en > summary .chev{transition:transform .2s; color:var(--accent-soft);}
+  details.en[open] > summary .chev{transform:rotate(90deg);}
+  details.en[open] > summary{border-bottom:1px solid var(--line);}
+  .en-body{padding:4px 18px 14px; font-size:14px; line-height:1.7; color:#5c574f; font-style:normal;}
+  .en-body p{margin:10px 0;}
+  .ts{
+    display:inline-block; font-family:"SFMono-Regular",ui-monospace,Menlo,Consolas,monospace;
+    font-size:11.5px; font-style:normal; color:var(--accent);
+    background:var(--tint); border:1px solid #e6cfcc; border-radius:5px;
+    padding:0 5px; margin:0 2px; vertical-align:baseline;
+  }
+
+  /* ===== 용어 설명 ===== */
+  .terms{
+    border:1px solid var(--line); border-left:3px solid var(--accent-soft);
+    border-radius:var(--radius); background:#fffdfb; padding:4px 20px 8px; margin:16px 0;
+  }
+  .terms dl{margin:8px 0;}
+  .terms dt{font-weight:700; color:var(--ink); margin-top:8px;}
+  .terms dt .en-term{color:var(--accent); font-weight:600;}
+  .terms dd{margin:1px 0 6px; color:var(--ink-soft); font-size:15px;}
+
+  /* ===== 표 ===== */
+  .table-wrap{overflow-x:auto; margin:16px 0; border:1px solid var(--line); border-radius:var(--radius);}
+  table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:520px;}
+  thead th{background:var(--accent); color:#fff; font-weight:700; text-align:left; padding:11px 14px; white-space:nowrap;}
+  tbody td{padding:9px 14px; border-top:1px solid var(--line);}
+  tbody tr:nth-child(even){background:var(--tint-2);}
+  tbody td:first-child{font-family:ui-monospace,Menlo,monospace; font-size:13px; color:var(--accent);}
+
+  /* ===== 콜아웃 ===== */
+  .callout{border-radius:var(--radius); padding:14px 20px 6px; margin:18px 0;}
+  .callout .c-title{font-weight:800; margin:6px 0 2px; display:flex; align-items:center; gap:8px;}
+  .callout.review{background:#fff; border:1px solid var(--line-strong);}
+  .callout.review ol{counter-reset:none;}
+  .callout.note{background:var(--tint-2); border-left:4px solid var(--muted); border-radius:0 var(--radius) var(--radius) 0; padding-bottom:12px;}
+  .callout.practice{background:var(--tint); border:1px solid #e6cfcc; padding-bottom:14px;}
+  .callout.practice li{margin:12px 0;}
+  .next{margin-top:40px; padding:14px 18px; background:var(--tint-2); border-radius:var(--radius); font-size:14px; color:var(--ink-soft);}
+
+  /* 수식 / 도식 */
+  .katex-display{margin:14px 0; overflow-x:auto; overflow-y:hidden; padding:6px 0;}
+  .diagram{background:#fffdfb; border:1px solid var(--line); border-radius:var(--radius); padding:14px; margin:16px 0; text-align:center;}
+  .diagram .cap{font-size:12.5px; color:var(--muted); margin-top:6px;}
+  .mermaid{display:flex; justify-content:center;}
+
+  /* ===== 모바일 ===== */
+  .menu-btn{display:none;}
+  .overlay{display:none;}
+  @media (max-width:900px){
+    .menu-btn{
+      display:flex; align-items:center; justify-content:center;
+      position:fixed; top:14px; left:14px; z-index:50;
+      width:42px; height:42px; border-radius:10px; border:1px solid var(--line-strong);
+      background:var(--paper); color:var(--accent); font-size:20px; cursor:pointer;
+      box-shadow:0 2px 8px rgba(60,40,20,.12);
+    }
+    .sidebar{
+      position:fixed; left:0; top:0; z-index:60; height:100vh;
+      transform:translateX(-105%); transition:transform .25s ease;
+      box-shadow:4px 0 24px rgba(0,0,0,.12); background:var(--bg);
+    }
+    .sidebar.open{transform:translateX(0);}
+    .overlay.show{display:block; position:fixed; inset:0; background:rgba(0,0,0,.32); z-index:55;}
+    .content{padding:0 16px;}
+    .doc{padding:64px 0 100px;}
+    body{font-size:16px;}
+    h1{font-size:23px;}
+    .ko,.terms{padding-left:16px; padding-right:16px;}
+  }
+
+  /* ===== 인쇄 ===== */
+  @media print{
+    .sidebar,.menu-btn,.overlay{display:none !important;}
+    .content{padding:0;}
+    body{background:#fff; font-size:11pt;}
+    details.en{display:none;}          /* 인쇄본은 한국어 위주 */
+    .ko,.terms,.callout,.table-wrap{break-inside:avoid; box-shadow:none;}
+    a{color:var(--ink);}
+  }
+  .home-btn{position:fixed; top:16px; right:18px; z-index:70;
+    display:inline-flex; align-items:center; gap:6px; text-decoration:none;
+    background:var(--paper); color:var(--accent); border:1px solid var(--line-strong);
+    border-radius:999px; padding:8px 14px; font-size:13.5px; font-weight:700;
+    box-shadow:0 2px 8px rgba(60,40,20,.12); transition:background .12s,color .12s;}
+  .home-btn:hover{background:var(--accent); color:#fff; border-color:var(--accent);}
+  @media (max-width:900px){ .home-btn{top:14px; right:14px; padding:8px 12px; font-size:12.5px;} }
+  @media print{ .home-btn{display:none !important;} }
+</style>
+</head>
+<body>
+<a class="home-btn" href="../index.html" title="전체 목차로 돌아가기">← 전체 목차</a>
+
+<button class="menu-btn" id="menuBtn" aria-label="목차 열기">☰</button>
+<div class="overlay" id="overlay"></div>
+
+<div class="layout">
+  <nav class="sidebar" id="sidebar"><div class="toc-brand">Stanford CME295 · Lecture 9</div><p class="toc-title">섹션 1. 전체 복습 ① — 트랜스포머부터 LLM 디코딩까지</p><ul class="toc"><li><a href="#overview">1. 강의 개요</a></li><li><a href="#goals">2. 학습 목표</a></li><li><a href="#body">3. 본문</a></li><li><a class="sub" href="#block1">블록 1 · 텍스트 처리부터 self-attention까지 (Lecture 1)</a></li><li><a class="sub" href="#block2">블록 2 · 트랜스포머 개선과 파생 모델 (Lecture 2)</a></li><li><a class="sub" href="#block3">블록 3 · LLM: MoE와 디코딩 (Lecture 3)</a></li><li><a href="#glossary">4. 핵심 용어집</a></li><li><a href="#review">5. 복습 문제</a></li><li><a href="#appendix">부록. 실무 적용 포인트 (NLP·LLM 기술 내용 한정)</a></li></ul></nav>
+  <main class="content"><article class="doc"><h1>CME295 Transformers &amp; LLMs — Lecture 9 한국어 교재</h1><p class="subtitle">섹션 1. 전체 복습 ① — 트랜스포머부터 LLM 디코딩까지</p><div class="source-banner"><span>📄</span><span><b>원문 출처</b>: Stanford CME295, Autumn 2025, Lecture 9 (마지막 강의: 복습·트렌드·마무리), 타임스탬프 <span class="ts">00:05</span>~<span class="ts">15:26</span></span></div><section id="overview"><h2>1. 강의 개요</h2><ul><li>마지막 강의로, 세 부분 — 전 과정 복습 / 2025 트렌드 / 마무리·다음 단계 — 으로 구성된다.</li><li>이 섹션은 복습 ①: 토큰화·임베딩·RNN·self-attention·트랜스포머(Lecture 1~2)와 LLM의 MoE·디코딩(Lecture 3)을 한 줄기로 잇는다.</li></ul></section><section id="goals"><h2>2. 학습 목표</h2><ol><li>텍스트 처리 흐름(토큰화 → 임베딩 → 순차모델 한계 → self-attention → 트랜스포머)을 한 줄기로 설명할 수 있다.</li><li>트랜스포머의 개선(RoPE·GQA·pre-norm)과 파생 모델(encoder/decoder/encoder-decoder)을 구분할 수 있다.</li><li>MoE와 디코딩(온도)의 핵심을 다시 안다.</li></ol></section><section id="body"><h2>3. 본문</h2><div id="block1"><h3><span class="badge">블록 1</span>텍스트 처리부터 self-attention까지 (Lecture 1)</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">01:46</span> tokenization (...) dividing the input into atomic units (...) subword level tokenizer. (...) <span class="ts">02:49</span> wordtovec (...) learned from a proxy task (...) not context(-)aware (...) <span class="ts">03:21</span> RNN's (...) long range dependency (...) <span class="ts">04:21</span> self attention where tokens can (...) attend to one another regardless of where they are placed (...) query, key and value (...) soft max of q k(transpose) over square root of dk (...) v.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>한 줄기로 복습합니다.</p>
+<ul><li><strong>토큰화(Lecture 1)</strong>: 입력을 원자 단위(토큰)로 나눔. 가장 흔한 건 서브워드 토크나이저(어근 재활용).</li><li><strong>임베딩</strong>: word2vec은 대리 과제(주변/중심 단어 예측)로 표현을 학습. 한계 — 맥락 비의존(같은 단어가 어느 문장에서나 같은 표현).</li><li><strong>RNN</strong>: 토큰을 하나씩 처리하며 내부 표현 유지. 한계 — 장기 의존성(먼 과거를 못 기억).</li><li><strong>self-attention</strong>: 위치와 무관하게 토큰이 서로에 주의(직접 연결). 쿼리·키·값으로, softmax(QKᵀ/√dₖ)·V 공식. 오늘날 하드웨어에 잘 맞는 효율적 행렬 연산.</li><li><strong>트랜스포머</strong>: 인코더(왼쪽)·디코더(오른쪽). 번역에서 출발.</li></ul></div>
+<div class="terms"><span class="label">용어 설명</span><dl></dl><p style="margin:8px 0 2px;color:var(--ink-soft);font-size:15px;">(Lecture 1~3 섹션 참고) 토큰화·임베딩·RNN·self-attention·트랜스포머.</p></div>
+</div>
+<div id="block2"><h3><span class="badge">블록 2</span>트랜스포머 개선과 파생 모델 (Lecture 2)</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">07:27</span> rotary position embeddings aka rope (...) rotates query and keys (...) a function of the relative distance. (...) <span class="ts">08:29</span> group query attention (...) <span class="ts">09:01</span> postnorm (...) prenorm. (...) <span class="ts">10:03</span> birds (...) encoder only (...) CLS token (...) GPT (...) decoder only (...) T5 (...) both.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>트랜스포머(2017) 이후 개선(Lecture 2):</p>
+<ul><li><strong>위치 인코딩 → RoPE</strong>: 원논문은 절대 위치 임베딩이었으나, 중요한 건 상대 위치. RoPE(회전 위치 임베딩)는 쿼리·키를 회전시켜 상대 거리만 반영하며, self-attention 층에서 작동.</li><li><strong>GQA(그룹 쿼리 어텐션)</strong>: 헤드마다 키·값 투영을 따로 두지 않고 묶어 공유.</li><li><strong>정규화 위치</strong>: post-norm → pre-norm(요즘은 하위 층 앞에 정규화).</li></ul>
+<p>파생 모델: 인코더만 = BERT(분류용 CLS 임베딩), 디코더만 = GPT, 둘 다 = T5. encoder-only는 텍스트 생성 못 하고 임베딩 생성(다운스트림용), encoder-decoder·decoder-only는 자기회귀로 텍스트 생성.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl></dl><p style="margin:8px 0 2px;color:var(--ink-soft);font-size:15px;">RoPE / GQA / pre-norm / BERT·GPT·T5: Lecture 2 섹션 참고.</p></div>
+</div>
+<div id="block3"><h3><span class="badge">블록 3</span>LLM: MoE와 디코딩 (Lecture 3)</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">11:08</span> large language models (...) decoder only transformer-based (...) <span class="ts">11:37</span> mixture of experts (...) activate (...) a subset (...) in the feed for(ward) neural network layer (...) a gating mechanism (...) <span class="ts">13:48</span> sample from the output distribution (...) greedy (...) temperature (...) spiky (...) more deterministic (...) higher temperatures (...) more creative.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>LLM은 decoder-only 트랜스포머 기반 텍스트→텍스트 모델입니다. 스케일을 키우면서 새 기법들이 나왔습니다(Lecture 3):</p>
+<ul><li><strong>전문가 혼합(MoE)</strong>: 전체를 다 돌리지 않고 일부 전문가만 희소하게 활성화. FFN 층에 두고, 게이팅이 토큰을 적절한 전문가(FFN)로 라우팅. 토큰 단위 라우팅이라 GPU 분산도 용이.</li><li><strong>디코딩</strong>: 다음 토큰 확률 분포에서 샘플링. 최고 확률만 고르는 그리디 대신 샘플링으로 다양성 부여. 온도(temperature)로 조절 — 낮으면 뾰족(결정적), 높으면 다양·창의적.</li></ul></div>
+<div class="terms"><span class="label">용어 설명</span><dl></dl><p style="margin:8px 0 2px;color:var(--ink-soft);font-size:15px;">MoE / 게이팅 / 온도: Lecture 3 섹션 참고.</p></div>
+</div></section><section id="glossary"><h2>4. 핵심 용어집</h2><div class="table-wrap"><table><thead><tr><th>영문</th><th>한국어</th><th>뜻</th></tr></thead><tbody><tr><td>tokenization / subword</td><td>토큰화/서브워드</td><td>입력을 토큰으로 나눔</td></tr><tr><td>word2vec</td><td>워드투벡</td><td>대리 과제로 임베딩 학습</td></tr><tr><td>self-attention</td><td>셀프 어텐션</td><td>위치 무관 토큰 간 주의</td></tr><tr><td>RoPE</td><td>회전 위치 임베딩</td><td>상대 거리 반영(쿼리·키 회전)</td></tr><tr><td>GQA</td><td>그룹 쿼리 어텐션</td><td>키·값 투영 공유</td></tr><tr><td>pre-norm</td><td>프리놈</td><td>하위 층 앞 정규화</td></tr><tr><td>BERT/GPT/T5</td><td>—</td><td>인코더/디코더/둘 다</td></tr><tr><td>MoE</td><td>전문가 혼합</td><td>일부 전문가만 활성화</td></tr><tr><td>temperature</td><td>온도</td><td>샘플링 다양성 조절</td></tr></tbody></table></div></section><section id="review"><h2>5. 복습 문제</h2><div class="callout review"><div class="c-title">✏️ 스스로 점검</div><ol><li>토큰화→임베딩→RNN→self-attention→트랜스포머의 흐름에서 각 단계가 푼 문제는?</li><li>RoPE·GQA·pre-norm은 원래 트랜스포머에서 무엇을 개선했는가?</li><li>MoE는 어디(어느 층)에 두며, 온도는 출력을 어떻게 바꾸는가?</li></ol></div></section><section id="appendix"><h2>부록. 실무 적용 포인트 <span style="font-size:14px;font-weight:500;color:var(--muted);">(NLP·LLM 기술 내용 한정)</span></h2><div class="callout practice"><div class="c-title">💡 현장에서 써먹기</div><ul><li><strong>이 복습은 "LLM 한 줄기 지도"다.</strong> 텍스트를 잘라(토큰화) 숫자로 바꾸고(임베딩), 서로 연결해(self-attention) 처리하는 흐름을 알면, AI가 글을 다루는 원리를 큰 틀에서 이해할 수 있다. 도구를 고르고 한계를 가늠하는 모든 판단의 토대다.</li><li><strong>MoE·온도는 즉시 쓰는 실무 지식이다.</strong> "큰 모델인데 왜 빠른가(MoE)", "온도를 낮추면 일관, 높이면 창의"는 모델 선택·설정에 바로 적용된다(앞 강의 부록들과 연결).</li></ul></div><div class="next"><strong><strong>다음 섹션 예고</strong>·&lt;/strong&gt; · 복습 ② — LLM 학습·정렬·추론(스케일링·FlashAttention·SFT·RLHF·GRPO). <span class="ts">15:26</span> 이후.</div></section></article></main>
+</div>
+
+<!-- KaTeX 자동 렌더 -->
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}],throwOnError:false});"></script>
+
+<!-- Mermaid -->
+<script type="module">
+  try{
+    const m = await import('https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs');
+    m.default.initialize({startOnLoad:true, theme:'base', themeVariables:{
+      fontFamily:'Pretendard, sans-serif', primaryColor:'#fffdfb', primaryBorderColor:'#d8d0c5',
+      primaryTextColor:'#1a1a1a', lineColor:'#b9554f', fontSize:'14px'
+    }});
+  }catch(e){ /* 오프라인이면 도식은 코드로 표시 */ }
+</script>
+
+<!-- 목차 활성표시 + 모바일 드로어 -->
+<script>
+  // 모바일 드로어
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('overlay');
+  const btn = document.getElementById('menuBtn');
+  const toggle = (on)=>{ sb.classList.toggle('open',on); ov.classList.toggle('show',on); };
+  btn.addEventListener('click',()=>toggle(!sb.classList.contains('open')));
+  ov.addEventListener('click',()=>toggle(false));
+  document.querySelectorAll('.toc a').forEach(a=>a.addEventListener('click',()=>{ if(window.innerWidth<=900) toggle(false); }));
+
+  // 현재 위치 강조
+  const links = [...document.querySelectorAll('.toc a')];
+  const map = {}; links.forEach(a=>{ const id=a.getAttribute('href').slice(1); map[id]=a; });
+  const targets = Object.keys(map).map(id=>document.getElementById(id)).filter(Boolean);
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(en=>{
+      if(en.isIntersecting){
+        links.forEach(l=>l.classList.remove('active'));
+        const a = map[en.target.id]; if(a) a.classList.add('active');
+      }
+    });
+  },{rootMargin:'-15% 0px -75% 0px', threshold:0});
+  targets.forEach(t=>io.observe(t));
+</script>
+
+</body>
+</html>

@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CME295 Lecture 5 · 섹션 3. 강화학습 기초와 RLHF 개요</title>
+
+<!-- 폰트: Pretendard (CDN, 없으면 시스템 폰트 폴백) -->
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<!-- 수식: KaTeX -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
+
+<style>
+  :root{
+    --bg:#FBF9F6;
+    --paper:#ffffff;
+    --ink:#1a1a1a;
+    --ink-soft:#4a4744;
+    --muted:#7a756f;
+    --accent:#8C1515;          /* Stanford 카디널 */
+    --accent-soft:#b9554f;
+    --tint:#f6ebe9;            /* 카디널 옅은 틴트 */
+    --tint-2:#f3efe9;          /* 따뜻한 회색 */
+    --line:#e7e1d9;
+    --line-strong:#d8d0c5;
+    --radius:10px;
+    --maxw:760px;
+    --sidew:268px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Pretendard","Pretendard Variable",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    line-height:1.78;
+    font-size:16.5px;
+    -webkit-font-smoothing:antialiased;
+    word-break:keep-all;
+  }
+
+  /* ===== 레이아웃 ===== */
+  .layout{display:flex; align-items:flex-start;}
+  .sidebar{
+    width:var(--sidew); flex:0 0 var(--sidew);
+    position:sticky; top:0; height:100vh; overflow-y:auto;
+    padding:28px 18px 40px; border-right:1px solid var(--line);
+    background:rgba(251,249,246,.85); backdrop-filter:saturate(120%) blur(2px);
+  }
+  .content{flex:1 1 auto; min-width:0; display:flex; justify-content:center; padding:0 24px;}
+  .doc{width:100%; max-width:var(--maxw); padding:48px 0 120px;}
+
+  /* ===== 사이드바 목차 ===== */
+  .toc-brand{font-size:12px; letter-spacing:.04em; color:var(--accent); font-weight:700; text-transform:uppercase; margin-bottom:4px;}
+  .toc-title{font-size:15px; font-weight:700; margin:0 0 18px; line-height:1.4; color:var(--ink);}
+  .toc{list-style:none; margin:0; padding:0; font-size:13.5px;}
+  .toc li{margin:1px 0;}
+  .toc a{display:block; padding:5px 10px; border-radius:7px; color:var(--ink-soft); text-decoration:none; border-left:2px solid transparent;}
+  .toc a:hover{background:var(--tint-2); color:var(--ink);}
+  .toc a.sub{padding-left:22px; font-size:13px; color:var(--muted);}
+  .toc a.active{color:var(--accent); background:var(--tint); border-left-color:var(--accent); font-weight:600;}
+
+  /* ===== 타이포 ===== */
+  h1{font-size:27px; line-height:1.32; font-weight:800; letter-spacing:-.01em; margin:0 0 6px;}
+  .subtitle{font-size:18px; font-weight:700; color:var(--accent); margin:0 0 22px;}
+  h2{font-size:21px; font-weight:800; letter-spacing:-.01em; margin:46px 0 14px; padding-bottom:9px; border-bottom:2px solid var(--line-strong);}
+  h3{font-size:17.5px; font-weight:700; margin:34px 0 12px; color:var(--ink);}
+  h3 .badge{display:inline-block; font-size:12px; font-weight:700; color:#fff; background:var(--accent); border-radius:6px; padding:2px 8px; margin-right:8px; vertical-align:middle;}
+  p{margin:12px 0;}
+  strong{font-weight:700;}
+  a{color:var(--accent);}
+  ul,ol{margin:12px 0; padding-left:22px;}
+  li{margin:6px 0;}
+  hr{display:none;}
+
+  /* ===== 출처 배너 ===== */
+  .source-banner{
+    display:flex; gap:10px; align-items:baseline;
+    background:var(--tint); border-left:4px solid var(--accent);
+    border-radius:0 var(--radius) var(--radius) 0;
+    padding:12px 16px; margin:0 0 8px; font-size:13.5px; color:var(--ink-soft);
+  }
+  .source-banner b{color:var(--accent);}
+
+  /* ===== 한국어 번역 카드 ===== */
+  .ko{
+    background:var(--paper); border:1px solid var(--line);
+    border-left:4px solid var(--accent); border-radius:var(--radius);
+    padding:6px 22px; margin:16px 0;
+    box-shadow:0 1px 2px rgba(60,40,20,.04);
+  }
+  .ko > .label, .terms > .label{
+    display:inline-block; font-size:11.5px; font-weight:800; letter-spacing:.06em;
+    color:var(--accent); text-transform:uppercase; margin:14px 0 -4px;
+  }
+
+  /* ===== 영문 원문 토글 ===== */
+  details.en{
+    background:var(--tint-2); border:1px solid var(--line); border-radius:var(--radius);
+    margin:14px 0; overflow:hidden;
+  }
+  details.en > summary{
+    cursor:pointer; list-style:none; padding:11px 16px;
+    font-size:13.5px; font-weight:700; color:var(--muted);
+    display:flex; align-items:center; gap:8px; user-select:none;
+  }
+  details.en > summary::-webkit-details-marker{display:none;}
+  details.en > summary .chev{transition:transform .2s; color:var(--accent-soft);}
+  details.en[open] > summary .chev{transform:rotate(90deg);}
+  details.en[open] > summary{border-bottom:1px solid var(--line);}
+  .en-body{padding:4px 18px 14px; font-size:14px; line-height:1.7; color:#5c574f; font-style:normal;}
+  .en-body p{margin:10px 0;}
+  .ts{
+    display:inline-block; font-family:"SFMono-Regular",ui-monospace,Menlo,Consolas,monospace;
+    font-size:11.5px; font-style:normal; color:var(--accent);
+    background:var(--tint); border:1px solid #e6cfcc; border-radius:5px;
+    padding:0 5px; margin:0 2px; vertical-align:baseline;
+  }
+
+  /* ===== 용어 설명 ===== */
+  .terms{
+    border:1px solid var(--line); border-left:3px solid var(--accent-soft);
+    border-radius:var(--radius); background:#fffdfb; padding:4px 20px 8px; margin:16px 0;
+  }
+  .terms dl{margin:8px 0;}
+  .terms dt{font-weight:700; color:var(--ink); margin-top:8px;}
+  .terms dt .en-term{color:var(--accent); font-weight:600;}
+  .terms dd{margin:1px 0 6px; color:var(--ink-soft); font-size:15px;}
+
+  /* ===== 표 ===== */
+  .table-wrap{overflow-x:auto; margin:16px 0; border:1px solid var(--line); border-radius:var(--radius);}
+  table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:520px;}
+  thead th{background:var(--accent); color:#fff; font-weight:700; text-align:left; padding:11px 14px; white-space:nowrap;}
+  tbody td{padding:9px 14px; border-top:1px solid var(--line);}
+  tbody tr:nth-child(even){background:var(--tint-2);}
+  tbody td:first-child{font-family:ui-monospace,Menlo,monospace; font-size:13px; color:var(--accent);}
+
+  /* ===== 콜아웃 ===== */
+  .callout{border-radius:var(--radius); padding:14px 20px 6px; margin:18px 0;}
+  .callout .c-title{font-weight:800; margin:6px 0 2px; display:flex; align-items:center; gap:8px;}
+  .callout.review{background:#fff; border:1px solid var(--line-strong);}
+  .callout.review ol{counter-reset:none;}
+  .callout.note{background:var(--tint-2); border-left:4px solid var(--muted); border-radius:0 var(--radius) var(--radius) 0; padding-bottom:12px;}
+  .callout.practice{background:var(--tint); border:1px solid #e6cfcc; padding-bottom:14px;}
+  .callout.practice li{margin:12px 0;}
+  .next{margin-top:40px; padding:14px 18px; background:var(--tint-2); border-radius:var(--radius); font-size:14px; color:var(--ink-soft);}
+
+  /* 수식 / 도식 */
+  .katex-display{margin:14px 0; overflow-x:auto; overflow-y:hidden; padding:6px 0;}
+  .diagram{background:#fffdfb; border:1px solid var(--line); border-radius:var(--radius); padding:14px; margin:16px 0; text-align:center;}
+  .diagram .cap{font-size:12.5px; color:var(--muted); margin-top:6px;}
+  .mermaid{display:flex; justify-content:center;}
+
+  /* ===== 모바일 ===== */
+  .menu-btn{display:none;}
+  .overlay{display:none;}
+  @media (max-width:900px){
+    .menu-btn{
+      display:flex; align-items:center; justify-content:center;
+      position:fixed; top:14px; left:14px; z-index:50;
+      width:42px; height:42px; border-radius:10px; border:1px solid var(--line-strong);
+      background:var(--paper); color:var(--accent); font-size:20px; cursor:pointer;
+      box-shadow:0 2px 8px rgba(60,40,20,.12);
+    }
+    .sidebar{
+      position:fixed; left:0; top:0; z-index:60; height:100vh;
+      transform:translateX(-105%); transition:transform .25s ease;
+      box-shadow:4px 0 24px rgba(0,0,0,.12); background:var(--bg);
+    }
+    .sidebar.open{transform:translateX(0);}
+    .overlay.show{display:block; position:fixed; inset:0; background:rgba(0,0,0,.32); z-index:55;}
+    .content{padding:0 16px;}
+    .doc{padding:64px 0 100px;}
+    body{font-size:16px;}
+    h1{font-size:23px;}
+    .ko,.terms{padding-left:16px; padding-right:16px;}
+  }
+
+  /* ===== 인쇄 ===== */
+  @media print{
+    .sidebar,.menu-btn,.overlay{display:none !important;}
+    .content{padding:0;}
+    body{background:#fff; font-size:11pt;}
+    details.en{display:none;}          /* 인쇄본은 한국어 위주 */
+    .ko,.terms,.callout,.table-wrap{break-inside:avoid; box-shadow:none;}
+    a{color:var(--ink);}
+  }
+  .home-btn{position:fixed; top:16px; right:18px; z-index:70;
+    display:inline-flex; align-items:center; gap:6px; text-decoration:none;
+    background:var(--paper); color:var(--accent); border:1px solid var(--line-strong);
+    border-radius:999px; padding:8px 14px; font-size:13.5px; font-weight:700;
+    box-shadow:0 2px 8px rgba(60,40,20,.12); transition:background .12s,color .12s;}
+  .home-btn:hover{background:var(--accent); color:#fff; border-color:var(--accent);}
+  @media (max-width:900px){ .home-btn{top:14px; right:14px; padding:8px 12px; font-size:12.5px;} }
+  @media print{ .home-btn{display:none !important;} }
+</style>
+</head>
+<body>
+<a class="home-btn" href="../index.html" title="전체 목차로 돌아가기">← 전체 목차</a>
+
+<button class="menu-btn" id="menuBtn" aria-label="목차 열기">☰</button>
+<div class="overlay" id="overlay"></div>
+
+<div class="layout">
+  <nav class="sidebar" id="sidebar"><div class="toc-brand">Stanford CME295 · Lecture 5</div><p class="toc-title">섹션 3. 강화학습 기초와 RLHF 개요</p><ul class="toc"><li><a href="#overview">1. 강의 개요</a></li><li><a href="#goals">2. 학습 목표</a></li><li><a href="#body">3. 본문</a></li><li><a class="sub" href="#block1">블록 1 · 강화학습(RL) 기초</a></li><li><a class="sub" href="#block2">블록 2 · RL 개념을 LLM에 대응시키기</a></li><li><a class="sub" href="#block3">블록 3 · 보상의 희소성과 RLHF의 두 단계</a></li><li><a href="#glossary">4. 핵심 용어집</a></li><li><a href="#review">5. 복습 문제</a></li><li><a href="#appendix">부록. 실무 적용 포인트 (NLP·LLM 기술 내용 한정)</a></li></ul></nav>
+  <main class="content"><article class="doc"><h1>CME295 Transformers &amp; LLMs — Lecture 5 한국어 교재</h1><p class="subtitle">섹션 3. 강화학습 기초와 RLHF 개요</p><div class="source-banner"><span>📄</span><span><b>원문 출처</b>: Stanford CME295, Autumn 2025, Lecture 5, 타임스탬프 <span class="ts">17:52</span>~<span class="ts">28:33</span></span></div><section id="overview"><h2>1. 강의 개요</h2><ul><li>선호로 모델을 정렬하는 대표 방법 RLHF의 토대인 강화학습(RL) 기초 개념(에이전트·상태·행동·정책·보상)을 다룬다.</li><li>이 개념들을 LLM에 어떻게 대응시키는지(LLM=에이전트, 입력=상태, 다음 토큰=행동, 출력 분포=정책)를 본다.</li><li>RLHF가 두 단계(보상 모델 학습 → RL 정렬)로 이뤄지며, '사람 피드백'이 어디에 들어가는지(RLHF vs RLAIF) 설명한다.</li></ul></section><section id="goals"><h2>2. 학습 목표</h2><ol><li>RL의 기본 요소(에이전트·상태·행동·정책·보상)를 설명할 수 있다.</li><li>이 요소들이 LLM에 어떻게 대응되는지(정책 = 출력 확률 분포 등) 안다.</li><li>RLHF의 두 단계와, 보상 신호가 SFT보다 희소(sparse)한 이유를 이해한다.</li></ol></section><section id="body"><h2>3. 본문</h2><div id="block1"><h3><span class="badge">블록 1</span>강화학습(RL) 기초</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">18:23</span> RLHF relies on RL (...) <span class="ts">18:55</span> an agent (...) which interacts with an environment (...) at a given state at (...) time t. It can take an action at time t (...) according to some policy (...) noted pi (...) of (...) the action given the state (...) the probability of you taking an action given a state. (...) <span class="ts">19:57</span> given that the agent takes some action, it also receives some rewards.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>RLHF는 강화학습(RL, Reinforcement Learning)에 기반합니다. RL의 기본 그림은 이렇습니다 — 에이전트(agent)가 환경(environment)과 상호작용합니다.</p>
+<ul><li>에이전트는 어떤 시점 t에 상태(state, sₜ)에 있습니다.</li><li>그 상태에서 행동(action, aₜ)을 취하는데, 정책(policy)에 따라 합니다. 정책은 보통 π_θ(a|s)로 표기하며, '상태가 주어졌을 때 그 행동을 할 확률'입니다.</li><li>행동을 하면 보상(reward)을 받습니다(좋은 보상일 수도, 나쁜 보상일 수도).</li></ul></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>강화학습<span class="en-term">(RL)</span></dt><dd>에이전트가 행동하고 보상을 받아 정책을 개선하는 학습 방식.</dd><dt>에이전트/환경<span class="en-term">(agent/environment)</span></dt><dd>행동 주체 / 그가 상호작용하는 세계.</dd><dt>상태/행동<span class="en-term">(state/action)</span></dt><dd>지금 처한 상황 / 취하는 선택.</dd><dt>정책<span class="en-term">(policy, π_θ)</span></dt><dd>상태가 주어졌을 때 행동을 고를 확률.</dd><dt>보상<span class="en-term">(reward)</span></dt><dd>행동의 결과로 받는 점수.</dd></dl></div>
+</div>
+<div id="block2"><h3><span class="badge">블록 2</span>RL 개념을 LLM에 대응시키기</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">20:31</span> The agent is the LLM (...) the state (...) is simply the input that it has so far (...) the action (...) is to predict the next token (...) <span class="ts">21:02</span> the probability of next token which is obtained by (...) your forward pass (...) is basically our policy. So our policy here is simply equal to the output of the LLM (...) <span class="ts">21:33</span> we want to know which output is better (...) we're going to use that for a reward.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>이 개념들을 LLM에 대응시켜 봅니다.</p>
+<ul><li><strong>에이전트 = LLM</strong>.</li><li><strong>상태 = 지금까지의 입력</strong>(모델이 본 토큰들).</li><li><strong>행동 = 다음 토큰 예측</strong>(어휘 집합 중 하나를 고름). 즉 환경은 어휘의 토큰 집합으로 볼 수 있습니다.</li><li><strong>정책 = LLM의 출력 확률 분포</strong>. 순전파로 얻는 다음 토큰 확률이 곧 정책입니다.</li></ul>
+<p>여기에 하나를 더합니다 — 선호 데이터로 "어느 출력이 더 나은지"를 알므로, 이를 보상(reward)으로 씁니다. LLM이 입력을 받아 다음 토큰을 고르고(정책 사용), 생성한 출력이 보상을 받아 그 보상이 에이전트(LLM) 튜닝에 되먹임됩니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>에이전트=LLM, 상태=입력, 행동=다음 토큰, 정책=출력 확률 분포</dt><dd>RL↔LLM 대응.</dd><dt>보상=선호 신호</dt><dd>어느 출력이 나은지를 보상으로 활용.</dd></dl></div>
+</div>
+<div id="block3"><h3><span class="badge">블록 3</span>보상의 희소성과 RLHF의 두 단계</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">24:14</span> for SFT you're literally always taking a partial input and making the LLM learn how to (...) generate the next token. But here you're only getting roughly one signal per completion (...) more sparse (...) <span class="ts">24:53</span> the reward (...) for the whole thing. (...) <span class="ts">26:29</span> RHF stands for reinforcement learning from human feedback (...) two stages (...) the first stage is you figuring out how to distinguish good output from bad output (...) the second step is the RL step (...) where you use the rewards to align your model. (...) <span class="ts">28:00</span> the human feedback part refers to the labels on which the reward model is trained (...) RL (...) AIf (...) relying on non(-)human preferences.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>보상은 SFT보다 신호가 희소(sparse)합니다. SFT는 늘 부분 입력을 받아 다음 토큰 생성을 가르치므로 토큰마다 신호가 있지만, RL에서는 한 완성 응답(completion)당 대략 하나의 보상 신호만 받습니다. 그래서 RLHF는 희소한 신호 기반 접근으로 여겨집니다. (보상은 토큰별이 아니라 전체 응답에 대해 줍니다.)</p>
+<p>RLHF(Reinforcement Learning from Human Feedback, 사람 피드백 기반 강화학습)는 두 단계입니다.</p>
+<ol><li><strong>보상 모델 학습</strong>: 좋은 출력과 나쁜 출력을 구분하는 법을 배웁니다. 입력은 (프롬프트+응답)의 결합, 출력은 점수입니다. 모은 선호 쌍이 여기 쓰입니다.</li><li><strong>RL 정렬</strong>: 그 보상을 써서 모델을 선호에 맞춥니다. 입력은 프롬프트, 목표는 보상에 더 부합하는 ŷ 생성입니다.</li></ol>
+<p>'사람 피드백(human feedback)'이란 보상 모델을 학습시키는 라벨이 사람 평가라는 뜻입니다. 라벨이 사람 선호면 RLHF, 비사람(다른 AI) 선호면 RLAIF(RL from AI Feedback)라 부릅니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>희소 보상<span class="en-term">(sparse reward)</span></dt><dd>완성 응답당 신호 하나. SFT(토큰마다 신호)보다 적음.</dd><dt>완성 응답<span class="en-term">(completion)</span></dt><dd>모델이 생성한 전체 응답.</dd><dt>RLHF</dt><dd>사람 피드백 기반 강화학습. ① 보상 모델 학습 → ② RL 정렬.</dd><dt>RLAIF</dt><dd>사람 대신 AI 피드백으로 보상 모델을 학습하는 변형.</dd></dl></div>
+</div></section><section id="glossary"><h2>4. 핵심 용어집</h2><div class="table-wrap"><table><thead><tr><th>영문</th><th>한국어</th><th>발음</th><th>뜻</th></tr></thead><tbody><tr><td>RL (Reinforcement Learning)</td><td>강화학습</td><td>—</td><td>행동·보상으로 정책 개선</td></tr><tr><td>agent / environment</td><td>에이전트/환경</td><td>—</td><td>행동 주체 / 세계</td></tr><tr><td>state / action</td><td>상태/행동</td><td>—</td><td>상황 / 선택</td></tr><tr><td>policy (π_θ)</td><td>정책</td><td>폴리시</td><td>상태→행동 확률(=출력 분포)</td></tr><tr><td>reward</td><td>보상</td><td>리워드</td><td>행동 결과 점수</td></tr><tr><td>sparse reward</td><td>희소 보상</td><td>—</td><td>응답당 신호 하나</td></tr><tr><td>completion</td><td>완성 응답</td><td>—</td><td>생성된 전체 응답</td></tr><tr><td>RLHF</td><td>사람 피드백 강화학습</td><td>—</td><td>①보상 모델 ②RL 정렬</td></tr><tr><td>RLAIF</td><td>AI 피드백 강화학습</td><td>—</td><td>사람 대신 AI 선호</td></tr></tbody></table></div></section><section id="review"><h2>5. 복습 문제</h2><div class="callout review"><div class="c-title">✏️ 스스로 점검</div><ol><li>RL의 다섯 요소(에이전트·상태·행동·정책·보상)를 LLM에 각각 대응시켜라.</li><li>RL의 보상이 SFT의 신호보다 '희소'하다는 것은 무슨 뜻인가?</li><li>RLHF의 두 단계는? '사람 피드백'은 정확히 어디에 들어가며, RLAIF와 무엇이 다른가?</li></ol></div></section><section id="appendix"><h2>부록. 실무 적용 포인트 <span style="font-size:14px;font-weight:500;color:var(--muted);">(NLP·LLM 기술 내용 한정)</span></h2><div class="callout practice"><div class="c-title">💡 현장에서 써먹기</div><ul><li><strong>'정책 = 출력 확률 분포'라는 대응은 LLM을 RL 관점에서 이해하는 핵심이다.</strong> 모델 정렬이 '확률 분포(정책)를 선호에 맞게 조금씩 옮기는 일'임을 알면, 정렬된 모델이 왜 특정 어조·태도를 일관되게 보이는지 납득된다.</li><li><strong>희소 보상은 "정렬 학습이 왜 까다로운가"의 한 이유다.</strong> 응답 하나에 신호 하나뿐이라 학습이 불안정하고 어렵다. 정렬은 비싸고 섬세한 과정이며, 그래서 기관이 직접 RLHF를 하기보다 잘 정렬된 기성 모델을 쓰는 게 합리적이라는 판단으로 이어진다.</li></ul></div><div class="next"><strong><strong>다음 섹션 예고</strong>·&lt;/strong&gt; · 첫 단계인 보상 모델을 어떻게 만드나 — Bradley-Terry 공식과 손실 함수 유도. <span class="ts">28:33</span> 이후.</div></section></article></main>
+</div>
+
+<!-- KaTeX 자동 렌더 -->
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}],throwOnError:false});"></script>
+
+<!-- Mermaid -->
+<script type="module">
+  try{
+    const m = await import('https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs');
+    m.default.initialize({startOnLoad:true, theme:'base', themeVariables:{
+      fontFamily:'Pretendard, sans-serif', primaryColor:'#fffdfb', primaryBorderColor:'#d8d0c5',
+      primaryTextColor:'#1a1a1a', lineColor:'#b9554f', fontSize:'14px'
+    }});
+  }catch(e){ /* 오프라인이면 도식은 코드로 표시 */ }
+</script>
+
+<!-- 목차 활성표시 + 모바일 드로어 -->
+<script>
+  // 모바일 드로어
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('overlay');
+  const btn = document.getElementById('menuBtn');
+  const toggle = (on)=>{ sb.classList.toggle('open',on); ov.classList.toggle('show',on); };
+  btn.addEventListener('click',()=>toggle(!sb.classList.contains('open')));
+  ov.addEventListener('click',()=>toggle(false));
+  document.querySelectorAll('.toc a').forEach(a=>a.addEventListener('click',()=>{ if(window.innerWidth<=900) toggle(false); }));
+
+  // 현재 위치 강조
+  const links = [...document.querySelectorAll('.toc a')];
+  const map = {}; links.forEach(a=>{ const id=a.getAttribute('href').slice(1); map[id]=a; });
+  const targets = Object.keys(map).map(id=>document.getElementById(id)).filter(Boolean);
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(en=>{
+      if(en.isIntersecting){
+        links.forEach(l=>l.classList.remove('active'));
+        const a = map[en.target.id]; if(a) a.classList.add('active');
+      }
+    });
+  },{rootMargin:'-15% 0px -75% 0px', threshold:0});
+  targets.forEach(t=>io.observe(t));
+</script>
+
+</body>
+</html>

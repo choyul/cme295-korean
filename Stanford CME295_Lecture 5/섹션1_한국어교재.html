@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CME295 Lecture 5 · 섹션 1. 선호 튜닝이 필요한 이유</title>
+
+<!-- 폰트: Pretendard (CDN, 없으면 시스템 폰트 폴백) -->
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<!-- 수식: KaTeX -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
+
+<style>
+  :root{
+    --bg:#FBF9F6;
+    --paper:#ffffff;
+    --ink:#1a1a1a;
+    --ink-soft:#4a4744;
+    --muted:#7a756f;
+    --accent:#8C1515;          /* Stanford 카디널 */
+    --accent-soft:#b9554f;
+    --tint:#f6ebe9;            /* 카디널 옅은 틴트 */
+    --tint-2:#f3efe9;          /* 따뜻한 회색 */
+    --line:#e7e1d9;
+    --line-strong:#d8d0c5;
+    --radius:10px;
+    --maxw:760px;
+    --sidew:268px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Pretendard","Pretendard Variable",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    line-height:1.78;
+    font-size:16.5px;
+    -webkit-font-smoothing:antialiased;
+    word-break:keep-all;
+  }
+
+  /* ===== 레이아웃 ===== */
+  .layout{display:flex; align-items:flex-start;}
+  .sidebar{
+    width:var(--sidew); flex:0 0 var(--sidew);
+    position:sticky; top:0; height:100vh; overflow-y:auto;
+    padding:28px 18px 40px; border-right:1px solid var(--line);
+    background:rgba(251,249,246,.85); backdrop-filter:saturate(120%) blur(2px);
+  }
+  .content{flex:1 1 auto; min-width:0; display:flex; justify-content:center; padding:0 24px;}
+  .doc{width:100%; max-width:var(--maxw); padding:48px 0 120px;}
+
+  /* ===== 사이드바 목차 ===== */
+  .toc-brand{font-size:12px; letter-spacing:.04em; color:var(--accent); font-weight:700; text-transform:uppercase; margin-bottom:4px;}
+  .toc-title{font-size:15px; font-weight:700; margin:0 0 18px; line-height:1.4; color:var(--ink);}
+  .toc{list-style:none; margin:0; padding:0; font-size:13.5px;}
+  .toc li{margin:1px 0;}
+  .toc a{display:block; padding:5px 10px; border-radius:7px; color:var(--ink-soft); text-decoration:none; border-left:2px solid transparent;}
+  .toc a:hover{background:var(--tint-2); color:var(--ink);}
+  .toc a.sub{padding-left:22px; font-size:13px; color:var(--muted);}
+  .toc a.active{color:var(--accent); background:var(--tint); border-left-color:var(--accent); font-weight:600;}
+
+  /* ===== 타이포 ===== */
+  h1{font-size:27px; line-height:1.32; font-weight:800; letter-spacing:-.01em; margin:0 0 6px;}
+  .subtitle{font-size:18px; font-weight:700; color:var(--accent); margin:0 0 22px;}
+  h2{font-size:21px; font-weight:800; letter-spacing:-.01em; margin:46px 0 14px; padding-bottom:9px; border-bottom:2px solid var(--line-strong);}
+  h3{font-size:17.5px; font-weight:700; margin:34px 0 12px; color:var(--ink);}
+  h3 .badge{display:inline-block; font-size:12px; font-weight:700; color:#fff; background:var(--accent); border-radius:6px; padding:2px 8px; margin-right:8px; vertical-align:middle;}
+  p{margin:12px 0;}
+  strong{font-weight:700;}
+  a{color:var(--accent);}
+  ul,ol{margin:12px 0; padding-left:22px;}
+  li{margin:6px 0;}
+  hr{display:none;}
+
+  /* ===== 출처 배너 ===== */
+  .source-banner{
+    display:flex; gap:10px; align-items:baseline;
+    background:var(--tint); border-left:4px solid var(--accent);
+    border-radius:0 var(--radius) var(--radius) 0;
+    padding:12px 16px; margin:0 0 8px; font-size:13.5px; color:var(--ink-soft);
+  }
+  .source-banner b{color:var(--accent);}
+
+  /* ===== 한국어 번역 카드 ===== */
+  .ko{
+    background:var(--paper); border:1px solid var(--line);
+    border-left:4px solid var(--accent); border-radius:var(--radius);
+    padding:6px 22px; margin:16px 0;
+    box-shadow:0 1px 2px rgba(60,40,20,.04);
+  }
+  .ko > .label, .terms > .label{
+    display:inline-block; font-size:11.5px; font-weight:800; letter-spacing:.06em;
+    color:var(--accent); text-transform:uppercase; margin:14px 0 -4px;
+  }
+
+  /* ===== 영문 원문 토글 ===== */
+  details.en{
+    background:var(--tint-2); border:1px solid var(--line); border-radius:var(--radius);
+    margin:14px 0; overflow:hidden;
+  }
+  details.en > summary{
+    cursor:pointer; list-style:none; padding:11px 16px;
+    font-size:13.5px; font-weight:700; color:var(--muted);
+    display:flex; align-items:center; gap:8px; user-select:none;
+  }
+  details.en > summary::-webkit-details-marker{display:none;}
+  details.en > summary .chev{transition:transform .2s; color:var(--accent-soft);}
+  details.en[open] > summary .chev{transform:rotate(90deg);}
+  details.en[open] > summary{border-bottom:1px solid var(--line);}
+  .en-body{padding:4px 18px 14px; font-size:14px; line-height:1.7; color:#5c574f; font-style:normal;}
+  .en-body p{margin:10px 0;}
+  .ts{
+    display:inline-block; font-family:"SFMono-Regular",ui-monospace,Menlo,Consolas,monospace;
+    font-size:11.5px; font-style:normal; color:var(--accent);
+    background:var(--tint); border:1px solid #e6cfcc; border-radius:5px;
+    padding:0 5px; margin:0 2px; vertical-align:baseline;
+  }
+
+  /* ===== 용어 설명 ===== */
+  .terms{
+    border:1px solid var(--line); border-left:3px solid var(--accent-soft);
+    border-radius:var(--radius); background:#fffdfb; padding:4px 20px 8px; margin:16px 0;
+  }
+  .terms dl{margin:8px 0;}
+  .terms dt{font-weight:700; color:var(--ink); margin-top:8px;}
+  .terms dt .en-term{color:var(--accent); font-weight:600;}
+  .terms dd{margin:1px 0 6px; color:var(--ink-soft); font-size:15px;}
+
+  /* ===== 표 ===== */
+  .table-wrap{overflow-x:auto; margin:16px 0; border:1px solid var(--line); border-radius:var(--radius);}
+  table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:520px;}
+  thead th{background:var(--accent); color:#fff; font-weight:700; text-align:left; padding:11px 14px; white-space:nowrap;}
+  tbody td{padding:9px 14px; border-top:1px solid var(--line);}
+  tbody tr:nth-child(even){background:var(--tint-2);}
+  tbody td:first-child{font-family:ui-monospace,Menlo,monospace; font-size:13px; color:var(--accent);}
+
+  /* ===== 콜아웃 ===== */
+  .callout{border-radius:var(--radius); padding:14px 20px 6px; margin:18px 0;}
+  .callout .c-title{font-weight:800; margin:6px 0 2px; display:flex; align-items:center; gap:8px;}
+  .callout.review{background:#fff; border:1px solid var(--line-strong);}
+  .callout.review ol{counter-reset:none;}
+  .callout.note{background:var(--tint-2); border-left:4px solid var(--muted); border-radius:0 var(--radius) var(--radius) 0; padding-bottom:12px;}
+  .callout.practice{background:var(--tint); border:1px solid #e6cfcc; padding-bottom:14px;}
+  .callout.practice li{margin:12px 0;}
+  .next{margin-top:40px; padding:14px 18px; background:var(--tint-2); border-radius:var(--radius); font-size:14px; color:var(--ink-soft);}
+
+  /* 수식 / 도식 */
+  .katex-display{margin:14px 0; overflow-x:auto; overflow-y:hidden; padding:6px 0;}
+  .diagram{background:#fffdfb; border:1px solid var(--line); border-radius:var(--radius); padding:14px; margin:16px 0; text-align:center;}
+  .diagram .cap{font-size:12.5px; color:var(--muted); margin-top:6px;}
+  .mermaid{display:flex; justify-content:center;}
+
+  /* ===== 모바일 ===== */
+  .menu-btn{display:none;}
+  .overlay{display:none;}
+  @media (max-width:900px){
+    .menu-btn{
+      display:flex; align-items:center; justify-content:center;
+      position:fixed; top:14px; left:14px; z-index:50;
+      width:42px; height:42px; border-radius:10px; border:1px solid var(--line-strong);
+      background:var(--paper); color:var(--accent); font-size:20px; cursor:pointer;
+      box-shadow:0 2px 8px rgba(60,40,20,.12);
+    }
+    .sidebar{
+      position:fixed; left:0; top:0; z-index:60; height:100vh;
+      transform:translateX(-105%); transition:transform .25s ease;
+      box-shadow:4px 0 24px rgba(0,0,0,.12); background:var(--bg);
+    }
+    .sidebar.open{transform:translateX(0);}
+    .overlay.show{display:block; position:fixed; inset:0; background:rgba(0,0,0,.32); z-index:55;}
+    .content{padding:0 16px;}
+    .doc{padding:64px 0 100px;}
+    body{font-size:16px;}
+    h1{font-size:23px;}
+    .ko,.terms{padding-left:16px; padding-right:16px;}
+  }
+
+  /* ===== 인쇄 ===== */
+  @media print{
+    .sidebar,.menu-btn,.overlay{display:none !important;}
+    .content{padding:0;}
+    body{background:#fff; font-size:11pt;}
+    details.en{display:none;}          /* 인쇄본은 한국어 위주 */
+    .ko,.terms,.callout,.table-wrap{break-inside:avoid; box-shadow:none;}
+    a{color:var(--ink);}
+  }
+  .home-btn{position:fixed; top:16px; right:18px; z-index:70;
+    display:inline-flex; align-items:center; gap:6px; text-decoration:none;
+    background:var(--paper); color:var(--accent); border:1px solid var(--line-strong);
+    border-radius:999px; padding:8px 14px; font-size:13.5px; font-weight:700;
+    box-shadow:0 2px 8px rgba(60,40,20,.12); transition:background .12s,color .12s;}
+  .home-btn:hover{background:var(--accent); color:#fff; border-color:var(--accent);}
+  @media (max-width:900px){ .home-btn{top:14px; right:14px; padding:8px 12px; font-size:12.5px;} }
+  @media print{ .home-btn{display:none !important;} }
+</style>
+</head>
+<body>
+<a class="home-btn" href="../index.html" title="전체 목차로 돌아가기">← 전체 목차</a>
+
+<button class="menu-btn" id="menuBtn" aria-label="목차 열기">☰</button>
+<div class="overlay" id="overlay"></div>
+
+<div class="layout">
+  <nav class="sidebar" id="sidebar"><div class="toc-brand">Stanford CME295 · Lecture 5</div><p class="toc-title">섹션 1. 선호 튜닝이 필요한 이유</p><ul class="toc"><li><a href="#overview">1. 강의 개요</a></li><li><a href="#goals">2. 학습 목표</a></li><li><a href="#body">3. 본문</a></li><li><a class="sub" href="#block1">블록 1 · 복습: 사전학습과 SFT</a></li><li><a class="sub" href="#block2">블록 2 · 세 번째 단계: 선호 튜닝(preference tuning)</a></li><li><a class="sub" href="#block3">블록 3 · 왜 SFT만으로 부족한가: 세 가지 이유</a></li><li><a href="#glossary">4. 핵심 용어집</a></li><li><a href="#review">5. 복습 문제</a></li><li><a href="#appendix">부록. 실무 적용 포인트 (NLP·LLM 기술 내용 한정)</a></li></ul></nav>
+  <main class="content"><article class="doc"><h1>CME295 Transformers &amp; LLMs — Lecture 5 한국어 교재</h1><p class="subtitle">섹션 1. 선호 튜닝이 필요한 이유</p><div class="source-banner"><span>📄</span><span><b>원문 출처</b>: Stanford CME295, Autumn 2025, Lecture 5 (LLM Tuning / Alignment), 타임스탬프 <span class="ts">00:07</span>~<span class="ts">11:02</span></span></div><section id="overview"><h2>1. 강의 개요</h2><ul><li>Lecture 4(사전학습·SFT·LoRA)를 복습하고, 학습의 세 번째 단계인 선호 튜닝(preference tuning)으로 들어간다.</li><li>SFT까지 거친 모델을 '사람이 선호하는 방향(친근함·안전 등)'으로 맞추는 정렬(alignment)을 소개한다.</li><li>선호 쌍(preference pair)이 무엇인지, 그리고 왜 SFT만으로 부족해 별도 단계가 필요한지(부정 신호 주입 등) 설명한다.</li></ul></section><section id="goals"><h2>2. 학습 목표</h2><ol><li>학습 3단계(사전학습 → SFT → 선호 튜닝)와 각 단계의 역할을 구분할 수 있다.</li><li>선호 쌍(좋은 응답 vs 나쁜 응답)이 무엇이며 정렬이 무엇을 바꾸는지 설명할 수 있다.</li><li>SFT가 있는데도 선호 튜닝이 따로 필요한 세 가지 이유(데이터 수집 용이·분포 편향 회피·부정 신호)를 안다.</li></ol></section><section id="body"><h2>3. 본문</h2><div id="block1"><h3><span class="badge">블록 1</span>복습: 사전학습과 SFT</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">01:12</span> pre-training where you're (...) trying to teach the model about language, about code (...) very time consuming (...) compute heavy (...) <span class="ts">02:14</span> what this model can do is only predict the next token. So it's a great autocompleter, but it's not a helpful model yet (...) <span class="ts">02:45</span> fine-tuning or SFT (...) we take our pre-trained model and we train it for specific tasks (...) <span class="ts">03:17</span> a data set that is much smaller in scale but of much higher quality. (...) <span class="ts">03:49</span> Laura which is (a) parameter efficient method.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>지난 강의 복습입니다. 사전학습(pre-training)은 모델에게 언어·코드를 가르치는 단계로, 매우 시간·연산이 많이 들고 방대한 데이터로 합니다(GPU 병렬화·ZeRO 등으로 최적화). 이 단계가 끝나면 모델은 언어·코드 구조를 알지만 할 수 있는 건 '다음 토큰 예측'뿐입니다 — 훌륭한 자동완성기일 뿐, 아직 도움이 되는 모델은 아닙니다.</p>
+<p>그래서 두 번째 단계, 파인튜닝(SFT)이 있습니다. 사전학습 모델을 특정 과제(예: 챗 비서)에 맞게 학습시켜 '어떻게 행동할지'를 가르칩니다. 규모는 훨씬 작지만 품질이 훨씬 높은 데이터셋을 씁니다. LoRA 같은 파라미터 효율적 방법으로 일부 가중치만 영리하게 튜닝하기도 합니다(저랭크 행렬).</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>사전학습<span class="en-term">(pre-training)</span></dt><dd>언어·코드 일반을 익히는 1단계. (Lecture 4)</dd><dt>SFT<span class="en-term">(지도 파인튜닝)</span></dt><dd>특정 과제 행동을 가르치는 2단계. 고품질 소규모 데이터.</dd><dt>LoRA</dt><dd>저랭크 행렬만 학습하는 효율적 파인튜닝. (Lecture 4 섹션 6)</dd></dl></div>
+</div>
+<div id="block2"><h3><span class="badge">블록 2</span>세 번째 단계: 선호 튜닝(preference tuning)</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">03:49</span> how to align the model to align with what we call human (preferences). (...) <span class="ts">04:21</span> your assistant is (...) behaving the way you want but not (...) at the tone that you want (...) not friendly or it's not (...) safe. (...) <span class="ts">04:50</span> this step is called preference (tuning). (...) <span class="ts">05:21</span> the model (...) responds with I would suggest you to not spend much time with your teddy bear at all (...) not (...) aligned with what we want (...) <span class="ts">05:54</span> this pair would be (...) a preference pair (...) two responses. One that we want to see (...) and (...) the other one that we do not want to see.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>오늘 배울 세 번째 단계는 모델을 사람의 선호(human preference)에 맞추는 것입니다. SFT를 거친 모델이 원하는 대로 동작은 하지만, 말투(tone)가 원하는 게 아닐 수 있습니다 — 친근하지 않거나 안전하지 않거나. 이런 면을 맞추는 단계가 선호 튜닝(preference tuning), 즉 정렬(alignment)입니다.</p>
+<p>예를 들어 SFT 모델에게 "곰인형과 할 새로운 활동을 제안해줘"라고 했더니 "곰인형과 시간을 많이 보내지 않는 게 좋겠다"고 답한다면 — 비서답긴 하지만 우리가 원하는 답은 아닙니다. 그래서 이 '나쁜 출력'을 두고, 우리가 원하는 출력을 짝지어 둡니다. 이 쌍이 선호 쌍(preference pair)입니다. 같은 프롬프트에 대해 두 응답 — 보고 싶은 것(좋은 답)과 보고 싶지 않은 것(나쁜 답) — 을 둡니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>선호 튜닝<span class="en-term">(preference tuning)</span></dt><dd>모델을 사람의 선호(말투·안전 등)에 맞추는 3단계.</dd><dt>정렬<span class="en-term">(alignment)</span></dt><dd>SFT + 선호 튜닝의 결합(Lecture 4 섹션 6 참고).</dd><dt>선호 쌍<span class="en-term">(preference pair)</span></dt><dd>같은 프롬프트에 대한 '좋은 응답 / 나쁜 응답' 쌍.</dd><dt>말투<span class="en-term">(tone)</span></dt><dd>응답의 어조. 선호 튜닝의 주요 조정 대상.</dd></dl></div>
+</div>
+<div id="block3"><h3><span class="badge">블록 3</span>왜 SFT만으로 부족한가: 세 가지 이유</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">06:53</span> during the fine-tuning stage (...) construct a very high quality data set (...) very time consuming and very (...) difficult. (...) <span class="ts">07:27</span> we're (...) not really teaching the model exactly what it should (do) but rather telling the model what kind of output it should prefer (...) <span class="ts">07:58</span> showing you two poems, one bad poem and one great poem, and ask you to just say which one is better (...) much easier. (...) <span class="ts">08:27</span> the distribution of prompts (...) if we have too much of a given kind of prompt our model will be more biased. (...) <span class="ts">11:02</span> preference tuning allows us to inject some negative signal (...) SFT (...) does not teach the model about what it should not predict.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>SFT가 이미 있는데 왜 3단계가 또 필요할까요? 세 가지 이유가 있습니다.</p>
+<ol><li><strong>데이터 수집이 더 쉽다</strong>: SFT는 모델이 어떻게 행동해야 하는지를 직접 가르치므로, 고품질 정답을 처음부터 작성해야 합니다(매우 어렵고 시간 소모적). 반면 선호 튜닝은 "이걸 생성해라"가 아니라 "이 옵션을 더 선호한다"입니다. 좋은 시를 처음부터 쓰는 것보다, 시 두 편(나쁜 것·좋은 것)을 보고 어느 쪽이 나은지 고르는 게 훨씬 쉽습니다.</li></ol>
+<ol><li><strong>분포 편향을 피한다</strong>: SFT 데이터는 프롬프트의 분포(distribution)를 신중히 맞춰야 합니다. 특정 유형 프롬프트가 너무 많으면 모델이 그 방향으로 편향됩니다. 모델이 한 가지를 잘못한다고 SFT에 예시 하나를 추가하면, 그 프롬프트가 모델을 과도하게 편향시키지 않는지 매우 조심해야 합니다.</li></ol>
+<ol><li><strong>부정 신호(negative signal)를 줄 수 있다</strong>: SFT는 '무엇을 생성해야 하는지'만 가르치고 '무엇을 생성하면 안 되는지'는 가르치지 못합니다. 선호 튜닝은 '하지 말아야 할 것'이라는 부정 신호를 주입할 수 있습니다.</li></ol></div>
+<div class="callout note"><div class="c-title">⚠️ 참고</div><p>주의: 모델이 많이 잘못한다면 선호 튜닝이 만능 해결책이 아니라, SFT 데이터셋 자체에 문제가 있을 수 있으니 점검하는 게 나을 때도 있습니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>프롬프트 분포<span class="en-term">(distribution of prompts)</span></dt><dd>학습 데이터에 든 프롬프트 유형의 비율. 치우치면 모델이 편향됨.</dd><dt>부정 신호<span class="en-term">(negative signal)</span></dt><dd>'이렇게 하지 말라'는 정보. SFT엔 없고 선호 튜닝이 줌.</dd></dl></div>
+</div></section><section id="glossary"><h2>4. 핵심 용어집</h2><div class="table-wrap"><table><thead><tr><th>영문</th><th>한국어</th><th>발음</th><th>뜻</th></tr></thead><tbody><tr><td>preference tuning</td><td>선호 튜닝</td><td>—</td><td>사람 선호에 모델을 맞추는 3단계</td></tr><tr><td>alignment</td><td>정렬</td><td>얼라인먼트</td><td>SFT+선호 튜닝</td></tr><tr><td>preference pair</td><td>선호 쌍</td><td>—</td><td>좋은 응답/나쁜 응답 쌍</td></tr><tr><td>human preference</td><td>사람 선호</td><td>—</td><td>정렬의 기준</td></tr><tr><td>tone</td><td>말투</td><td>톤</td><td>응답의 어조</td></tr><tr><td>distribution of prompts</td><td>프롬프트 분포</td><td>—</td><td>프롬프트 유형 비율</td></tr><tr><td>negative signal</td><td>부정 신호</td><td>—</td><td>'하지 말 것' 정보</td></tr><tr><td>autocompleter</td><td>자동완성기</td><td>—</td><td>사전학습 모델의 상태(다음 토큰만 예측)</td></tr></tbody></table></div></section><section id="review"><h2>5. 복습 문제</h2><div class="callout review"><div class="c-title">✏️ 스스로 점검</div><ol><li>학습 3단계(사전학습·SFT·선호 튜닝)는 각각 무엇을 가르치는가?</li><li>선호 쌍이란 무엇이며, 곰인형 예시에서 좋은 답/나쁜 답은 어떻게 구성되는가?</li><li>SFT가 있는데도 선호 튜닝이 필요한 세 가지 이유는?</li></ol></div></section><section id="appendix"><h2>부록. 실무 적용 포인트 <span style="font-size:14px;font-weight:500;color:var(--muted);">(NLP·LLM 기술 내용 한정)</span></h2><div class="callout practice"><div class="c-title">💡 현장에서 써먹기</div><ul><li><strong>선호 튜닝은 "왜 같은 사실도 LLM이 친절하게 말하는가"의 답이다.</strong> 사실 정확성은 사전학습·SFT의 몫이고, 말투·태도는 선호 튜닝으로 다듬어진다. 우리가 쓰는 LLM의 '공손함·친근함'이 별도 학습 단계의 산물임을 알면, 모델마다 어조가 다른 이유를 이해할 수 있다.</li><li><strong>"좋은 답을 쓰기보다 두 답 중 고르기가 쉽다"는 발상은 평가·검수 업무에 그대로 통한다.</strong> AI 출력을 다룰 때, 모범 답안을 매번 작성하기보다 후보 몇 개를 두고 더 나은 것을 고르는 방식이 비용·시간 면에서 효율적이다. 문구·초안 검토 업무 설계에 참고할 만하다.</li></ul></div><div class="next"><strong><strong>다음 섹션 예고</strong>·&lt;/strong&gt; · 선호 데이터를 실제로 어떻게 모으나 — 점수 매기기(pointwise)·쌍 비교(pairwise)·순위(listwise)와 그 생성·평가·재작성. <span class="ts">11:02</span> 이후.</div></section></article></main>
+</div>
+
+<!-- KaTeX 자동 렌더 -->
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}],throwOnError:false});"></script>
+
+<!-- Mermaid -->
+<script type="module">
+  try{
+    const m = await import('https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs');
+    m.default.initialize({startOnLoad:true, theme:'base', themeVariables:{
+      fontFamily:'Pretendard, sans-serif', primaryColor:'#fffdfb', primaryBorderColor:'#d8d0c5',
+      primaryTextColor:'#1a1a1a', lineColor:'#b9554f', fontSize:'14px'
+    }});
+  }catch(e){ /* 오프라인이면 도식은 코드로 표시 */ }
+</script>
+
+<!-- 목차 활성표시 + 모바일 드로어 -->
+<script>
+  // 모바일 드로어
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('overlay');
+  const btn = document.getElementById('menuBtn');
+  const toggle = (on)=>{ sb.classList.toggle('open',on); ov.classList.toggle('show',on); };
+  btn.addEventListener('click',()=>toggle(!sb.classList.contains('open')));
+  ov.addEventListener('click',()=>toggle(false));
+  document.querySelectorAll('.toc a').forEach(a=>a.addEventListener('click',()=>{ if(window.innerWidth<=900) toggle(false); }));
+
+  // 현재 위치 강조
+  const links = [...document.querySelectorAll('.toc a')];
+  const map = {}; links.forEach(a=>{ const id=a.getAttribute('href').slice(1); map[id]=a; });
+  const targets = Object.keys(map).map(id=>document.getElementById(id)).filter(Boolean);
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(en=>{
+      if(en.isIntersecting){
+        links.forEach(l=>l.classList.remove('active'));
+        const a = map[en.target.id]; if(a) a.classList.add('active');
+      }
+    });
+  },{rootMargin:'-15% 0px -75% 0px', threshold:0});
+  targets.forEach(t=>io.observe(t));
+</script>
+
+</body>
+</html>

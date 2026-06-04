@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CME295 Transformers &amp; LLMs — 한국어 교재 (전 9강)</title>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+  :root{
+    --bg:#FBF9F6; --paper:#fff; --ink:#1a1a1a; --ink-soft:#4a4744; --muted:#7a756f;
+    --accent:#8C1515; --accent-soft:#b9554f; --tint:#f6ebe9; --tint-2:#f3efe9;
+    --line:#e7e1d9; --line-strong:#d8d0c5; --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--bg); color:var(--ink); word-break:keep-all;
+    font-family:"Pretendard","Pretendard Variable",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    line-height:1.7; -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:1140px; margin:0 auto; padding:0 24px 100px;}
+
+  /* 헤더 */
+  .hero{padding:56px 0 30px; border-bottom:2px solid var(--line-strong); margin-bottom:36px;}
+  .brand{font-size:13px; letter-spacing:.06em; font-weight:800; color:var(--accent); text-transform:uppercase;}
+  .hero h1{font-size:30px; line-height:1.3; font-weight:800; letter-spacing:-.01em; margin:8px 0 10px;}
+  .hero .desc{color:var(--ink-soft); font-size:15.5px; margin:0;}
+  .stats{display:flex; gap:22px; margin-top:18px; flex-wrap:wrap;}
+  .stat{font-size:13.5px; color:var(--muted);}
+  .stat b{color:var(--accent); font-size:17px; margin-right:4px;}
+  .howto{margin-top:18px; background:var(--tint); border-left:4px solid var(--accent);
+    border-radius:0 var(--radius) var(--radius) 0; padding:11px 16px; font-size:13.5px; color:var(--ink-soft);}
+
+  /* 카드 그리드 */
+  .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(330px,1fr)); gap:20px;}
+  .card{background:var(--paper); border:1px solid var(--line); border-radius:var(--radius);
+    overflow:hidden; box-shadow:0 1px 3px rgba(60,40,20,.05); display:flex; flex-direction:column;}
+  .card-h{padding:18px 20px 14px; border-bottom:1px solid var(--line); position:relative; background:linear-gradient(180deg,#fffdfb,#fff);}
+  .lnum{position:absolute; top:16px; right:18px; font-size:12px; font-weight:800; color:#fff;
+    background:var(--accent); border-radius:7px; padding:3px 9px;}
+  .card-h h2{font-size:15px; font-weight:700; color:var(--muted); margin:0 0 3px; letter-spacing:.02em;}
+  .card-h .theme{font-size:17px; font-weight:800; color:var(--ink); margin:0; line-height:1.4; padding-right:42px;}
+  .secs{list-style:none; margin:0; padding:6px 10px 12px;}
+  .secs li{margin:0;}
+  .secs a{display:flex; align-items:baseline; gap:10px; text-decoration:none; color:var(--ink-soft);
+    padding:9px 10px; border-radius:9px; transition:background .12s,color .12s;}
+  .secs a:hover{background:var(--tint); color:var(--accent);}
+  .sec-no{flex:0 0 auto; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center;
+    font-size:12px; font-weight:700; color:var(--accent); background:var(--tint); border-radius:50%;}
+  .secs a:hover .sec-no{background:var(--accent); color:#fff;}
+  .sec-t{flex:1 1 auto; font-size:14.5px;}
+  .arr{flex:0 0 auto; color:var(--line-strong); font-size:13px; transition:color .12s,transform .12s;}
+  .secs a:hover .arr{color:var(--accent); transform:translateX(2px);}
+
+  footer{margin-top:44px; padding-top:20px; border-top:1px solid var(--line); font-size:13px; color:var(--muted);}
+
+  @media (max-width:640px){
+    .wrap{padding:0 16px 70px;}
+    .hero{padding:40px 0 24px;}
+    .hero h1{font-size:24px;}
+    .grid{grid-template-columns:1fr; gap:16px;}
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hero">
+      <div class="brand">Stanford CME295 · Autumn 2025</div>
+      <h1>Transformers &amp; LLMs — 한국어 교재</h1>
+      <p class="desc">스탠퍼드 CME295 강의를 한국어로 옮긴 학습자료. 전 9강 · 강의별 섹션으로 정리.</p>
+      <div class="stats">
+        <span class="stat"><b>9</b>개 강의</span>
+        <span class="stat"><b>51</b>개 섹션</span>
+        <span class="stat"><b>한국어</b> 번역 + 영문 원문 토글</span>
+      </div>
+      <div class="howto">💡 각 섹션 안에서 <b>‘영문 원문 보기’</b>를 누르면 원어 자막이 펼쳐집니다. 모바일·인쇄(PDF) 모두 지원.</div>
+    </div>
+
+    <div class="grid">
+      <article class="card">
+        <header class="card-h">
+          <span class="lnum">L1</span>
+          <h2>Lecture 1</h2>
+          <p class="theme">NLP 기초와 트랜스포머의 등장</p>
+        </header>
+        <ul class="secs">
+          <li><a href="Stanford%20CME295_Lecture%201/%EC%84%B9%EC%85%981_%ED%95%9C%EA%B5%AD%EC%96%B4%EA%B5%90%EC%9E%AC.html"><span class="sec-no">1</span><span class="sec-t">강의 도입 (강사 소개·수업 운영)</span><span class="arr">→</span></a></li>
+          <li><a href="Stanford%20CME295_Lecture%201/%EC%84%B9%EC%85%982_%ED%95%9C%EA%B5%AD%EC%96%B4%EA%B5%90%EC%9E%AC.html"><span class="sec-no">2</span><span class="sec-t">NLP 개요 — 과제 유형과 평가지표</span><span class="arr">→</span></a></li>
+          <li><a href="Stanford%20CME295_Lecture%201/%EC%84%B9%EC%85%983_%ED%95%9C%EA%B5%AD%EC%96%B4%EA%B5%90%EC%9E%AC.html"><span class="sec-no">3</span><span class="sec-t">텍스트를 숫자로 — 토큰화와 토큰 표현</span><span class="arr">→</span></a></li>
+          <li><a href="Stanford%20CME295_Lecture%201/%EC%84%B9%EC%85%984_%ED%95%9C%EA%B5%AD%EC%96%B4%EA%B5%90%EC%9E%AC.html"><span class="sec-no">4</span><span class="sec-t">표현 학습 — word2vec과 순차 모델(RNN·LSTM)</span><span class="arr">→</span></a></li>
+          <li><a href="Stanford%20CME295_Lecture%201/%EC%84%B9%EC%85%985_%ED%95%9C%EA%B5%AD%EC%96%B4%EA%B5%90%EC%9E%AC.html"><span class="sec-no">5</span><span class="sec-t">어텐션과 트랜스포머 아키텍처</span><span class="arr">→</span></a></li>
+        </ul>
+      </article>
+      <article class="card">
+        <header class="card-h">
+          <span class="lnum">L2</span>
+          <h2>Lecture 2</h2>
+          <p class="theme">트랜스포머 심화 — 위치 임베딩·정규화·BERT</p>
+        </header>
+        <ul class="secs">
+          <li><a href="Stanford%20CME295_Lecture%202/%EC%84%B9%EC%85%981_%ED%95%9C%EA%B5%AD%EC%96%B4%EA%B5%90%EC%9E%AC.html"><span class="sec-no">1</span><span class="sec-t">도입과 복습 — self-attention·멀티헤드·어텐션 맵</span><span class="arr">→</span></a></li>
+          <li><a href="Stanford%20CME295_Lecture%202/%EC%84%B9%EC%85%982_%ED%95%9C%EA%B5%AD%EC%96%B4%EA%B5%90%EC%9E%AC.html"><span class="sec-no">2</span><span class="sec-t">위치 임베딩 (Position Embedding)</span><span class="arr">→</span></a></li>
+          <li><a href="Stanford%20CME295_Lecture%202/%EC%84%B9%EC%85%983_%ED%95%9C%EA%B5%AD%EC%96%B4%EA%B5%90%EC%9E%AC.html"><span class="sec-no">3</span><span class="sec-t">레이어 정규화와 어텐션 변형</span><span class="arr">→</span></a></li>
+          <li><a href="Stanford%20CME295_Lecture%202/%EC%84%B9%EC%85%984_%ED%95%9C%EA%B5%AD%EC%96%B4%EA%B5%90%EC%9E%AC.html"><span class="sec-no">4</span><span class="sec-t">트랜스포머 모델의 분류 체계</span><span class="arr">→</span></a></li>
+          <li><a href="Stanford%20CME295_Lecture%202/%EC%84%B9%EC%85%985_%ED%95%9C%EA%B5%AD%EC%96%B4%EA%B5%90%EC%9E%AC.html"><span class="sec-no">5</span><span class="sec-t">BERT 심화와 경량화 (DistilBERT·RoBERTa)</span><span class="arr">→</span></a></li>
+        </ul>
+      </article>
+      <article class="card">
+        <header class="card-h">
+          <span class="lnum">L3</span>
+          <h2>Lecture 3</h2>
+          <p class="theme">LLM의 핵심 — MoE·디코딩·프롬프팅·추론 효율화</p>
+        </header>
+        <ul class="secs">
+          <li><a href="Stanford%20CME295_Lecture%203/%EC%84%B9%EC%85%981_%ED%95%9C%EA%B5%AD%EC%96%B4%EA%B5%90%EC%9E%AC.html"><span class="sec-no">1</span><span class="sec-t">도입·복습과 LLM의 정의</span><span class="arr">→</span></a></li>
+          <li><a href="Stanford%20CME295_Lecture%203/%EC%84%B9%EC%85%982_%ED%95%9C%EA%B5%AD%EC%96%B4%EA%B5%90%EC%9E%AC.html"><span class="sec-no">2</span><span class="sec-t">전문가 혼합 (Mixture of Experts, MoE)</span><span class="arr">→</span></a></li>
+          <li><a href="Stanford%20CME295_Lecture%203/%EC%84%B9%EC%85%983_%ED%95%9C%EA%B5%AD%EC%96%B4%EA%B5%90%EC%9E%AC.html"><span class="sec-no">3</span><span class="sec-t">디코딩 — 다음 토큰을 고르는 법</span><span class="arr">→</span></a></li>
+          <li><a href="Stanford%20CME295_Lecture%203/%EC%84%B9%EC%85%984_%ED%95%9C%EA%B5%AD%EC%96%B4%EA%B5%90%EC%9E%AC.html"><span class="sec-no">4</span><span class="sec-t">프롬프팅 전략</span><span class="arr">→</span></a></li>
+          <li><a href="Stanford%20CME295_Lecture%203/%EC%84%B9%EC%85%985_%ED%95%9C%EA%B5%AD%EC%96%B4%EA%B5%90%EC%9E%AC.html"><span class="sec-no">5</span><span class="sec-t">추론 효율화 기법</span><span class="arr">→</span></a></li>
+        </ul>
+      </article>
+      <article class="card">
+        <header class="card-h">
+          <span class="lnum">L4</span>
+          <h2>Lecture 4</h2>
+          <p class="theme">LLM 학습 — 사전학습·스케일링·분산학습·파인튜닝</p>
+        </header>
+        <ul class="secs">
+          <li><a href="Stanford%20CME295_Lecture%204/%EC%84%B9%EC%85%981_%ED%95%9C%EA%B5%AD%EC%96%B4%EA%B5%90%EC%9E%AC.html"><span class="sec-no">1</span><span class="sec-t">전이학습과 사전학습 — LLM 학습의 시작</span><span class="arr">→</span></a></li>
+          <li><a href="Stanford%20CME295_Lecture%204/%EC%84%B9%EC%85%982_%ED%95%9C%EA%B5%AD%EC%96%B4%EA%B5%90%EC%9E%AC.html"><span class="sec-no">2</span><span class="sec-t">스케일링 법칙과 사전학습의 도전과제</span><span class="arr">→</span></a></li>
+          <li><a href="Stanford%20CME295_Lecture%204/%EC%84%B9%EC%85%983_%ED%95%9C%EA%B5%AD%EC%96%B4%EA%B5%90%EC%9E%AC.html"><span class="sec-no">3</span><span class="sec-t">분산 학습 — GPU 메모리와 병렬화</span><span class="arr">→</span></a></li>
+          <li><a href="Stanford%20CME295_Lecture%204/%EC%84%B9%EC%85%984_%ED%95%9C%EA%B5%AD%EC%96%B4%EA%B5%90%EC%9E%AC.html"><span class="sec-no">4</span><span class="sec-t">FlashAttention과 양자화·혼합정밀도</span><span class="arr">→</span></a></li>
+          <li><a href="Stanford%20CME295_Lecture%204/%EC%84%B9%EC%85%985_%ED%95%9C%EA%B5%AD%EC%96%B4%EA%B5%90%EC%9E%AC.html"><span class="sec-no">5</span><span class="sec-t">파인튜닝(SFT)과 instruction tuning</span><span class="arr">→</span></a></li>
+          <li><a href="Stanford%20CME295_Lecture%204/%EC%84%B9%EC%85%986_%ED%95%9C%EA%B5%AD%EC%96%B4%EA%B5%90%EC%9E%AC.html"><span class="sec-no">6</span><span class="sec-t">평가·정렬과 효율적 파인튜닝 (LoRA·QLoRA)</span><span class="arr">→</span></a></li>
+        </ul>
+      </article>
+      <article class="card">
+        <header class="card-h">
+          <span class="lnum">L5</span>
+          <h2>Lecture 5</h2>
+          <p class="theme">선호 튜닝과 정렬 — RLHF·보상모델·DPO</p>
+        </header>
+        <ul class="secs">
+          <li><a href="Stanford%20CME295_Lecture%205/%EC%84%B9%EC%85%981_%ED%95%9C%EA%B5%AD%EC%96%B4%EA%B5%90%EC%9E%AC.html"><span class="sec-no">1</span><span class="sec-t">선호 튜닝이 필요한 이유</span><span class="arr">→</span></a></li>
+          <li><a href="Stanford%20CME295_Lecture%205/%EC%84%B9%EC%85%982_%ED%95%9C%EA%B5%AD%EC%96%B4%EA%B5%90%EC%9E%AC.html"><span class="sec-no">2</span><span class="sec-t">선호 데이터 수집</span><span class="arr">→</span></a></li>
+          <li><a href="Stanford%20CME295_Lecture%205/%EC%84%B9%EC%85%983_%ED%95%9C%EA%B5%AD%EC%96%B4%EA%B5%90%EC%9E%AC.html"><span class="sec-no">3</span><span class="sec-t">강화학습 기초와 RLHF 개요</span><span class="arr">→</span></a></li>
+          <li><a href="Stanford%20CME295_Lecture%205/%EC%84%B9%EC%85%984_%ED%95%9C%EA%B5%AD%EC%96%B4%EA%B5%90%EC%9E%AC.html"><span class="sec-no">4</span><span class="sec-t">보상 모델 (Bradley-Terry와 손실 함수)</span><span class="arr">→</span></a></li>
+          <li><a href="Stanford%20CME295_Lecture%205/%EC%84%B9%EC%85%985_%ED%95%9C%EA%B5%AD%EC%96%B4%EA%B5%90%EC%9E%AC.html"><span class="sec-no">5</span><span class="sec-t">RL 정렬 — 보상 해킹·KL 발산·PPO</span><span class="arr">→</span></a></li>
+          <li><a href="Stanford%20CME295_Lecture%205/%EC%84%B9%EC%85%986_%ED%95%9C%EA%B5%AD%EC%96%B4%EA%B5%90%EC%9E%AC.html"><span class="sec-no">6</span><span class="sec-t">Best-of-N과 DPO</span><span class="arr">→</span></a></li>
+        </ul>
+      </article>
+      <article class="card">
+        <header class="card-h">
+          <span class="lnum">L6</span>
+          <h2>Lecture 6</h2>
+          <p class="theme">추론 모델 — 사고연쇄·GRPO·DeepSeek-R1</p>
+        </header>
+        <ul class="secs">
+          <li><a href="Stanford%20CME295_Lecture%206/%EC%84%B9%EC%85%981_%ED%95%9C%EA%B5%AD%EC%96%B4%EA%B5%90%EC%9E%AC.html"><span class="sec-no">1</span><span class="sec-t">복습과 vanilla LLM의 약점</span><span class="arr">→</span></a></li>
+          <li><a href="Stanford%20CME295_Lecture%206/%EC%84%B9%EC%85%982_%ED%95%9C%EA%B5%AD%EC%96%B4%EA%B5%90%EC%9E%AC.html"><span class="sec-no">2</span><span class="sec-t">추론 모델이란 — 사고연쇄의 대규모화</span><span class="arr">→</span></a></li>
+          <li><a href="Stanford%20CME295_Lecture%206/%EC%84%B9%EC%85%983_%ED%95%9C%EA%B5%AD%EC%96%B4%EA%B5%90%EC%9E%AC.html"><span class="sec-no">3</span><span class="sec-t">추론 벤치마크와 pass@k 지표</span><span class="arr">→</span></a></li>
+          <li><a href="Stanford%20CME295_Lecture%206/%EC%84%B9%EC%85%984_%ED%95%9C%EA%B5%AD%EC%96%B4%EA%B5%90%EC%9E%AC.html"><span class="sec-no">4</span><span class="sec-t">RL로 추론 모델 만들기와 GRPO</span><span class="arr">→</span></a></li>
+          <li><a href="Stanford%20CME295_Lecture%206/%EC%84%B9%EC%85%985_%ED%95%9C%EA%B5%AD%EC%96%B4%EA%B5%90%EC%9E%AC.html"><span class="sec-no">5</span><span class="sec-t">GRPO vs PPO와 길이 편향 보정</span><span class="arr">→</span></a></li>
+          <li><a href="Stanford%20CME295_Lecture%206/%EC%84%B9%EC%85%986_%ED%95%9C%EA%B5%AD%EC%96%B4%EA%B5%90%EC%9E%AC.html"><span class="sec-no">6</span><span class="sec-t">DeepSeek-R1 파이프라인과 distillation</span><span class="arr">→</span></a></li>
+        </ul>
+      </article>
+      <article class="card">
+        <header class="card-h">
+          <span class="lnum">L7</span>
+          <h2>Lecture 7</h2>
+          <p class="theme">RAG·도구 호출·에이전트</p>
+        </header>
+        <ul class="secs">
+          <li><a href="Stanford%20CME295_Lecture%207/%EC%84%B9%EC%85%981_%ED%95%9C%EA%B5%AD%EC%96%B4%EA%B5%90%EC%9E%AC.html"><span class="sec-no">1</span><span class="sec-t">RAG의 동기와 개요</span><span class="arr">→</span></a></li>
+          <li><a href="Stanford%20CME295_Lecture%207/%EC%84%B9%EC%85%982_%ED%95%9C%EA%B5%AD%EC%96%B4%EA%B5%90%EC%9E%AC.html"><span class="sec-no">2</span><span class="sec-t">지식 베이스와 2단계 검색</span><span class="arr">→</span></a></li>
+          <li><a href="Stanford%20CME295_Lecture%207/%EC%84%B9%EC%85%983_%ED%95%9C%EA%B5%AD%EC%96%B4%EA%B5%90%EC%9E%AC.html"><span class="sec-no">3</span><span class="sec-t">키워드 검색·맥락 보강·랭킹·평가 지표</span><span class="arr">→</span></a></li>
+          <li><a href="Stanford%20CME295_Lecture%207/%EC%84%B9%EC%85%984_%ED%95%9C%EA%B5%AD%EC%96%B4%EA%B5%90%EC%9E%AC.html"><span class="sec-no">4</span><span class="sec-t">도구 호출 (Tool/Function Calling)</span><span class="arr">→</span></a></li>
+          <li><a href="Stanford%20CME295_Lecture%207/%EC%84%B9%EC%85%985_%ED%95%9C%EA%B5%AD%EC%96%B4%EA%B5%90%EC%9E%AC.html"><span class="sec-no">5</span><span class="sec-t">도구의 종류·도구 선택·MCP</span><span class="arr">→</span></a></li>
+          <li><a href="Stanford%20CME295_Lecture%207/%EC%84%B9%EC%85%986_%ED%95%9C%EA%B5%AD%EC%96%B4%EA%B5%90%EC%9E%AC.html"><span class="sec-no">6</span><span class="sec-t">에이전트 — ReAct·멀티 에이전트·안전</span><span class="arr">→</span></a></li>
+        </ul>
+      </article>
+      <article class="card">
+        <header class="card-h">
+          <span class="lnum">L8</span>
+          <h2>Lecture 8</h2>
+          <p class="theme">평가 — 사람·지표·LLM judge·벤치마크</p>
+        </header>
+        <ul class="secs">
+          <li><a href="Stanford%20CME295_Lecture%208/%EC%84%B9%EC%85%981_%ED%95%9C%EA%B5%AD%EC%96%B4%EA%B5%90%EC%9E%AC.html"><span class="sec-no">1</span><span class="sec-t">평가의 정의와 사람 평가</span><span class="arr">→</span></a></li>
+          <li><a href="Stanford%20CME295_Lecture%208/%EC%84%B9%EC%85%982_%ED%95%9C%EA%B5%AD%EC%96%B4%EA%B5%90%EC%9E%AC.html"><span class="sec-no">2</span><span class="sec-t">규칙 기반 지표와 그 한계</span><span class="arr">→</span></a></li>
+          <li><a href="Stanford%20CME295_Lecture%208/%EC%84%B9%EC%85%983_%ED%95%9C%EA%B5%AD%EC%96%B4%EA%B5%90%EC%9E%AC.html"><span class="sec-no">3</span><span class="sec-t">LLM as a judge</span><span class="arr">→</span></a></li>
+          <li><a href="Stanford%20CME295_Lecture%208/%EC%84%B9%EC%85%984_%ED%95%9C%EA%B5%AD%EC%96%B4%EA%B5%90%EC%9E%AC.html"><span class="sec-no">4</span><span class="sec-t">평가 차원과 사실성 평가</span><span class="arr">→</span></a></li>
+          <li><a href="Stanford%20CME295_Lecture%208/%EC%84%B9%EC%85%985_%ED%95%9C%EA%B5%AD%EC%96%B4%EA%B5%90%EC%9E%AC.html"><span class="sec-no">5</span><span class="sec-t">에이전트 평가 — 일곱 가지 실패 유형</span><span class="arr">→</span></a></li>
+          <li><a href="Stanford%20CME295_Lecture%208/%EC%84%B9%EC%85%986_%ED%95%9C%EA%B5%AD%EC%96%B4%EA%B5%90%EC%9E%AC.html"><span class="sec-no">6</span><span class="sec-t">벤치마크와 모델 선택</span><span class="arr">→</span></a></li>
+        </ul>
+      </article>
+      <article class="card">
+        <header class="card-h">
+          <span class="lnum">L9</span>
+          <h2>Lecture 9</h2>
+          <p class="theme">전체 복습과 최신 트렌드</p>
+        </header>
+        <ul class="secs">
+          <li><a href="Stanford%20CME295_Lecture%209/%EC%84%B9%EC%85%981_%ED%95%9C%EA%B5%AD%EC%96%B4%EA%B5%90%EC%9E%AC.html"><span class="sec-no">1</span><span class="sec-t">전체 복습 ① — 트랜스포머부터 LLM 디코딩까지</span><span class="arr">→</span></a></li>
+          <li><a href="Stanford%20CME295_Lecture%209/%EC%84%B9%EC%85%982_%ED%95%9C%EA%B5%AD%EC%96%B4%EA%B5%90%EC%9E%AC.html"><span class="sec-no">2</span><span class="sec-t">전체 복습 ② — 학습·정렬·추론</span><span class="arr">→</span></a></li>
+          <li><a href="Stanford%20CME295_Lecture%209/%EC%84%B9%EC%85%983_%ED%95%9C%EA%B5%AD%EC%96%B4%EA%B5%90%EC%9E%AC.html"><span class="sec-no">3</span><span class="sec-t">전체 복습 ③ — RAG·도구·에이전트·평가</span><span class="arr">→</span></a></li>
+          <li><a href="Stanford%20CME295_Lecture%209/%EC%84%B9%EC%85%984_%ED%95%9C%EA%B5%AD%EC%96%B4%EA%B5%90%EC%9E%AC.html"><span class="sec-no">4</span><span class="sec-t">트렌드 ① — Vision Transformer와 멀티모달</span><span class="arr">→</span></a></li>
+          <li><a href="Stanford%20CME295_Lecture%209/%EC%84%B9%EC%85%985_%ED%95%9C%EA%B5%AD%EC%96%B4%EA%B5%90%EC%9E%AC.html"><span class="sec-no">5</span><span class="sec-t">트렌드 ② — 디퓨전 기반 LLM</span><span class="arr">→</span></a></li>
+          <li><a href="Stanford%20CME295_Lecture%209/%EC%84%B9%EC%85%986_%ED%95%9C%EA%B5%AD%EC%96%B4%EA%B5%90%EC%9E%AC.html"><span class="sec-no">6</span><span class="sec-t">마무리 — 진행 중인 연구·미래·자료</span><span class="arr">→</span></a></li>
+        </ul>
+      </article>
+    </div>
+
+    <footer>
+      출처: Stanford CME295 Transformers &amp; LLMs (Autumn 2025) · 한국어 교재 변환본 · 봉화군 도시재생팀 내부 학습자료
+    </footer>
+  </div>
+</body>
+</html>

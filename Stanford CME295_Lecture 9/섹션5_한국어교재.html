@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CME295 Lecture 9 · 섹션 5. 트렌드 ② — 디퓨전 기반 LLM</title>
+
+<!-- 폰트: Pretendard (CDN, 없으면 시스템 폰트 폴백) -->
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<!-- 수식: KaTeX -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
+
+<style>
+  :root{
+    --bg:#FBF9F6;
+    --paper:#ffffff;
+    --ink:#1a1a1a;
+    --ink-soft:#4a4744;
+    --muted:#7a756f;
+    --accent:#8C1515;          /* Stanford 카디널 */
+    --accent-soft:#b9554f;
+    --tint:#f6ebe9;            /* 카디널 옅은 틴트 */
+    --tint-2:#f3efe9;          /* 따뜻한 회색 */
+    --line:#e7e1d9;
+    --line-strong:#d8d0c5;
+    --radius:10px;
+    --maxw:760px;
+    --sidew:268px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Pretendard","Pretendard Variable",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    line-height:1.78;
+    font-size:16.5px;
+    -webkit-font-smoothing:antialiased;
+    word-break:keep-all;
+  }
+
+  /* ===== 레이아웃 ===== */
+  .layout{display:flex; align-items:flex-start;}
+  .sidebar{
+    width:var(--sidew); flex:0 0 var(--sidew);
+    position:sticky; top:0; height:100vh; overflow-y:auto;
+    padding:28px 18px 40px; border-right:1px solid var(--line);
+    background:rgba(251,249,246,.85); backdrop-filter:saturate(120%) blur(2px);
+  }
+  .content{flex:1 1 auto; min-width:0; display:flex; justify-content:center; padding:0 24px;}
+  .doc{width:100%; max-width:var(--maxw); padding:48px 0 120px;}
+
+  /* ===== 사이드바 목차 ===== */
+  .toc-brand{font-size:12px; letter-spacing:.04em; color:var(--accent); font-weight:700; text-transform:uppercase; margin-bottom:4px;}
+  .toc-title{font-size:15px; font-weight:700; margin:0 0 18px; line-height:1.4; color:var(--ink);}
+  .toc{list-style:none; margin:0; padding:0; font-size:13.5px;}
+  .toc li{margin:1px 0;}
+  .toc a{display:block; padding:5px 10px; border-radius:7px; color:var(--ink-soft); text-decoration:none; border-left:2px solid transparent;}
+  .toc a:hover{background:var(--tint-2); color:var(--ink);}
+  .toc a.sub{padding-left:22px; font-size:13px; color:var(--muted);}
+  .toc a.active{color:var(--accent); background:var(--tint); border-left-color:var(--accent); font-weight:600;}
+
+  /* ===== 타이포 ===== */
+  h1{font-size:27px; line-height:1.32; font-weight:800; letter-spacing:-.01em; margin:0 0 6px;}
+  .subtitle{font-size:18px; font-weight:700; color:var(--accent); margin:0 0 22px;}
+  h2{font-size:21px; font-weight:800; letter-spacing:-.01em; margin:46px 0 14px; padding-bottom:9px; border-bottom:2px solid var(--line-strong);}
+  h3{font-size:17.5px; font-weight:700; margin:34px 0 12px; color:var(--ink);}
+  h3 .badge{display:inline-block; font-size:12px; font-weight:700; color:#fff; background:var(--accent); border-radius:6px; padding:2px 8px; margin-right:8px; vertical-align:middle;}
+  p{margin:12px 0;}
+  strong{font-weight:700;}
+  a{color:var(--accent);}
+  ul,ol{margin:12px 0; padding-left:22px;}
+  li{margin:6px 0;}
+  hr{display:none;}
+
+  /* ===== 출처 배너 ===== */
+  .source-banner{
+    display:flex; gap:10px; align-items:baseline;
+    background:var(--tint); border-left:4px solid var(--accent);
+    border-radius:0 var(--radius) var(--radius) 0;
+    padding:12px 16px; margin:0 0 8px; font-size:13.5px; color:var(--ink-soft);
+  }
+  .source-banner b{color:var(--accent);}
+
+  /* ===== 한국어 번역 카드 ===== */
+  .ko{
+    background:var(--paper); border:1px solid var(--line);
+    border-left:4px solid var(--accent); border-radius:var(--radius);
+    padding:6px 22px; margin:16px 0;
+    box-shadow:0 1px 2px rgba(60,40,20,.04);
+  }
+  .ko > .label, .terms > .label{
+    display:inline-block; font-size:11.5px; font-weight:800; letter-spacing:.06em;
+    color:var(--accent); text-transform:uppercase; margin:14px 0 -4px;
+  }
+
+  /* ===== 영문 원문 토글 ===== */
+  details.en{
+    background:var(--tint-2); border:1px solid var(--line); border-radius:var(--radius);
+    margin:14px 0; overflow:hidden;
+  }
+  details.en > summary{
+    cursor:pointer; list-style:none; padding:11px 16px;
+    font-size:13.5px; font-weight:700; color:var(--muted);
+    display:flex; align-items:center; gap:8px; user-select:none;
+  }
+  details.en > summary::-webkit-details-marker{display:none;}
+  details.en > summary .chev{transition:transform .2s; color:var(--accent-soft);}
+  details.en[open] > summary .chev{transform:rotate(90deg);}
+  details.en[open] > summary{border-bottom:1px solid var(--line);}
+  .en-body{padding:4px 18px 14px; font-size:14px; line-height:1.7; color:#5c574f; font-style:normal;}
+  .en-body p{margin:10px 0;}
+  .ts{
+    display:inline-block; font-family:"SFMono-Regular",ui-monospace,Menlo,Consolas,monospace;
+    font-size:11.5px; font-style:normal; color:var(--accent);
+    background:var(--tint); border:1px solid #e6cfcc; border-radius:5px;
+    padding:0 5px; margin:0 2px; vertical-align:baseline;
+  }
+
+  /* ===== 용어 설명 ===== */
+  .terms{
+    border:1px solid var(--line); border-left:3px solid var(--accent-soft);
+    border-radius:var(--radius); background:#fffdfb; padding:4px 20px 8px; margin:16px 0;
+  }
+  .terms dl{margin:8px 0;}
+  .terms dt{font-weight:700; color:var(--ink); margin-top:8px;}
+  .terms dt .en-term{color:var(--accent); font-weight:600;}
+  .terms dd{margin:1px 0 6px; color:var(--ink-soft); font-size:15px;}
+
+  /* ===== 표 ===== */
+  .table-wrap{overflow-x:auto; margin:16px 0; border:1px solid var(--line); border-radius:var(--radius);}
+  table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:520px;}
+  thead th{background:var(--accent); color:#fff; font-weight:700; text-align:left; padding:11px 14px; white-space:nowrap;}
+  tbody td{padding:9px 14px; border-top:1px solid var(--line);}
+  tbody tr:nth-child(even){background:var(--tint-2);}
+  tbody td:first-child{font-family:ui-monospace,Menlo,monospace; font-size:13px; color:var(--accent);}
+
+  /* ===== 콜아웃 ===== */
+  .callout{border-radius:var(--radius); padding:14px 20px 6px; margin:18px 0;}
+  .callout .c-title{font-weight:800; margin:6px 0 2px; display:flex; align-items:center; gap:8px;}
+  .callout.review{background:#fff; border:1px solid var(--line-strong);}
+  .callout.review ol{counter-reset:none;}
+  .callout.note{background:var(--tint-2); border-left:4px solid var(--muted); border-radius:0 var(--radius) var(--radius) 0; padding-bottom:12px;}
+  .callout.practice{background:var(--tint); border:1px solid #e6cfcc; padding-bottom:14px;}
+  .callout.practice li{margin:12px 0;}
+  .next{margin-top:40px; padding:14px 18px; background:var(--tint-2); border-radius:var(--radius); font-size:14px; color:var(--ink-soft);}
+
+  /* 수식 / 도식 */
+  .katex-display{margin:14px 0; overflow-x:auto; overflow-y:hidden; padding:6px 0;}
+  .diagram{background:#fffdfb; border:1px solid var(--line); border-radius:var(--radius); padding:14px; margin:16px 0; text-align:center;}
+  .diagram .cap{font-size:12.5px; color:var(--muted); margin-top:6px;}
+  .mermaid{display:flex; justify-content:center;}
+
+  /* ===== 모바일 ===== */
+  .menu-btn{display:none;}
+  .overlay{display:none;}
+  @media (max-width:900px){
+    .menu-btn{
+      display:flex; align-items:center; justify-content:center;
+      position:fixed; top:14px; left:14px; z-index:50;
+      width:42px; height:42px; border-radius:10px; border:1px solid var(--line-strong);
+      background:var(--paper); color:var(--accent); font-size:20px; cursor:pointer;
+      box-shadow:0 2px 8px rgba(60,40,20,.12);
+    }
+    .sidebar{
+      position:fixed; left:0; top:0; z-index:60; height:100vh;
+      transform:translateX(-105%); transition:transform .25s ease;
+      box-shadow:4px 0 24px rgba(0,0,0,.12); background:var(--bg);
+    }
+    .sidebar.open{transform:translateX(0);}
+    .overlay.show{display:block; position:fixed; inset:0; background:rgba(0,0,0,.32); z-index:55;}
+    .content{padding:0 16px;}
+    .doc{padding:64px 0 100px;}
+    body{font-size:16px;}
+    h1{font-size:23px;}
+    .ko,.terms{padding-left:16px; padding-right:16px;}
+  }
+
+  /* ===== 인쇄 ===== */
+  @media print{
+    .sidebar,.menu-btn,.overlay{display:none !important;}
+    .content{padding:0;}
+    body{background:#fff; font-size:11pt;}
+    details.en{display:none;}          /* 인쇄본은 한국어 위주 */
+    .ko,.terms,.callout,.table-wrap{break-inside:avoid; box-shadow:none;}
+    a{color:var(--ink);}
+  }
+  .home-btn{position:fixed; top:16px; right:18px; z-index:70;
+    display:inline-flex; align-items:center; gap:6px; text-decoration:none;
+    background:var(--paper); color:var(--accent); border:1px solid var(--line-strong);
+    border-radius:999px; padding:8px 14px; font-size:13.5px; font-weight:700;
+    box-shadow:0 2px 8px rgba(60,40,20,.12); transition:background .12s,color .12s;}
+  .home-btn:hover{background:var(--accent); color:#fff; border-color:var(--accent);}
+  @media (max-width:900px){ .home-btn{top:14px; right:14px; padding:8px 12px; font-size:12.5px;} }
+  @media print{ .home-btn{display:none !important;} }
+</style>
+</head>
+<body>
+<a class="home-btn" href="../index.html" title="전체 목차로 돌아가기">← 전체 목차</a>
+
+<button class="menu-btn" id="menuBtn" aria-label="목차 열기">☰</button>
+<div class="overlay" id="overlay"></div>
+
+<div class="layout">
+  <nav class="sidebar" id="sidebar"><div class="toc-brand">Stanford CME295 · Lecture 9</div><p class="toc-title">섹션 5. 트렌드 ② — 디퓨전 기반 LLM</p><ul class="toc"><li><a href="#overview">1. 강의 개요</a></li><li><a href="#goals">2. 학습 목표</a></li><li><a href="#body">3. 본문</a></li><li><a class="sub" href="#block1">블록 1 · 자기회귀의 한계와 디퓨전의 동기</a></li><li><a class="sub" href="#block2">블록 2 · 이미지 디퓨전: 노이즈에서 이미지로</a></li><li><a class="sub" href="#block3">블록 3 · 텍스트 디퓨전: 노이즈 = 마스크 토큰</a></li><li><a class="sub" href="#block4">블록 4 · 디퓨전 LLM의 장점과 현황</a></li><li><a href="#glossary">4. 핵심 용어집</a></li><li><a href="#review">5. 복습 문제</a></li><li><a href="#appendix">부록. 실무 적용 포인트 (NLP·LLM 기술 내용 한정)</a></li></ul></nav>
+  <main class="content"><article class="doc"><h1>CME295 Transformers &amp; LLMs — Lecture 9 한국어 교재</h1><p class="subtitle">섹션 5. 트렌드 ② — 디퓨전 기반 LLM</p><div class="source-banner"><span>📄</span><span><b>원문 출처</b>: Stanford CME295, Autumn 2025, Lecture 9, 타임스탬프 <span class="ts">1:03:48</span>~<span class="ts">1:23:21</span></span></div><section id="overview"><h2>1. 강의 개요</h2><ul><li>비전에서 온 디퓨전(diffusion)을 텍스트 생성에 적용하는 흐름을 다룬다. 동기는 자기회귀(ARM) 생성이 추론 시 병렬화가 안 된다는 점.</li><li>이미지 디퓨전(노이즈→이미지)의 원리와, 텍스트에서 '노이즈=마스크 토큰'으로 옮기는 마스크드 디퓨전(MDM)을 본다.</li><li>디퓨전 LLM의 장점(속도·양방향 고려)과 현황(자기회귀 모델을 추격 중)을 설명한다.</li></ul></section><section id="goals"><h2>2. 학습 목표</h2><ol><li>자기회귀(ARM) 생성의 한계(추론 시 병렬화 불가)와 디퓨전이 주목받는 이유를 설명할 수 있다.</li><li>이미지 디퓨전(노이즈 추가→제거)의 원리와, 텍스트에서 마스크로 옮기는 발상을 안다.</li><li>디퓨전 LLM의 장점(적은 순전파로 빠름·양방향)과 현황을 이해한다.</li></ol></section><section id="body"><h2>3. 본문</h2><div id="block1"><h3><span class="badge">블록 1</span>자기회귀의 한계와 디퓨전의 동기</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">1:04:51</span> auto reg(r)essive (...) predict the next token (...) again and again (...) <span class="ts">1:05:57</span> ARM (...) inference time generation is (...) not paral(lel)izable. But training is paral(lel)izable. (...) <span class="ts">1:07:33</span> people have tried adapting this paradigm for (...) text generation (...) <span class="ts">1:08:34</span> text is discrete whereas images are continuous.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>지금까지 LLM은 자기회귀(auto-regressive)였습니다 — 입력으로 다음 토큰을 예측하고, 그걸 더해 또 다음 토큰을 예측하길 끝(EOS)까지 반복. 이를 ARM(Auto-Regressive Model)이라 부릅니다.</p>
+<p>문제: 추론 시 생성이 병렬화 불가입니다 — 다음을 예측하려면 늘 앞이 필요하기 때문. (학습은 병렬화 가능 — 인과 마스크로 미래를 못 보게 하며 모든 토큰을 한 번에 처리) 이 한계 때문에 다른 패러다임을 탐색했고, 비전에서 잘 되는 디퓨전(diffusion)을 텍스트 생성에 적용하려 했습니다(올해 구글의 실험적 텍스트 디퓨전 모델, Inception 같은 스타트업 등 — 큰 속도 향상으로 화제).</p>
+<p>핵심 난점: 텍스트는 이산(discrete), 이미지는 연속(continuous)이라는 차이입니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>자기회귀<span class="en-term">(ARM, Auto-Regressive Model)</span></dt><dd>앞 토큰들로 다음 토큰을 차례로 예측. 추론 시 병렬화 불가.</dd><dt>이산/연속<span class="en-term">(discrete/continuous)</span></dt><dd>텍스트(토큰)는 이산, 이미지(픽셀)는 연속. 디퓨전 적용의 핵심 차이.</dd></dl></div>
+</div>
+<div id="block2"><h3><span class="badge">블록 2</span>이미지 디퓨전: 노이즈에서 이미지로</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">1:08:34</span> in the image world (...) start from noise and then (...) generate (...) <span class="ts">1:11:16</span> Michelangelo (...) the sculpture is already complete within the marble block (...) chisel away the (superfluous) material (...) <span class="ts">1:12:18</span> start from clean (...) add noise gradually (...) predict the noise to remove.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>이미지 디퓨전은 노이즈에서 시작해 이미지를 생성합니다. 왜 노이즈? — 픽셀을 하나씩 자기회귀로 만들긴 비현실적이고, 노이즈는 가우시안 분포로 잘 모델링되며 샘플링이 쉽고 무작위성(다양한 이미지)을 줍니다. 목표는 '노이즈→목표 이미지 분포'로 가는 변환을 학습하는 것.</p>
+<p>비유(미켈란젤로): "조각은 이미 대리석 안에 완성돼 있다. 나는 불필요한 부분을 깎아낼 뿐이다." 디퓨전의 노이즈 제거가 이와 같습니다 — 바위(노이즈)에서 무엇을 깎을지 배워 최종 작품(이미지)을 얻습니다.</p>
+<p>두 단계: ① 깨끗한 이미지에 노이즈를 점진적으로 더해 아주 노이즈한 상태로 만들고(forward), ② 그로부터 '제거할 노이즈'를 예측해 이미지를 복원합니다(denoise). 노이즈가 수학적으로 잘 정의된 가우시안이라 잘 작동합니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>디퓨전<span class="en-term">(diffusion)</span></dt><dd>노이즈를 점진적으로 더했다가, 제거를 학습해 목표(이미지)를 생성.</dd><dt>노이즈 제거<span class="en-term">(denoising)</span></dt><dd>노이즈에서 목표를 복원하는 과정. 미켈란젤로의 '깎아내기' 비유.</dd></dl></div>
+</div>
+<div id="block3"><h3><span class="badge">블록 3</span>텍스트 디퓨전: 노이즈 = 마스크 토큰</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">1:13:54</span> noise is to images what the mask token is to text (...) <span class="ts">1:14:25</span> more and more inputs that would be masked (...) a sequence full of mask tokens (...) learn (a) model that allows you to unmask these (...) <span class="ts">1:15:31</span> masked diffusion models, MDM (...) DLLM diffusion based.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>텍스트는 이산이라 '노이즈 추가' 개념이 없습니다. 그래서 등가물을 찾았습니다 — <strong>이미지의 노이즈 = 텍스트의 마스크 토큰</strong>. 마스크는 시퀀스 일부의 정보를 가리는 방법입니다.</p>
+<p>텍스트용 두 단계: ① forward — 입력을 점점 더 많이 마스킹해 결국 전부 마스크 토큰인 시퀀스로 만듦. ② 그 마스크들을 풀어(unmask) 원문을 재구성하는 모델을 학습. 이런 모델을 마스크드 디퓨전 모델(MDM, Masked Diffusion Model), 또는 디퓨전 기반 LLM(dLLM)이라 합니다.</p>
+<p>추론 시: 완전히 마스킹된 시퀀스에서 시작해(프롬프트로 조건화) 마스크 뒤의 토큰들을 예측합니다. 자기회귀처럼 하나씩이 아니라 한꺼번에.</p>
+<p>직관(연설문 쓰기): 연설문을 처음부터 한 단어씩 선형으로 쓰지 않고, 먼저 거친 계획(1·2·3 무엇을 말할지)을 세운 뒤 각 부분을 다듬습니다. 디퓨전은 이처럼 '거친 초안→정교한 다듬기'로 작동해, 아직 안 정해진 토큰 뒤의 것도 예측할 수 있습니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>노이즈=마스크 토큰</dt><dd>텍스트 디퓨전의 핵심 대응.</dd><dt>마스크드 디퓨전 모델<span class="en-term">(MDM)</span>/디퓨전 LLM<span class="en-term">(dLLM)</span></dt><dd>마스킹→복원으로 생성하는 텍스트 디퓨전 모델.</dd><dt>거친 초안→정교화</dt><dd>디퓨전 생성의 직관(연설문 비유).</dd></dl></div>
+</div>
+<div id="block4"><h3><span class="badge">블록 4</span>디퓨전 LLM의 장점과 현황</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">1:18:08</span> the decoding is now done in much fewer forward passes (...) as many passes as there are steps in your diffusion process (...) much faster. (...) <span class="ts">1:20:17</span> the speed (...) 10x faster (...) <span class="ts">1:20:46</span> considering the text as a whole (...) fill in the middle (...) <span class="ts">1:21:53</span> the performance was not on par with (...) frontier models (...) but (...) catching up.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>디퓨전 LLM의 핵심 장점:</p>
+<ol><li><strong>속도</strong>: 자기회귀는 토큰 수만큼 순전파가 필요하지만, 디퓨전은 디퓨전 단계 수만큼만 필요합니다(단계 수는 정할 수 있고 보통 출력 길이보다 훨씬 적음). 그래서 훨씬 빠릅니다(일부 벤치마크는 약 10배). 긴 출력·코딩처럼 모델 호출이 여러 번이고 지연이 중요한 경우 강력합니다.</li><li><strong>양방향 고려</strong>: 텍스트를 전체로 보고 예측하므로, '중간 채우기(fill in the middle)' 같은 과제(코드 중간의 빠진 부분 추론)에 더 잘 맞습니다 — 여러 방향의 입력을 고려할 수 있기 때문.</li></ol>
+<p>현황: 한동안 성능이 최전선 자기회귀 모델에 못 미쳤지만, 최근 논문들은 그 격차를 좁히고 있습니다(예: LLaDA — Large Language Diffusion with mAsking, 수학적 근거 제시). 또 자기회귀에 맞춰 개발된 기법들(추론 사슬 등)을 디퓨전에 어떻게 적용할지가 활발한 연구 주제입니다.</p>
+<p>요약: 이 수업의 것들이 다른 분야로(ViT) 가기도, 다른 분야의 것이 텍스트로(디퓨전 LLM) 오기도 합니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>적은 순전파로 빠름</dt><dd>토큰 수가 아니라 디퓨전 단계 수만큼만 순전파 → 속도↑.</dd><dt>중간 채우기<span class="en-term">(fill in the middle)</span></dt><dd>빠진 중간 부분을 양방향 맥락으로 채우는 과제. 디퓨전이 유리.</dd><dt>LLaDA</dt><dd>마스킹 기반 대규모 언어 디퓨전 모델.</dd></dl></div>
+</div></section><section id="glossary"><h2>4. 핵심 용어집</h2><div class="table-wrap"><table><thead><tr><th>영문</th><th>한국어</th><th>뜻</th></tr></thead><tbody><tr><td>auto-regressive (ARM)</td><td>자기회귀</td><td>앞으로 다음 토큰 예측(추론 병렬화 불가)</td></tr><tr><td>discrete / continuous</td><td>이산/연속</td><td>텍스트 / 이미지</td></tr><tr><td>diffusion</td><td>디퓨전</td><td>노이즈 더했다 제거 학습</td></tr><tr><td>denoising</td><td>노이즈 제거</td><td>노이즈→목표 복원</td></tr><tr><td>노이즈=마스크 토큰</td><td>noise = mask token</td><td>텍스트 디퓨전 대응</td></tr><tr><td>MDM / dLLM</td><td>마스크드 디퓨전/디퓨전 LLM</td><td>마스킹→복원 생성</td></tr><tr><td>fill in the middle</td><td>중간 채우기</td><td>양방향 맥락으로 빠진 부분 채움</td></tr><tr><td>LLaDA</td><td>라다</td><td>마스킹 기반 디퓨전 LLM</td></tr></tbody></table></div></section><section id="review"><h2>5. 복습 문제</h2><div class="callout review"><div class="c-title">✏️ 스스로 점검</div><ol><li>자기회귀(ARM) 생성이 추론 시 병렬화가 안 되는 이유는? 학습은 왜 병렬화되는가?</li><li>이미지 디퓨전의 두 단계는? 텍스트에서 '노이즈'에 해당하는 것은?</li><li>디퓨전 LLM이 빠른 이유(순전파 수)와, '중간 채우기'에 유리한 이유는?</li></ol></div></section><section id="appendix"><h2>부록. 실무 적용 포인트 <span style="font-size:14px;font-weight:500;color:var(--muted);">(NLP·LLM 기술 내용 한정)</span></h2><div class="callout practice"><div class="c-title">💡 현장에서 써먹기</div><ul><li><strong>디퓨전 LLM은 "더 빠른 LLM"의 한 방향이다.</strong> 자기회귀보다 훨씬 적은 순전파로 생성해 지연·비용을 줄일 수 있다(특히 긴 출력·코딩). 아직 성능 추격 중이지만, 응답 속도가 중요한 업무에서 향후 선택지가 될 수 있음을 알아둘 만하다.</li><li><strong>'거친 초안→정교화'라는 디퓨전의 발상은 글쓰기 방식과도 통한다.</strong> 연설문 비유처럼, 한 번에 완성하기보다 초안을 잡고 다듬는 접근은 AI에 작업을 시킬 때도 유효하다(개요 먼저 → 세부 보강).</li></ul></div><div class="next"><strong><strong>다음 섹션 예고</strong>·&lt;/strong&gt; · 3부 마무리 — 모달리티 간 상호 영향, 진행 중인 연구(최적화·데이터·하드웨어), 미래 활용, 자료. <span class="ts">1:23:53</span> 이후.</div></section></article></main>
+</div>
+
+<!-- KaTeX 자동 렌더 -->
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}],throwOnError:false});"></script>
+
+<!-- Mermaid -->
+<script type="module">
+  try{
+    const m = await import('https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs');
+    m.default.initialize({startOnLoad:true, theme:'base', themeVariables:{
+      fontFamily:'Pretendard, sans-serif', primaryColor:'#fffdfb', primaryBorderColor:'#d8d0c5',
+      primaryTextColor:'#1a1a1a', lineColor:'#b9554f', fontSize:'14px'
+    }});
+  }catch(e){ /* 오프라인이면 도식은 코드로 표시 */ }
+</script>
+
+<!-- 목차 활성표시 + 모바일 드로어 -->
+<script>
+  // 모바일 드로어
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('overlay');
+  const btn = document.getElementById('menuBtn');
+  const toggle = (on)=>{ sb.classList.toggle('open',on); ov.classList.toggle('show',on); };
+  btn.addEventListener('click',()=>toggle(!sb.classList.contains('open')));
+  ov.addEventListener('click',()=>toggle(false));
+  document.querySelectorAll('.toc a').forEach(a=>a.addEventListener('click',()=>{ if(window.innerWidth<=900) toggle(false); }));
+
+  // 현재 위치 강조
+  const links = [...document.querySelectorAll('.toc a')];
+  const map = {}; links.forEach(a=>{ const id=a.getAttribute('href').slice(1); map[id]=a; });
+  const targets = Object.keys(map).map(id=>document.getElementById(id)).filter(Boolean);
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(en=>{
+      if(en.isIntersecting){
+        links.forEach(l=>l.classList.remove('active'));
+        const a = map[en.target.id]; if(a) a.classList.add('active');
+      }
+    });
+  },{rootMargin:'-15% 0px -75% 0px', threshold:0});
+  targets.forEach(t=>io.observe(t));
+</script>
+
+</body>
+</html>

@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CME295 Lecture 8 · 섹션 6. 벤치마크와 모델 선택</title>
+
+<!-- 폰트: Pretendard (CDN, 없으면 시스템 폰트 폴백) -->
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<!-- 수식: KaTeX -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
+
+<style>
+  :root{
+    --bg:#FBF9F6;
+    --paper:#ffffff;
+    --ink:#1a1a1a;
+    --ink-soft:#4a4744;
+    --muted:#7a756f;
+    --accent:#8C1515;          /* Stanford 카디널 */
+    --accent-soft:#b9554f;
+    --tint:#f6ebe9;            /* 카디널 옅은 틴트 */
+    --tint-2:#f3efe9;          /* 따뜻한 회색 */
+    --line:#e7e1d9;
+    --line-strong:#d8d0c5;
+    --radius:10px;
+    --maxw:760px;
+    --sidew:268px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Pretendard","Pretendard Variable",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    line-height:1.78;
+    font-size:16.5px;
+    -webkit-font-smoothing:antialiased;
+    word-break:keep-all;
+  }
+
+  /* ===== 레이아웃 ===== */
+  .layout{display:flex; align-items:flex-start;}
+  .sidebar{
+    width:var(--sidew); flex:0 0 var(--sidew);
+    position:sticky; top:0; height:100vh; overflow-y:auto;
+    padding:28px 18px 40px; border-right:1px solid var(--line);
+    background:rgba(251,249,246,.85); backdrop-filter:saturate(120%) blur(2px);
+  }
+  .content{flex:1 1 auto; min-width:0; display:flex; justify-content:center; padding:0 24px;}
+  .doc{width:100%; max-width:var(--maxw); padding:48px 0 120px;}
+
+  /* ===== 사이드바 목차 ===== */
+  .toc-brand{font-size:12px; letter-spacing:.04em; color:var(--accent); font-weight:700; text-transform:uppercase; margin-bottom:4px;}
+  .toc-title{font-size:15px; font-weight:700; margin:0 0 18px; line-height:1.4; color:var(--ink);}
+  .toc{list-style:none; margin:0; padding:0; font-size:13.5px;}
+  .toc li{margin:1px 0;}
+  .toc a{display:block; padding:5px 10px; border-radius:7px; color:var(--ink-soft); text-decoration:none; border-left:2px solid transparent;}
+  .toc a:hover{background:var(--tint-2); color:var(--ink);}
+  .toc a.sub{padding-left:22px; font-size:13px; color:var(--muted);}
+  .toc a.active{color:var(--accent); background:var(--tint); border-left-color:var(--accent); font-weight:600;}
+
+  /* ===== 타이포 ===== */
+  h1{font-size:27px; line-height:1.32; font-weight:800; letter-spacing:-.01em; margin:0 0 6px;}
+  .subtitle{font-size:18px; font-weight:700; color:var(--accent); margin:0 0 22px;}
+  h2{font-size:21px; font-weight:800; letter-spacing:-.01em; margin:46px 0 14px; padding-bottom:9px; border-bottom:2px solid var(--line-strong);}
+  h3{font-size:17.5px; font-weight:700; margin:34px 0 12px; color:var(--ink);}
+  h3 .badge{display:inline-block; font-size:12px; font-weight:700; color:#fff; background:var(--accent); border-radius:6px; padding:2px 8px; margin-right:8px; vertical-align:middle;}
+  p{margin:12px 0;}
+  strong{font-weight:700;}
+  a{color:var(--accent);}
+  ul,ol{margin:12px 0; padding-left:22px;}
+  li{margin:6px 0;}
+  hr{display:none;}
+
+  /* ===== 출처 배너 ===== */
+  .source-banner{
+    display:flex; gap:10px; align-items:baseline;
+    background:var(--tint); border-left:4px solid var(--accent);
+    border-radius:0 var(--radius) var(--radius) 0;
+    padding:12px 16px; margin:0 0 8px; font-size:13.5px; color:var(--ink-soft);
+  }
+  .source-banner b{color:var(--accent);}
+
+  /* ===== 한국어 번역 카드 ===== */
+  .ko{
+    background:var(--paper); border:1px solid var(--line);
+    border-left:4px solid var(--accent); border-radius:var(--radius);
+    padding:6px 22px; margin:16px 0;
+    box-shadow:0 1px 2px rgba(60,40,20,.04);
+  }
+  .ko > .label, .terms > .label{
+    display:inline-block; font-size:11.5px; font-weight:800; letter-spacing:.06em;
+    color:var(--accent); text-transform:uppercase; margin:14px 0 -4px;
+  }
+
+  /* ===== 영문 원문 토글 ===== */
+  details.en{
+    background:var(--tint-2); border:1px solid var(--line); border-radius:var(--radius);
+    margin:14px 0; overflow:hidden;
+  }
+  details.en > summary{
+    cursor:pointer; list-style:none; padding:11px 16px;
+    font-size:13.5px; font-weight:700; color:var(--muted);
+    display:flex; align-items:center; gap:8px; user-select:none;
+  }
+  details.en > summary::-webkit-details-marker{display:none;}
+  details.en > summary .chev{transition:transform .2s; color:var(--accent-soft);}
+  details.en[open] > summary .chev{transform:rotate(90deg);}
+  details.en[open] > summary{border-bottom:1px solid var(--line);}
+  .en-body{padding:4px 18px 14px; font-size:14px; line-height:1.7; color:#5c574f; font-style:normal;}
+  .en-body p{margin:10px 0;}
+  .ts{
+    display:inline-block; font-family:"SFMono-Regular",ui-monospace,Menlo,Consolas,monospace;
+    font-size:11.5px; font-style:normal; color:var(--accent);
+    background:var(--tint); border:1px solid #e6cfcc; border-radius:5px;
+    padding:0 5px; margin:0 2px; vertical-align:baseline;
+  }
+
+  /* ===== 용어 설명 ===== */
+  .terms{
+    border:1px solid var(--line); border-left:3px solid var(--accent-soft);
+    border-radius:var(--radius); background:#fffdfb; padding:4px 20px 8px; margin:16px 0;
+  }
+  .terms dl{margin:8px 0;}
+  .terms dt{font-weight:700; color:var(--ink); margin-top:8px;}
+  .terms dt .en-term{color:var(--accent); font-weight:600;}
+  .terms dd{margin:1px 0 6px; color:var(--ink-soft); font-size:15px;}
+
+  /* ===== 표 ===== */
+  .table-wrap{overflow-x:auto; margin:16px 0; border:1px solid var(--line); border-radius:var(--radius);}
+  table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:520px;}
+  thead th{background:var(--accent); color:#fff; font-weight:700; text-align:left; padding:11px 14px; white-space:nowrap;}
+  tbody td{padding:9px 14px; border-top:1px solid var(--line);}
+  tbody tr:nth-child(even){background:var(--tint-2);}
+  tbody td:first-child{font-family:ui-monospace,Menlo,monospace; font-size:13px; color:var(--accent);}
+
+  /* ===== 콜아웃 ===== */
+  .callout{border-radius:var(--radius); padding:14px 20px 6px; margin:18px 0;}
+  .callout .c-title{font-weight:800; margin:6px 0 2px; display:flex; align-items:center; gap:8px;}
+  .callout.review{background:#fff; border:1px solid var(--line-strong);}
+  .callout.review ol{counter-reset:none;}
+  .callout.note{background:var(--tint-2); border-left:4px solid var(--muted); border-radius:0 var(--radius) var(--radius) 0; padding-bottom:12px;}
+  .callout.practice{background:var(--tint); border:1px solid #e6cfcc; padding-bottom:14px;}
+  .callout.practice li{margin:12px 0;}
+  .next{margin-top:40px; padding:14px 18px; background:var(--tint-2); border-radius:var(--radius); font-size:14px; color:var(--ink-soft);}
+
+  /* 수식 / 도식 */
+  .katex-display{margin:14px 0; overflow-x:auto; overflow-y:hidden; padding:6px 0;}
+  .diagram{background:#fffdfb; border:1px solid var(--line); border-radius:var(--radius); padding:14px; margin:16px 0; text-align:center;}
+  .diagram .cap{font-size:12.5px; color:var(--muted); margin-top:6px;}
+  .mermaid{display:flex; justify-content:center;}
+
+  /* ===== 모바일 ===== */
+  .menu-btn{display:none;}
+  .overlay{display:none;}
+  @media (max-width:900px){
+    .menu-btn{
+      display:flex; align-items:center; justify-content:center;
+      position:fixed; top:14px; left:14px; z-index:50;
+      width:42px; height:42px; border-radius:10px; border:1px solid var(--line-strong);
+      background:var(--paper); color:var(--accent); font-size:20px; cursor:pointer;
+      box-shadow:0 2px 8px rgba(60,40,20,.12);
+    }
+    .sidebar{
+      position:fixed; left:0; top:0; z-index:60; height:100vh;
+      transform:translateX(-105%); transition:transform .25s ease;
+      box-shadow:4px 0 24px rgba(0,0,0,.12); background:var(--bg);
+    }
+    .sidebar.open{transform:translateX(0);}
+    .overlay.show{display:block; position:fixed; inset:0; background:rgba(0,0,0,.32); z-index:55;}
+    .content{padding:0 16px;}
+    .doc{padding:64px 0 100px;}
+    body{font-size:16px;}
+    h1{font-size:23px;}
+    .ko,.terms{padding-left:16px; padding-right:16px;}
+  }
+
+  /* ===== 인쇄 ===== */
+  @media print{
+    .sidebar,.menu-btn,.overlay{display:none !important;}
+    .content{padding:0;}
+    body{background:#fff; font-size:11pt;}
+    details.en{display:none;}          /* 인쇄본은 한국어 위주 */
+    .ko,.terms,.callout,.table-wrap{break-inside:avoid; box-shadow:none;}
+    a{color:var(--ink);}
+  }
+  .home-btn{position:fixed; top:16px; right:18px; z-index:70;
+    display:inline-flex; align-items:center; gap:6px; text-decoration:none;
+    background:var(--paper); color:var(--accent); border:1px solid var(--line-strong);
+    border-radius:999px; padding:8px 14px; font-size:13.5px; font-weight:700;
+    box-shadow:0 2px 8px rgba(60,40,20,.12); transition:background .12s,color .12s;}
+  .home-btn:hover{background:var(--accent); color:#fff; border-color:var(--accent);}
+  @media (max-width:900px){ .home-btn{top:14px; right:14px; padding:8px 12px; font-size:12.5px;} }
+  @media print{ .home-btn{display:none !important;} }
+</style>
+</head>
+<body>
+<a class="home-btn" href="../index.html" title="전체 목차로 돌아가기">← 전체 목차</a>
+
+<button class="menu-btn" id="menuBtn" aria-label="목차 열기">☰</button>
+<div class="overlay" id="overlay"></div>
+
+<div class="layout">
+  <nav class="sidebar" id="sidebar"><div class="toc-brand">Stanford CME295 · Lecture 8</div><p class="toc-title">섹션 6. 벤치마크와 모델 선택</p><ul class="toc"><li><a href="#overview">1. 강의 개요</a></li><li><a href="#goals">2. 학습 목표</a></li><li><a href="#body">3. 본문</a></li><li><a class="sub" href="#block1">블록 1 · 지식·추론 벤치마크 (MMLU·AIME·PIQA)</a></li><li><a class="sub" href="#block2">블록 2 · 코딩·안전 벤치마크 (SWE-bench·HarmBench)</a></li><li><a class="sub" href="#block3">블록 3 · 에이전트 벤치마크와 pass^k (τ-bench)</a></li><li><a class="sub" href="#block4">블록 4 · 모델 선택: Pareto·데이터 오염·Goodhart</a></li><li><a href="#glossary">4. 핵심 용어집</a></li><li><a href="#review">5. 복습 문제</a></li><li><a href="#appendix">부록. 실무 적용 포인트 (NLP·LLM 기술 내용 한정)</a></li></ul></nav>
+  <main class="content"><article class="doc"><h1>CME295 Transformers &amp; LLMs — Lecture 8 한국어 교재</h1><p class="subtitle">섹션 6. 벤치마크와 모델 선택</p><div class="source-banner"><span>📄</span><span><b>원문 출처</b>: Stanford CME295, Autumn 2025, Lecture 8, 타임스탬프 <span class="ts">1:23:26</span>~(1:49:08, 끝)</span></div><section id="overview"><h2>1. 강의 개요</h2><ul><li>LLM을 비교하는 표준인 벤치마크를 범주별로 본다 — 지식(MMLU)·추론(AIME·PIQA)·코딩(SWE-bench)·안전(HarmBench)·에이전트(τ-bench).</li><li>에이전트 벤치마크의 pass^k(모든 K 시도 성공 확률)와 그 동기를 다룬다.</li><li>실제 모델 선택 — Pareto 프런티어, 데이터 오염(contamination), Goodhart's law, 그리고 "직접 써보라"는 조언으로 마무리한다.</li></ul></section><section id="goals"><h2>2. 학습 목표</h2><ol><li>벤치마크 범주(지식·추론·코딩·안전·에이전트)와 대표 예를 짝지을 수 있다.</li><li>안전 벤치마크가 왜 모델 간 직접 비교에 부적합한지, 에이전트 평가의 pass^k가 무엇인지 안다.</li><li>Pareto 프런티어·데이터 오염·Goodhart's law를 이해하고, 모델 선택에 적용할 수 있다.</li></ol></section><section id="body"><h2>3. 본문</h2><div id="block1"><h3><span class="badge">블록 1</span>지식·추론 벤치마크 (MMLU·AIME·PIQA)</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">1:24:31</span> a knowledge based benchmark (...) MMLU (...) measures how well pre-training was done. (...) <span class="ts">1:26:00</span> a question and (...) four possible answers (...) <span class="ts">1:27:05</span> output the right letter (...) extract and (...) compare. (...) <span class="ts">1:28:41</span> the reasoning space (...) AIM(E) (...) a three-digit number (...) <span class="ts">1:30:47</span> common sense reasoning (...) (PIQA) (...) physical interaction question answering (...) over two only (...) 20k examples.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>오늘날 벤치마크는 몇 가지 범주에 있습니다.</p>
+<p><strong>지식 기반 벤치마크</strong>: 모델이 사실을 잘 복원하는지(여러 분야에 걸쳐) 봅니다. 주로 사전학습이 얼마나 잘 됐는지를 잽니다. 대표는 MMLU(Massive Multitask Language Understanding) — 법·의학 등 약 60개 다양한 과제로, 자유 형식이 아니라 4지선다입니다(LLM에게 정답 글자를 출력하게 해 하드코딩으로 추출·대조). 자유 형식 + LLM 심판은 또 다른 오류층을 더하므로, 벤치마크는 보통 이렇게 정답 추출을 제약합니다.</p>
+<p><strong>추론 벤치마크</strong>: 답 전에 사고가 필요한 것들.</p>
+<ul><li><strong>AIME</strong>: 올림피아드 준비 고교생이 보는 어려운 수학 시험. 답을 세 자리 숫자로 쓰게 해 LLM 친화적(하드코딩 채점 가능).</li><li><strong>PIQA</strong>(Physical Interaction QA): 일상 물리 상식 추론. MMLU(4지선다)와 달리 2지선다, 약 2만 예시. 예: "카펫에서 잃어버린 물건 찾기 — 밀폐 흡입구 진공 vs 망 씌운 진공" → 망이면 흡입하며 물건이 망에 걸림. 수학이 아닌 일상 상식.</li></ul></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>MMLU</dt><dd>약 60과제 4지선다 지식 벤치마크. 사전학습 품질 반영.</dd><dt>AIME</dt><dd>어려운 수학 추론 벤치마크(세 자리 숫자 답).</dd><dt>PIQA</dt><dd>물리 상식 추론 2지선다 벤치마크.</dd><dt>하드코딩 채점</dt><dd>정답을 글자·숫자로 제약해 자동 추출·대조.</dd></dl></div>
+</div>
+<div id="block2"><h3><span class="badge">블록 2</span>코딩·안전 벤치마크 (SWE-bench·HarmBench)</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">1:32:53</span> coding (...) <span class="ts">1:33:55</span> SWEBench (...) software engineering benchmark (...) popular Python repositories (...) pull requests that were solving an issue and that introduced tests (...) before after behavior (...) <span class="ts">1:34:24</span> <span class="ts">1:36:35</span> safety (...) subjective with respect to the LLM provider (...) <span class="ts">1:38:09</span> harm bench (...) standard (...) copyright (...) contextual (...) multimodel (...) <span class="ts">1:39:43</span> trained some classifier.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p><strong>코딩 벤치마크</strong>: 모델이 복잡한 코딩 문제를 푸는지 봅니다(① AI 코딩 보조용, ② 에이전트의 도구가 Python이라 코드 읽기·쓰기 능력 필요). 대표는 SWE-bench(Software Engineering benchmark 추정) — 인기 Python 저장소에서 '이슈를 고치고 테스트를 추가한 PR'을 골라, 수정 전엔 테스트 실패·수정 후엔 통과라는 점을 이용합니다. 모델에게 GitHub 이슈를 풀게 하고, 패치 전후 테스트 상태로 평가합니다(테스트 주도 개발과 같은 원리).</p>
+<p><strong>안전 벤치마크</strong>: 보통 모델 광고엔 안 나옵니다 — 안전 정책은 제공자마다 달라(주관적), 같은 벤치마크 점수를 모델 간 비교하기 어렵기 때문. 모델 카드의 안전 섹션은 '한 일'을 적을 뿐 모델 비교는 잘 안 합니다. 대표는 HarmBench(Harmful behavior benchmark 추정) — 네 범주(표준 유해행동, 저작권, 맥락형(텍스트), 멀티모달). 유해 문장은 정규식으로 못 잡으므로 분류기로 평가합니다. 흥미로운 점: 모델 품질과 안전을 분리해, 모델이 유해 행동을 시도하면(성공 못 해도) 공격 성공으로 칩니다. (이 벤치마크는 분류기 기반이라 그 자체로 오류 가능성이 있는, 본 강의 유일한 예)</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>SWE-bench</dt><dd>GitHub 이슈 수정을 테스트 통과로 평가하는 코딩 벤치마크.</dd><dt>HarmBench</dt><dd>유해 행동 네 범주를 분류기로 평가하는 안전 벤치마크.</dd><dt>안전 벤치마크의 비교 한계</dt><dd>정책이 제공자마다 달라 모델 간 직접 비교가 부적합.</dd></dl></div>
+</div>
+<div id="block3"><h3><span class="badge">블록 3</span>에이전트 벤치마크와 pass^k (τ-bench)</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">1:41:18</span> toao bench (...) tool agent user (...) airline and (...) retail (...) a set of tools (...) policies (...) tasks (...) <span class="ts">1:42:22</span> language model simulated (...) <span class="ts">1:43:24</span> pass (^) K which is the probability that all K attempts succeed (...) <span class="ts">1:44:24</span> reliability and consistency (...) you want the probability that all of them succeeds.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p><strong>에이전트 벤치마크</strong>: 도구로 풀 수 있는 것 외에 에이전트 행동을 평가합니다. 대표는 τ-bench(타우-벤치, tau = tool-agent-user) — 항공·소매 두 분야에서 도구 집합과 정책(에이전트가 할 수 있는/없는 것)을 주고, 과제(사용자가 에이전트로 달성할 목표)를 줍니다. 특징: 사용자 상호작용이 언어모델로 시뮬레이션됩니다 — 다음 턴이 이전에 의존하므로 하드코딩할 수 없어, 별도 큰 모델이 사용자 역할을 합니다. 항공편 변경 같은 과제를, 데이터베이스가 목표 상태가 됐는지(보상)로 평가합니다.</p>
+<p><strong>pass^k</strong>: 지난 강의의 pass@k(K 시도 중 적어도 하나 성공)에 빗댄 말장난으로, pass^k는 'K 시도가 모두 성공할 확률'입니다. 왜 중요한가 — 항공·소매 같은 곳에서 에이전트를 자동화하려면 신뢰성·일관성이 중요합니다. 한 번만 맞으면 되는 게 아니라 매번 맞아야 하므로, '적어도 한 번'(pass@k)이 아니라 '모두 성공'(pass^k)이 적절합니다. (유도는 Lecture 6 pass@k 유도 참고)</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>τ-bench<span class="en-term">(타우-벤치)</span></dt><dd>도구·정책·과제로 에이전트를 평가. 사용자를 LLM으로 시뮬레이션.</dd><dt>pass^k</dt><dd>K 시도가 '모두' 성공할 확률. 신뢰성·일관성 측정. (pass@k는 '적어도 하나')</dd></dl></div>
+</div>
+<div id="block4"><h3><span class="badge">블록 4</span>모델 선택: Pareto·데이터 오염·Goodhart</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">1:46:34</span> benchmarks are here to characterize the profile of your LLM (...) <span class="ts">1:47:02</span> plot the performance (...) with respect to (...) price (...) the parareto (frontier) (...) <span class="ts">1:47:35</span> data (contamination) (...) make sure you haven't seen them (...) hash values (...) block list (...) <span class="ts">1:48:37</span> when a measure becomes a target it ceases to be a good measure (...) you should be the one trying out these (...) models.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>마무리: 벤치마크는 LLM의 프로필을 그리는 도구입니다. 전부 좋거나 나쁜 모델은 없고, 강·약점이 있어 상황마다 맞는 모델이 다릅니다. (강사 경험: Claude Sonnet은 코딩에 강하고, 빠르고 싼 출력엔 Gemini Flash가 좋음 — 일반 권장이 아니라 개인 경험)</p>
+<ul><li><strong>Pareto 프런티어(Pareto frontier)</strong>: 성능을 다른 축(예: 가격)과 함께 그리면, 주어진 가격에서 최선인 모델들의 경계가 그려집니다. 비용·안전·컨텍스트 길이 등 여러 축으로 프런티어를 볼 수 있습니다.</li><li><strong>데이터 오염(data contamination)</strong>: 벤치마크는 모델이 그 정답을 본 적 없어야 의미가 있습니다. 그래서 해시값으로 점검하거나(도구 사용 평가에선 특정 사이트 차단 목록 사용), 수학은 모델이 못 본 새 시험으로 평가하는 게 좋습니다.</li><li><strong>Goodhart's law(굿하트 법칙)</strong>: "측정값이 목표가 되면 더 이상 좋은 측정이 아니다." 벤치마크 점수도 진짜 원하는 것에 비춰 가늠해야 하며, 점수가 곧 '나에게 좋은 모델'을 뜻하진 않습니다.</li></ul>
+<p>결론: Chatbot Arena 같은 실사용 평가도 한 방법이지만, 궁극적으로는 직접 여러 모델을 써보고 자기 업무에 맞는 것을 골라야 합니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>Pareto 프런티어</dt><dd>두 축(예: 성능·가격)에서 최선인 모델들의 경계.</dd><dt>데이터 오염<span class="en-term">(data contamination)</span></dt><dd>모델이 벤치마크 정답을 미리 학습한 문제. 해시·차단목록·새 시험으로 방지.</dd><dt>Goodhart's law<span class="en-term">(굿하트 법칙)</span></dt><dd>측정이 목표가 되면 측정의 의미가 퇴색.</dd></dl></div>
+</div></section><section id="glossary"><h2>4. 핵심 용어집</h2><div class="table-wrap"><table><thead><tr><th>영문</th><th>한국어</th><th>발음</th><th>뜻</th></tr></thead><tbody><tr><td>MMLU</td><td>엠엠엘유</td><td>—</td><td>지식 4지선다 벤치마크</td></tr><tr><td>AIME / PIQA</td><td>에임이/피카</td><td>—</td><td>수학 추론 / 물리 상식</td></tr><tr><td>SWE-bench</td><td>스위벤치</td><td>—</td><td>코딩(이슈 수정·테스트)</td></tr><tr><td>HarmBench</td><td>함벤치</td><td>—</td><td>안전(유해행동, 분류기)</td></tr><tr><td>τ-bench (tau-bench)</td><td>타우-벤치</td><td>—</td><td>에이전트(도구·정책·과제)</td></tr><tr><td>pass^k</td><td>패스 캐럿 k</td><td>—</td><td>K 시도 모두 성공 확률</td></tr><tr><td>Pareto frontier</td><td>파레토 프런티어</td><td>—</td><td>두 축 최선 모델 경계</td></tr><tr><td>data contamination</td><td>데이터 오염</td><td>—</td><td>정답 미리 학습 문제</td></tr><tr><td>Goodhart's law</td><td>굿하트 법칙</td><td>—</td><td>측정이 목표 되면 의미 퇴색</td></tr></tbody></table></div></section><section id="review"><h2>5. 복습 문제</h2><div class="callout review"><div class="c-title">✏️ 스스로 점검</div><ol><li>벤치마크 범주(지식·추론·코딩·안전·에이전트)와 대표 예를 짝지어라.</li><li>안전 벤치마크가 모델 간 직접 비교에 부적합한 이유는? pass^k가 pass@k와 다른 점은?</li><li>Pareto 프런티어·데이터 오염·Goodhart's law는 모델 선택에 각각 어떤 시사점을 주는가?</li></ol></div></section><section id="appendix"><h2>부록. 실무 적용 포인트 <span style="font-size:14px;font-weight:500;color:var(--muted);">(NLP·LLM 기술 내용 한정)</span></h2><div class="callout practice"><div class="c-title">💡 현장에서 써먹기</div><ul><li><strong>벤치마크 범주는 "어떤 모델이 어떤 일에 강한지" 읽는 안목을 준다.</strong> 지식·추론·코딩·안전·에이전트 점수를 구분해 보면, 업무 성격(사실 조회냐, 계산이냐, 코드냐)에 맞는 모델을 고를 수 있다. 단, 점수 하나로 '최고 모델'을 정하지 말 것.</li><li><strong>Pareto 프런티어는 "성능만이 아니라 비용·속도와 함께 보라"는 실무 기준이다.</strong> 같은 가격대에서 최선인 모델, 같은 성능에서 가장 싼 모델을 찾는 관점이다. 예산이 있는 기관 업무에서 '성능 대비 비용'으로 모델을 고르는 직접적 틀이다.</li><li><strong>데이터 오염·Goodhart's law는 "벤치마크 1등을 맹신하지 말라"는 경고다.</strong> 모델이 벤치마크 정답을 미리 봤을 수 있고, 점수 자체가 목표가 되면 실제 유용성과 어긋난다. 결국 <strong>자기 업무 샘플로 직접 시험해 보는 것</strong>이 가장 확실한 평가다 — 모든 AI 도입 결정의 최종 원칙.</li></ul></div></section></article></main>
+</div>
+
+<!-- KaTeX 자동 렌더 -->
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}],throwOnError:false});"></script>
+
+<!-- Mermaid -->
+<script type="module">
+  try{
+    const m = await import('https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs');
+    m.default.initialize({startOnLoad:true, theme:'base', themeVariables:{
+      fontFamily:'Pretendard, sans-serif', primaryColor:'#fffdfb', primaryBorderColor:'#d8d0c5',
+      primaryTextColor:'#1a1a1a', lineColor:'#b9554f', fontSize:'14px'
+    }});
+  }catch(e){ /* 오프라인이면 도식은 코드로 표시 */ }
+</script>
+
+<!-- 목차 활성표시 + 모바일 드로어 -->
+<script>
+  // 모바일 드로어
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('overlay');
+  const btn = document.getElementById('menuBtn');
+  const toggle = (on)=>{ sb.classList.toggle('open',on); ov.classList.toggle('show',on); };
+  btn.addEventListener('click',()=>toggle(!sb.classList.contains('open')));
+  ov.addEventListener('click',()=>toggle(false));
+  document.querySelectorAll('.toc a').forEach(a=>a.addEventListener('click',()=>{ if(window.innerWidth<=900) toggle(false); }));
+
+  // 현재 위치 강조
+  const links = [...document.querySelectorAll('.toc a')];
+  const map = {}; links.forEach(a=>{ const id=a.getAttribute('href').slice(1); map[id]=a; });
+  const targets = Object.keys(map).map(id=>document.getElementById(id)).filter(Boolean);
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(en=>{
+      if(en.isIntersecting){
+        links.forEach(l=>l.classList.remove('active'));
+        const a = map[en.target.id]; if(a) a.classList.add('active');
+      }
+    });
+  },{rootMargin:'-15% 0px -75% 0px', threshold:0});
+  targets.forEach(t=>io.observe(t));
+</script>
+
+</body>
+</html>

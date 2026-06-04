@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CME295 Lecture 4 · 섹션 3. 분산 학습 — GPU 메모리와 병렬화</title>
+
+<!-- 폰트: Pretendard (CDN, 없으면 시스템 폰트 폴백) -->
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<!-- 수식: KaTeX -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
+
+<style>
+  :root{
+    --bg:#FBF9F6;
+    --paper:#ffffff;
+    --ink:#1a1a1a;
+    --ink-soft:#4a4744;
+    --muted:#7a756f;
+    --accent:#8C1515;          /* Stanford 카디널 */
+    --accent-soft:#b9554f;
+    --tint:#f6ebe9;            /* 카디널 옅은 틴트 */
+    --tint-2:#f3efe9;          /* 따뜻한 회색 */
+    --line:#e7e1d9;
+    --line-strong:#d8d0c5;
+    --radius:10px;
+    --maxw:760px;
+    --sidew:268px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Pretendard","Pretendard Variable",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    line-height:1.78;
+    font-size:16.5px;
+    -webkit-font-smoothing:antialiased;
+    word-break:keep-all;
+  }
+
+  /* ===== 레이아웃 ===== */
+  .layout{display:flex; align-items:flex-start;}
+  .sidebar{
+    width:var(--sidew); flex:0 0 var(--sidew);
+    position:sticky; top:0; height:100vh; overflow-y:auto;
+    padding:28px 18px 40px; border-right:1px solid var(--line);
+    background:rgba(251,249,246,.85); backdrop-filter:saturate(120%) blur(2px);
+  }
+  .content{flex:1 1 auto; min-width:0; display:flex; justify-content:center; padding:0 24px;}
+  .doc{width:100%; max-width:var(--maxw); padding:48px 0 120px;}
+
+  /* ===== 사이드바 목차 ===== */
+  .toc-brand{font-size:12px; letter-spacing:.04em; color:var(--accent); font-weight:700; text-transform:uppercase; margin-bottom:4px;}
+  .toc-title{font-size:15px; font-weight:700; margin:0 0 18px; line-height:1.4; color:var(--ink);}
+  .toc{list-style:none; margin:0; padding:0; font-size:13.5px;}
+  .toc li{margin:1px 0;}
+  .toc a{display:block; padding:5px 10px; border-radius:7px; color:var(--ink-soft); text-decoration:none; border-left:2px solid transparent;}
+  .toc a:hover{background:var(--tint-2); color:var(--ink);}
+  .toc a.sub{padding-left:22px; font-size:13px; color:var(--muted);}
+  .toc a.active{color:var(--accent); background:var(--tint); border-left-color:var(--accent); font-weight:600;}
+
+  /* ===== 타이포 ===== */
+  h1{font-size:27px; line-height:1.32; font-weight:800; letter-spacing:-.01em; margin:0 0 6px;}
+  .subtitle{font-size:18px; font-weight:700; color:var(--accent); margin:0 0 22px;}
+  h2{font-size:21px; font-weight:800; letter-spacing:-.01em; margin:46px 0 14px; padding-bottom:9px; border-bottom:2px solid var(--line-strong);}
+  h3{font-size:17.5px; font-weight:700; margin:34px 0 12px; color:var(--ink);}
+  h3 .badge{display:inline-block; font-size:12px; font-weight:700; color:#fff; background:var(--accent); border-radius:6px; padding:2px 8px; margin-right:8px; vertical-align:middle;}
+  p{margin:12px 0;}
+  strong{font-weight:700;}
+  a{color:var(--accent);}
+  ul,ol{margin:12px 0; padding-left:22px;}
+  li{margin:6px 0;}
+  hr{display:none;}
+
+  /* ===== 출처 배너 ===== */
+  .source-banner{
+    display:flex; gap:10px; align-items:baseline;
+    background:var(--tint); border-left:4px solid var(--accent);
+    border-radius:0 var(--radius) var(--radius) 0;
+    padding:12px 16px; margin:0 0 8px; font-size:13.5px; color:var(--ink-soft);
+  }
+  .source-banner b{color:var(--accent);}
+
+  /* ===== 한국어 번역 카드 ===== */
+  .ko{
+    background:var(--paper); border:1px solid var(--line);
+    border-left:4px solid var(--accent); border-radius:var(--radius);
+    padding:6px 22px; margin:16px 0;
+    box-shadow:0 1px 2px rgba(60,40,20,.04);
+  }
+  .ko > .label, .terms > .label{
+    display:inline-block; font-size:11.5px; font-weight:800; letter-spacing:.06em;
+    color:var(--accent); text-transform:uppercase; margin:14px 0 -4px;
+  }
+
+  /* ===== 영문 원문 토글 ===== */
+  details.en{
+    background:var(--tint-2); border:1px solid var(--line); border-radius:var(--radius);
+    margin:14px 0; overflow:hidden;
+  }
+  details.en > summary{
+    cursor:pointer; list-style:none; padding:11px 16px;
+    font-size:13.5px; font-weight:700; color:var(--muted);
+    display:flex; align-items:center; gap:8px; user-select:none;
+  }
+  details.en > summary::-webkit-details-marker{display:none;}
+  details.en > summary .chev{transition:transform .2s; color:var(--accent-soft);}
+  details.en[open] > summary .chev{transform:rotate(90deg);}
+  details.en[open] > summary{border-bottom:1px solid var(--line);}
+  .en-body{padding:4px 18px 14px; font-size:14px; line-height:1.7; color:#5c574f; font-style:normal;}
+  .en-body p{margin:10px 0;}
+  .ts{
+    display:inline-block; font-family:"SFMono-Regular",ui-monospace,Menlo,Consolas,monospace;
+    font-size:11.5px; font-style:normal; color:var(--accent);
+    background:var(--tint); border:1px solid #e6cfcc; border-radius:5px;
+    padding:0 5px; margin:0 2px; vertical-align:baseline;
+  }
+
+  /* ===== 용어 설명 ===== */
+  .terms{
+    border:1px solid var(--line); border-left:3px solid var(--accent-soft);
+    border-radius:var(--radius); background:#fffdfb; padding:4px 20px 8px; margin:16px 0;
+  }
+  .terms dl{margin:8px 0;}
+  .terms dt{font-weight:700; color:var(--ink); margin-top:8px;}
+  .terms dt .en-term{color:var(--accent); font-weight:600;}
+  .terms dd{margin:1px 0 6px; color:var(--ink-soft); font-size:15px;}
+
+  /* ===== 표 ===== */
+  .table-wrap{overflow-x:auto; margin:16px 0; border:1px solid var(--line); border-radius:var(--radius);}
+  table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:520px;}
+  thead th{background:var(--accent); color:#fff; font-weight:700; text-align:left; padding:11px 14px; white-space:nowrap;}
+  tbody td{padding:9px 14px; border-top:1px solid var(--line);}
+  tbody tr:nth-child(even){background:var(--tint-2);}
+  tbody td:first-child{font-family:ui-monospace,Menlo,monospace; font-size:13px; color:var(--accent);}
+
+  /* ===== 콜아웃 ===== */
+  .callout{border-radius:var(--radius); padding:14px 20px 6px; margin:18px 0;}
+  .callout .c-title{font-weight:800; margin:6px 0 2px; display:flex; align-items:center; gap:8px;}
+  .callout.review{background:#fff; border:1px solid var(--line-strong);}
+  .callout.review ol{counter-reset:none;}
+  .callout.note{background:var(--tint-2); border-left:4px solid var(--muted); border-radius:0 var(--radius) var(--radius) 0; padding-bottom:12px;}
+  .callout.practice{background:var(--tint); border:1px solid #e6cfcc; padding-bottom:14px;}
+  .callout.practice li{margin:12px 0;}
+  .next{margin-top:40px; padding:14px 18px; background:var(--tint-2); border-radius:var(--radius); font-size:14px; color:var(--ink-soft);}
+
+  /* 수식 / 도식 */
+  .katex-display{margin:14px 0; overflow-x:auto; overflow-y:hidden; padding:6px 0;}
+  .diagram{background:#fffdfb; border:1px solid var(--line); border-radius:var(--radius); padding:14px; margin:16px 0; text-align:center;}
+  .diagram .cap{font-size:12.5px; color:var(--muted); margin-top:6px;}
+  .mermaid{display:flex; justify-content:center;}
+
+  /* ===== 모바일 ===== */
+  .menu-btn{display:none;}
+  .overlay{display:none;}
+  @media (max-width:900px){
+    .menu-btn{
+      display:flex; align-items:center; justify-content:center;
+      position:fixed; top:14px; left:14px; z-index:50;
+      width:42px; height:42px; border-radius:10px; border:1px solid var(--line-strong);
+      background:var(--paper); color:var(--accent); font-size:20px; cursor:pointer;
+      box-shadow:0 2px 8px rgba(60,40,20,.12);
+    }
+    .sidebar{
+      position:fixed; left:0; top:0; z-index:60; height:100vh;
+      transform:translateX(-105%); transition:transform .25s ease;
+      box-shadow:4px 0 24px rgba(0,0,0,.12); background:var(--bg);
+    }
+    .sidebar.open{transform:translateX(0);}
+    .overlay.show{display:block; position:fixed; inset:0; background:rgba(0,0,0,.32); z-index:55;}
+    .content{padding:0 16px;}
+    .doc{padding:64px 0 100px;}
+    body{font-size:16px;}
+    h1{font-size:23px;}
+    .ko,.terms{padding-left:16px; padding-right:16px;}
+  }
+
+  /* ===== 인쇄 ===== */
+  @media print{
+    .sidebar,.menu-btn,.overlay{display:none !important;}
+    .content{padding:0;}
+    body{background:#fff; font-size:11pt;}
+    details.en{display:none;}          /* 인쇄본은 한국어 위주 */
+    .ko,.terms,.callout,.table-wrap{break-inside:avoid; box-shadow:none;}
+    a{color:var(--ink);}
+  }
+  .home-btn{position:fixed; top:16px; right:18px; z-index:70;
+    display:inline-flex; align-items:center; gap:6px; text-decoration:none;
+    background:var(--paper); color:var(--accent); border:1px solid var(--line-strong);
+    border-radius:999px; padding:8px 14px; font-size:13.5px; font-weight:700;
+    box-shadow:0 2px 8px rgba(60,40,20,.12); transition:background .12s,color .12s;}
+  .home-btn:hover{background:var(--accent); color:#fff; border-color:var(--accent);}
+  @media (max-width:900px){ .home-btn{top:14px; right:14px; padding:8px 12px; font-size:12.5px;} }
+  @media print{ .home-btn{display:none !important;} }
+</style>
+</head>
+<body>
+<a class="home-btn" href="../index.html" title="전체 목차로 돌아가기">← 전체 목차</a>
+
+<button class="menu-btn" id="menuBtn" aria-label="목차 열기">☰</button>
+<div class="overlay" id="overlay"></div>
+
+<div class="layout">
+  <nav class="sidebar" id="sidebar"><div class="toc-brand">Stanford CME295 · Lecture 4</div><p class="toc-title">섹션 3. 분산 학습 — GPU 메모리와 병렬화</p><ul class="toc"><li><a href="#overview">1. 강의 개요</a></li><li><a href="#goals">2. 학습 목표</a></li><li><a href="#body">3. 본문</a></li><li><a class="sub" href="#block1">블록 1 · 학습 단계와 저장해야 하는 것들</a></li><li><a class="sub" href="#block2">블록 2 · GPU 메모리의 한계와 데이터 병렬화</a></li><li><a class="sub" href="#block3">블록 3 · ZeRO: 중복 제거 최적화</a></li><li><a class="sub" href="#block4">블록 4 · 모델 병렬화: 전문가·텐서·파이프라인</a></li><li><a href="#glossary">4. 핵심 용어집</a></li><li><a href="#review">5. 복습 문제</a></li><li><a href="#appendix">부록. 실무 적용 포인트 (NLP·LLM 기술 내용 한정)</a></li></ul></nav>
+  <main class="content"><article class="doc"><h1>CME295 Transformers &amp; LLMs — Lecture 4 한국어 교재</h1><p class="subtitle">섹션 3. 분산 학습 — GPU 메모리와 병렬화</p><div class="source-banner"><span>📄</span><span><b>원문 출처</b>: Stanford CME295, Autumn 2025, Lecture 4, 타임스탬프 <span class="ts">24:45</span>~<span class="ts">37:54</span></span></div><section id="overview"><h2>1. 강의 개요</h2><ul><li>거대 모델 학습에 필요한 하드웨어(GPU)와, 학습 과정에서 메모리에 저장해야 하는 것들(활성값·기울기·옵티마이저 상태)을 본다.</li><li>GPU 한 장의 메모리 한계를 넘기 위한 데이터 병렬화(data parallelism)와 그 최적화 ZeRO를 다룬다.</li><li>모델 자체를 쪼개는 모델 병렬화(model parallelism) — 전문가·텐서·파이프라인 병렬화 — 를 개관한다.</li></ul></section><section id="goals"><h2>2. 학습 목표</h2><ol><li>학습의 순전파·역전파에서 메모리에 무엇을(활성값·기울기·옵티마이저 상태) 저장하는지 안다.</li><li>데이터 병렬화와 ZeRO(중복 제거)가 메모리를 어떻게 줄이는지, 그 대가(통신 비용)는 무엇인지 설명할 수 있다.</li><li>모델 병렬화의 세 종류(전문가·텐서·파이프라인)를 개념적으로 구분할 수 있다.</li></ol></section><section id="body"><h2>3. 본문</h2><div id="block1"><h3><span class="badge">블록 1</span>학습 단계와 저장해야 하는 것들</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">25:46</span> what is the kind of hardware that loves matrix multiplications? GPUs. (...) Google (...) developed their own hardware that's called TPUs. (...) <span class="ts">26:50</span> you have one step called the forward pass (...) you have something that's called activations which are basically the values at each layer that are needed in order to compute the loss. (...) <span class="ts">28:26</span> another pass called backwards pass (...) the gradient (...) gradients they also need to be saved (...) <span class="ts">29:27</span> (Adam) optimizer (...) the first moment and the second moment (...) you also need to (...) save them.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>LLM 학습에는 행렬 곱셈이 많아 GPU가 필요합니다(여러 장 필요). 구글은 자체 하드웨어 TPU를 만들었지만, 비구글 모델은 대개 GPU로 학습됩니다.</p>
+<p>학습 한 단계는 이렇습니다.</p>
+<ol><li><strong>순전파(forward pass)</strong>: 데이터를 모델에 통과시킵니다. 이때 활성값(activation) — 손실 계산에 필요한 각 층의 값 — 이 생깁니다. 손실(loss)은 정답(라벨)에서 얼마나 벗어났는지를 나타냅니다.</li><li><strong>역전파(backward pass)</strong>: 손실을 최소화하는 방향, 즉 각 파라미터에 대한 손실의 기울기(gradient)를 계산합니다.</li><li><strong>가중치 갱신</strong>: 기울기 방향으로 가중치를 갱신합니다. 보통 Adam 옵티마이저를 쓰는데, 기울기의 이동평균인 1차·2차 모멘트(moment)를 추가로 추적합니다.</li></ol>
+<p>메모리에 저장해야 하는 것: 활성값, 기울기, 옵티마이저 상태(모멘트). 활성값 메모리는 모델 크기, 배치 크기, 컨텍스트 길이(self-attention의 O(N²) 때문)에 따라 커집니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>GPU / TPU</dt><dd>행렬 연산용 하드웨어. TPU는 구글 자체 칩.</dd><dt>순전파<span class="en-term">(forward pass)</span></dt><dd>입력→출력 계산 단계. 활성값 생성.</dd><dt>활성값<span class="en-term">(activation)</span></dt><dd>손실 계산에 필요한 각 층의 중간 값.</dd><dt>역전파<span class="en-term">(backward pass)</span></dt><dd>손실의 기울기를 계산하는 단계.</dd><dt>기울기<span class="en-term">(gradient)</span></dt><dd>손실을 줄이는 방향. 파라미터별로 계산.</dd><dt>Adam 옵티마이저</dt><dd>기울기의 1차·2차 모멘트를 활용해 가중치를 갱신하는 표준 방법.</dd></dl></div>
+</div>
+<div id="block2"><h3><span class="badge">블록 2</span>GPU 메모리의 한계와 데이터 병렬화</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">30:00</span> Memory is not unlimited. (...) H100 (...) GPU memory (...) 80 gig (...) on the order of tens of gigabytes. (...) <span class="ts">31:03</span> data parallelism also known as DP (...) divide the batch of data across devices (...) you need to have a copy of the model per device (...) you're able to reduce the memory that is linked to the batch size. (...) <span class="ts">32:07</span> the gradient is just the average of the gradients (...) you have some communication in between the GPUs that (...) aggregate the gradient. (...) <span class="ts">32:37</span> an additional cost which is called communication cost (...) your training is going to be slower.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>메모리는 무한하지 않습니다. 좋은 GPU인 H100도 메모리가 80GB(수십 GB 규모)뿐입니다. 저장할 게 그렇게 많은데 80GB는 부족합니다. 그래서 GPU 한 장이 아니라 여러 장에 부하를 나눕니다.</p>
+<p>첫 번째 방법은 데이터 병렬화(data parallelism, DP)입니다. 데이터 배치(batch)를 여러 장치(GPU)에 나눠, 순전파·역전파를 병렬로 합니다. 이때 각 장치마다 모델 사본(copy)이 필요합니다(활성값 등을 계산해야 하므로). 이렇게 하면 배치 크기와 관련된 메모리를 줄일 수 있습니다.</p>
+<ul><li>기울기는 어떻게? 각 GPU의 기울기를 평균 냅니다. GPU 간에 통신해 기울기를 취합합니다.</li><li>한계: ① 모델 하나는 GPU 한 장에 들어가야 합니다(데이터 병렬화는 모델을 쪼개지 않음). ② GPU 간 취합을 위한 통신 비용(communication cost)이 추가돼 학습이 느려집니다.</li></ul></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>데이터 병렬화<span class="en-term">(data parallelism, DP)</span></dt><dd>데이터 배치를 여러 GPU에 나눠 병렬 처리. 각 GPU에 모델 사본 필요.</dd><dt>배치<span class="en-term">(batch)</span></dt><dd>한 번에 처리하는 데이터 묶음.</dd><dt>통신 비용<span class="en-term">(communication cost)</span></dt><dd>GPU 간 데이터(기울기 등)를 주고받는 데 드는 비용. 학습을 느리게 함.</dd></dl></div>
+</div>
+<div id="block3"><h3><span class="badge">블록 3</span>ZeRO: 중복 제거 최적화</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">33:42</span> a lot of duplication (...) this method is called zero (...) redundancy optim(ization) (...) on each GPU you store the same parameters, the same gradients, the same optim(izer) (...) states. So (...) how about we shard (...) partition those quantities across GPUs. (...) <span class="ts">34:12</span> sharing the optim(izer) states (...) we can also partition the gradients and (...) the (parameters). (...) <span class="ts">34:43</span> you're going to have even more communication costs, but (...) it allows (...) to decrease the memory load. (...) there's 0 1, 02, 03.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>데이터 병렬화에서는 각 GPU가 같은 파라미터·기울기·옵티마이저 상태를 똑같이 저장합니다 — 중복(duplication)이 많습니다. 이 중복을 없애려는 기법이 ZeRO(Zero Redundancy Optimizer, 영(零)중복 옵티마이저)입니다. 발상은 — 이 양들을 GPU에 걸쳐 분할(shard/partition)하자는 것입니다.</p>
+<ul><li><strong>ZeRO-1</strong>: 옵티마이저 상태를 분할. (메모리 크게 절약)</li><li><strong>ZeRO-2</strong>: 기울기도 분할.</li><li><strong>ZeRO-3</strong>: 파라미터도 분할. (중복 정보 없이 전부 분할)</li></ul>
+<p>대가는 통신 비용이 더 늘어나는 것이지만, GPU별 메모리 부담은 크게 줍니다. 어느 단계(ZeRO-1/2/3)를 고를지는 학습 시간 민감도와 모델 크기에 달려 있습니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>ZeRO<span class="en-term">(Zero Redundancy Optimizer)</span></dt><dd>파라미터·기울기·옵티마이저 상태를 GPU에 분할해 중복을 없애는 기법.</dd><dt>분할/샤딩<span class="en-term">(shard/partition)</span></dt><dd>한 덩어리를 여러 GPU에 나눠 저장.</dd><dt>ZeRO-1/2/3</dt><dd>옵티마이저 상태 / +기울기 / +파라미터 까지 분할하는 단계.</dd></dl></div>
+</div>
+<div id="block4"><h3><span class="badge">블록 4</span>모델 병렬화: 전문가·텐서·파이프라인</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">35:46</span> another set of methods that's called model parallelism (...) <span class="ts">36:18</span> MOE based LLM (...) expert parallelism which is (...) having one expert on a device another one on another (device). (...) <span class="ts">36:51</span> tensor parallelism is (...) when you have big matrix multiplications to (...) cut that in a way that decreases the memory. (...) <span class="ts">37:19</span> pipeline parallelism (...) one GPU is going to only be responsible for (...) layers 1 2 3 and then another one (...) four five six.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>데이터 병렬화는 '데이터'를 나눴습니다. 반면 모델 병렬화(model parallelism)는 모델의 연산 자체를 한 배치 안에서도 나눕니다. 여러 방법이 있는데 세 가지만 짚습니다.</p>
+<ul><li><strong>전문가 병렬화(expert parallelism)</strong>: MoE에서 전문가들을 서로 다른 장치에 배치(한 전문가는 이 GPU, 다른 전문가는 저 GPU). (Lecture 3의 MoE와 연결)</li><li><strong>텐서 병렬화(tensor parallelism)</strong>: 큰 행렬 곱셈을 쪼개 GPU별 메모리 요구를 줄임.</li><li><strong>파이프라인 병렬화(pipeline parallelism)</strong>: 순전파의 층들을 나눠, 한 GPU는 1~3층, 다른 GPU는 4~6층을 담당.</li></ul></div>
+<div class="callout note"><div class="c-title">⚠️ 참고</div><p>세부까지 외울 필요는 없고, "데이터를 나누는 병렬화(DP/ZeRO)와 모델을 나누는 병렬화(MP)가 있다"는 큰 그림이 중요합니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>모델 병렬화<span class="en-term">(model parallelism, MP)</span></dt><dd>모델의 연산을 여러 GPU에 나눔.</dd><dt>전문가 병렬화<span class="en-term">(expert parallelism)</span></dt><dd>MoE 전문가를 GPU별로 분산.</dd><dt>텐서 병렬화<span class="en-term">(tensor parallelism)</span></dt><dd>큰 행렬 곱을 쪼갬.</dd><dt>파이프라인 병렬화<span class="en-term">(pipeline parallelism)</span></dt><dd>층을 GPU별로 분담.</dd></dl></div>
+</div></section><section id="glossary"><h2>4. 핵심 용어집</h2><div class="table-wrap"><table><thead><tr><th>영문</th><th>한국어</th><th>발음</th><th>뜻</th></tr></thead><tbody><tr><td>forward / backward pass</td><td>순전파/역전파</td><td>—</td><td>출력 계산 / 기울기 계산</td></tr><tr><td>activation</td><td>활성값</td><td>—</td><td>손실 계산용 중간 값</td></tr><tr><td>gradient</td><td>기울기</td><td>그래디언트</td><td>손실 줄이는 방향</td></tr><tr><td>Adam optimizer</td><td>아담 옵티마이저</td><td>—</td><td>모멘트 활용 가중치 갱신</td></tr><tr><td>GPU / TPU</td><td>지피유/티피유</td><td>—</td><td>연산 하드웨어</td></tr><tr><td>data parallelism (DP)</td><td>데이터 병렬화</td><td>—</td><td>배치를 GPU에 분산</td></tr><tr><td>communication cost</td><td>통신 비용</td><td>—</td><td>GPU 간 데이터 교환 비용</td></tr><tr><td>ZeRO</td><td>제로</td><td>제로</td><td>중복 제거(파라미터·기울기·옵티마이저 분할)</td></tr><tr><td>model parallelism (MP)</td><td>모델 병렬화</td><td>—</td><td>모델 연산을 GPU에 분산</td></tr><tr><td>expert / tensor / pipeline parallelism</td><td>전문가/텐서/파이프라인 병렬화</td><td>—</td><td>MoE 전문가 / 행렬 / 층 분산</td></tr></tbody></table></div></section><section id="review"><h2>5. 복습 문제</h2><div class="callout review"><div class="c-title">✏️ 스스로 점검</div><ol><li>학습 과정에서 메모리에 저장해야 하는 세 가지(활성값·기울기·옵티마이저 상태)는 각각 무엇 때문에 필요한가?</li><li>데이터 병렬화의 한계 두 가지는? ZeRO는 무엇을 분할해 메모리를 줄이는가?</li><li>데이터 병렬화와 모델 병렬화의 차이는? 모델 병렬화 세 종류를 들어라.</li></ol></div></section><section id="appendix"><h2>부록. 실무 적용 포인트 <span style="font-size:14px;font-weight:500;color:var(--muted);">(NLP·LLM 기술 내용 한정)</span></h2><div class="callout practice"><div class="c-title">💡 현장에서 써먹기</div><ul><li><strong>GPU 메모리 한계와 병렬화는 "왜 LLM 학습·운영에 GPU가 여러 대 필요한가"의 답이다.</strong> 모델 하나가 GPU 한 장에 안 들어가기 때문에 쪼개 나눈다. 자체 모델 학습·미세조정을 검토할 때 'GPU 몇 장이 필요한가'가 비용의 핵심이며, 이는 모델 크기에 직결된다.</li><li><strong>통신 비용이라는 트레이드오프는 "GPU를 늘린다고 선형으로 빨라지지 않는다"를 설명한다.</strong> GPU를 늘릴수록 메모리는 확보되지만 GPU 간 통신이 늘어 속도 이득은 줄어든다. 인프라 견적에서 'GPU 수 = 속도'로 단순 환산하면 안 된다는 안목을 준다.</li></ul></div><div class="next"><strong><strong>다음 섹션 예고</strong>·&lt;/strong&gt; · GPU 구조를 영리하게 활용해 어텐션을 빠르게·메모리 적게 계산하는 FlashAttention과, 정밀도를 낮춰 절약하는 양자화·혼합정밀도 학습. <span class="ts">37:54</span> 이후.</div></section></article></main>
+</div>
+
+<!-- KaTeX 자동 렌더 -->
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}],throwOnError:false});"></script>
+
+<!-- Mermaid -->
+<script type="module">
+  try{
+    const m = await import('https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs');
+    m.default.initialize({startOnLoad:true, theme:'base', themeVariables:{
+      fontFamily:'Pretendard, sans-serif', primaryColor:'#fffdfb', primaryBorderColor:'#d8d0c5',
+      primaryTextColor:'#1a1a1a', lineColor:'#b9554f', fontSize:'14px'
+    }});
+  }catch(e){ /* 오프라인이면 도식은 코드로 표시 */ }
+</script>
+
+<!-- 목차 활성표시 + 모바일 드로어 -->
+<script>
+  // 모바일 드로어
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('overlay');
+  const btn = document.getElementById('menuBtn');
+  const toggle = (on)=>{ sb.classList.toggle('open',on); ov.classList.toggle('show',on); };
+  btn.addEventListener('click',()=>toggle(!sb.classList.contains('open')));
+  ov.addEventListener('click',()=>toggle(false));
+  document.querySelectorAll('.toc a').forEach(a=>a.addEventListener('click',()=>{ if(window.innerWidth<=900) toggle(false); }));
+
+  // 현재 위치 강조
+  const links = [...document.querySelectorAll('.toc a')];
+  const map = {}; links.forEach(a=>{ const id=a.getAttribute('href').slice(1); map[id]=a; });
+  const targets = Object.keys(map).map(id=>document.getElementById(id)).filter(Boolean);
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(en=>{
+      if(en.isIntersecting){
+        links.forEach(l=>l.classList.remove('active'));
+        const a = map[en.target.id]; if(a) a.classList.add('active');
+      }
+    });
+  },{rootMargin:'-15% 0px -75% 0px', threshold:0});
+  targets.forEach(t=>io.observe(t));
+</script>
+
+</body>
+</html>

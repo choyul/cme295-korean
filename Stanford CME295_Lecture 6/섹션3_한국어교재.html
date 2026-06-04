@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CME295 Lecture 6 · 섹션 3. 추론 벤치마크와 pass@k 지표</title>
+
+<!-- 폰트: Pretendard (CDN, 없으면 시스템 폰트 폴백) -->
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<!-- 수식: KaTeX -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
+
+<style>
+  :root{
+    --bg:#FBF9F6;
+    --paper:#ffffff;
+    --ink:#1a1a1a;
+    --ink-soft:#4a4744;
+    --muted:#7a756f;
+    --accent:#8C1515;          /* Stanford 카디널 */
+    --accent-soft:#b9554f;
+    --tint:#f6ebe9;            /* 카디널 옅은 틴트 */
+    --tint-2:#f3efe9;          /* 따뜻한 회색 */
+    --line:#e7e1d9;
+    --line-strong:#d8d0c5;
+    --radius:10px;
+    --maxw:760px;
+    --sidew:268px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Pretendard","Pretendard Variable",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    line-height:1.78;
+    font-size:16.5px;
+    -webkit-font-smoothing:antialiased;
+    word-break:keep-all;
+  }
+
+  /* ===== 레이아웃 ===== */
+  .layout{display:flex; align-items:flex-start;}
+  .sidebar{
+    width:var(--sidew); flex:0 0 var(--sidew);
+    position:sticky; top:0; height:100vh; overflow-y:auto;
+    padding:28px 18px 40px; border-right:1px solid var(--line);
+    background:rgba(251,249,246,.85); backdrop-filter:saturate(120%) blur(2px);
+  }
+  .content{flex:1 1 auto; min-width:0; display:flex; justify-content:center; padding:0 24px;}
+  .doc{width:100%; max-width:var(--maxw); padding:48px 0 120px;}
+
+  /* ===== 사이드바 목차 ===== */
+  .toc-brand{font-size:12px; letter-spacing:.04em; color:var(--accent); font-weight:700; text-transform:uppercase; margin-bottom:4px;}
+  .toc-title{font-size:15px; font-weight:700; margin:0 0 18px; line-height:1.4; color:var(--ink);}
+  .toc{list-style:none; margin:0; padding:0; font-size:13.5px;}
+  .toc li{margin:1px 0;}
+  .toc a{display:block; padding:5px 10px; border-radius:7px; color:var(--ink-soft); text-decoration:none; border-left:2px solid transparent;}
+  .toc a:hover{background:var(--tint-2); color:var(--ink);}
+  .toc a.sub{padding-left:22px; font-size:13px; color:var(--muted);}
+  .toc a.active{color:var(--accent); background:var(--tint); border-left-color:var(--accent); font-weight:600;}
+
+  /* ===== 타이포 ===== */
+  h1{font-size:27px; line-height:1.32; font-weight:800; letter-spacing:-.01em; margin:0 0 6px;}
+  .subtitle{font-size:18px; font-weight:700; color:var(--accent); margin:0 0 22px;}
+  h2{font-size:21px; font-weight:800; letter-spacing:-.01em; margin:46px 0 14px; padding-bottom:9px; border-bottom:2px solid var(--line-strong);}
+  h3{font-size:17.5px; font-weight:700; margin:34px 0 12px; color:var(--ink);}
+  h3 .badge{display:inline-block; font-size:12px; font-weight:700; color:#fff; background:var(--accent); border-radius:6px; padding:2px 8px; margin-right:8px; vertical-align:middle;}
+  p{margin:12px 0;}
+  strong{font-weight:700;}
+  a{color:var(--accent);}
+  ul,ol{margin:12px 0; padding-left:22px;}
+  li{margin:6px 0;}
+  hr{display:none;}
+
+  /* ===== 출처 배너 ===== */
+  .source-banner{
+    display:flex; gap:10px; align-items:baseline;
+    background:var(--tint); border-left:4px solid var(--accent);
+    border-radius:0 var(--radius) var(--radius) 0;
+    padding:12px 16px; margin:0 0 8px; font-size:13.5px; color:var(--ink-soft);
+  }
+  .source-banner b{color:var(--accent);}
+
+  /* ===== 한국어 번역 카드 ===== */
+  .ko{
+    background:var(--paper); border:1px solid var(--line);
+    border-left:4px solid var(--accent); border-radius:var(--radius);
+    padding:6px 22px; margin:16px 0;
+    box-shadow:0 1px 2px rgba(60,40,20,.04);
+  }
+  .ko > .label, .terms > .label{
+    display:inline-block; font-size:11.5px; font-weight:800; letter-spacing:.06em;
+    color:var(--accent); text-transform:uppercase; margin:14px 0 -4px;
+  }
+
+  /* ===== 영문 원문 토글 ===== */
+  details.en{
+    background:var(--tint-2); border:1px solid var(--line); border-radius:var(--radius);
+    margin:14px 0; overflow:hidden;
+  }
+  details.en > summary{
+    cursor:pointer; list-style:none; padding:11px 16px;
+    font-size:13.5px; font-weight:700; color:var(--muted);
+    display:flex; align-items:center; gap:8px; user-select:none;
+  }
+  details.en > summary::-webkit-details-marker{display:none;}
+  details.en > summary .chev{transition:transform .2s; color:var(--accent-soft);}
+  details.en[open] > summary .chev{transform:rotate(90deg);}
+  details.en[open] > summary{border-bottom:1px solid var(--line);}
+  .en-body{padding:4px 18px 14px; font-size:14px; line-height:1.7; color:#5c574f; font-style:normal;}
+  .en-body p{margin:10px 0;}
+  .ts{
+    display:inline-block; font-family:"SFMono-Regular",ui-monospace,Menlo,Consolas,monospace;
+    font-size:11.5px; font-style:normal; color:var(--accent);
+    background:var(--tint); border:1px solid #e6cfcc; border-radius:5px;
+    padding:0 5px; margin:0 2px; vertical-align:baseline;
+  }
+
+  /* ===== 용어 설명 ===== */
+  .terms{
+    border:1px solid var(--line); border-left:3px solid var(--accent-soft);
+    border-radius:var(--radius); background:#fffdfb; padding:4px 20px 8px; margin:16px 0;
+  }
+  .terms dl{margin:8px 0;}
+  .terms dt{font-weight:700; color:var(--ink); margin-top:8px;}
+  .terms dt .en-term{color:var(--accent); font-weight:600;}
+  .terms dd{margin:1px 0 6px; color:var(--ink-soft); font-size:15px;}
+
+  /* ===== 표 ===== */
+  .table-wrap{overflow-x:auto; margin:16px 0; border:1px solid var(--line); border-radius:var(--radius);}
+  table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:520px;}
+  thead th{background:var(--accent); color:#fff; font-weight:700; text-align:left; padding:11px 14px; white-space:nowrap;}
+  tbody td{padding:9px 14px; border-top:1px solid var(--line);}
+  tbody tr:nth-child(even){background:var(--tint-2);}
+  tbody td:first-child{font-family:ui-monospace,Menlo,monospace; font-size:13px; color:var(--accent);}
+
+  /* ===== 콜아웃 ===== */
+  .callout{border-radius:var(--radius); padding:14px 20px 6px; margin:18px 0;}
+  .callout .c-title{font-weight:800; margin:6px 0 2px; display:flex; align-items:center; gap:8px;}
+  .callout.review{background:#fff; border:1px solid var(--line-strong);}
+  .callout.review ol{counter-reset:none;}
+  .callout.note{background:var(--tint-2); border-left:4px solid var(--muted); border-radius:0 var(--radius) var(--radius) 0; padding-bottom:12px;}
+  .callout.practice{background:var(--tint); border:1px solid #e6cfcc; padding-bottom:14px;}
+  .callout.practice li{margin:12px 0;}
+  .next{margin-top:40px; padding:14px 18px; background:var(--tint-2); border-radius:var(--radius); font-size:14px; color:var(--ink-soft);}
+
+  /* 수식 / 도식 */
+  .katex-display{margin:14px 0; overflow-x:auto; overflow-y:hidden; padding:6px 0;}
+  .diagram{background:#fffdfb; border:1px solid var(--line); border-radius:var(--radius); padding:14px; margin:16px 0; text-align:center;}
+  .diagram .cap{font-size:12.5px; color:var(--muted); margin-top:6px;}
+  .mermaid{display:flex; justify-content:center;}
+
+  /* ===== 모바일 ===== */
+  .menu-btn{display:none;}
+  .overlay{display:none;}
+  @media (max-width:900px){
+    .menu-btn{
+      display:flex; align-items:center; justify-content:center;
+      position:fixed; top:14px; left:14px; z-index:50;
+      width:42px; height:42px; border-radius:10px; border:1px solid var(--line-strong);
+      background:var(--paper); color:var(--accent); font-size:20px; cursor:pointer;
+      box-shadow:0 2px 8px rgba(60,40,20,.12);
+    }
+    .sidebar{
+      position:fixed; left:0; top:0; z-index:60; height:100vh;
+      transform:translateX(-105%); transition:transform .25s ease;
+      box-shadow:4px 0 24px rgba(0,0,0,.12); background:var(--bg);
+    }
+    .sidebar.open{transform:translateX(0);}
+    .overlay.show{display:block; position:fixed; inset:0; background:rgba(0,0,0,.32); z-index:55;}
+    .content{padding:0 16px;}
+    .doc{padding:64px 0 100px;}
+    body{font-size:16px;}
+    h1{font-size:23px;}
+    .ko,.terms{padding-left:16px; padding-right:16px;}
+  }
+
+  /* ===== 인쇄 ===== */
+  @media print{
+    .sidebar,.menu-btn,.overlay{display:none !important;}
+    .content{padding:0;}
+    body{background:#fff; font-size:11pt;}
+    details.en{display:none;}          /* 인쇄본은 한국어 위주 */
+    .ko,.terms,.callout,.table-wrap{break-inside:avoid; box-shadow:none;}
+    a{color:var(--ink);}
+  }
+  .home-btn{position:fixed; top:16px; right:18px; z-index:70;
+    display:inline-flex; align-items:center; gap:6px; text-decoration:none;
+    background:var(--paper); color:var(--accent); border:1px solid var(--line-strong);
+    border-radius:999px; padding:8px 14px; font-size:13.5px; font-weight:700;
+    box-shadow:0 2px 8px rgba(60,40,20,.12); transition:background .12s,color .12s;}
+  .home-btn:hover{background:var(--accent); color:#fff; border-color:var(--accent);}
+  @media (max-width:900px){ .home-btn{top:14px; right:14px; padding:8px 12px; font-size:12.5px;} }
+  @media print{ .home-btn{display:none !important;} }
+</style>
+</head>
+<body>
+<a class="home-btn" href="../index.html" title="전체 목차로 돌아가기">← 전체 목차</a>
+
+<button class="menu-btn" id="menuBtn" aria-label="목차 열기">☰</button>
+<div class="overlay" id="overlay"></div>
+
+<div class="layout">
+  <nav class="sidebar" id="sidebar"><div class="toc-brand">Stanford CME295 · Lecture 6</div><p class="toc-title">섹션 3. 추론 벤치마크와 pass@k 지표</p><ul class="toc"><li><a href="#overview">1. 강의 개요</a></li><li><a href="#goals">2. 학습 목표</a></li><li><a href="#body">3. 본문</a></li><li><a class="sub" href="#block1">블록 1 · 추론 벤치마크 (코딩·수학)</a></li><li><a class="sub" href="#block2">블록 2 · pass@k 지표와 그 동기</a></li><li><a class="sub" href="#block3">블록 3 · pass@k 추정 공식 유도</a></li><li><a class="sub" href="#block4">블록 4 · 온도(temperature)와 그 외 지표</a></li><li><a href="#glossary">4. 핵심 용어집</a></li><li><a href="#review">5. 복습 문제</a></li><li><a href="#appendix">부록. 실무 적용 포인트 (NLP·LLM 기술 내용 한정)</a></li></ul></nav>
+  <main class="content"><article class="doc"><h1>CME295 Transformers &amp; LLMs — Lecture 6 한국어 교재</h1><p class="subtitle">섹션 3. 추론 벤치마크와 pass@k 지표</p><div class="source-banner"><span>📄</span><span><b>원문 출처</b>: Stanford CME295, Autumn 2025, Lecture 6, 타임스탬프 <span class="ts">27:41</span>~<span class="ts">47:28</span></span></div><section id="overview"><h2>1. 강의 개요</h2><ul><li>추론을 측정하는 벤치마크 — 코딩(HumanEval·Codeforces·SWE-bench)과 수학(AIME·GSM8K) — 과 정답 검증(verifiable) 방식을 다룬다.</li><li>핵심 지표 pass@k(K번 시도 중 적어도 한 번 성공할 확률)와 그 추정 공식을 유도한다.</li><li>온도(temperature)가 pass@k에 미치는 영향(다양성↔정확성)과 그 외 지표(consensus@k)를 본다.</li></ul></section><section id="goals"><h2>2. 학습 목표</h2><ol><li>코딩·수학 추론 벤치마크의 정답 검증 방식(테스트 통과·정답 대조)을 설명할 수 있다.</li><li>pass@k가 무엇이며, 왜 K번 중 하나만 맞아도 되는 상황이 있는지 안다.</li><li>온도가 pass@k에 미치는 영향(너무 낮으면 다양성↓, 너무 높으면 정확성↓)을 이해한다.</li></ol></section><section id="body"><h2>3. 본문</h2><div id="block1"><h3><span class="badge">블록 1</span>추론 벤치마크 (코딩·수학)</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">28:13</span> the first one (...) about (...) coding (...) given a problem, you want to produce a solution (...) able to pass test cases (...) our way of verifying. (...) <span class="ts">28:45</span> human eval (...) code forces (...) competitive programming (...) sw(e)bench (...) derived from GitHub issues. (...) <span class="ts">29:52</span> for math the goal is to (...) solve a problem (...) comparing it with some ground truth (...) <span class="ts">31:23</span> AIM(E) (...) a math exam to qualify for the US math olympiads (...) GSM 8K (...) grade school (...) math.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>추론을 정량화하는 벤치마크를 봅니다.</p>
+<p><strong>코딩</strong>: 문제가 주어지면 해법을 만들어 테스트 케이스(test case)를 통과시키는 것이 목표입니다. 모든 테스트를 통과하면 작동하는 해법이고, 이것이 생성된 응답이 옳은지 검증(verify)하는 방법입니다. 대표 벤치마크:</p>
+<ul><li><strong>HumanEval</strong>: 사람이 작성한 100여 개 코딩 문제.</li><li><strong>Codeforces</strong>: 경쟁 프로그래밍 사이트에서 온 문제.</li><li><strong>SWE-bench</strong>: GitHub 이슈에서 파생한 실전 문제.</li></ul>
+<p><strong>수학</strong>: 문제가 주어지면 답을 내는 것이 목표이고, 모델이 추론 사슬을 생성하게 둡니다. 검증은 — 답을 파싱(parse)해 정답(ground truth)과 비교합니다. 답을 파싱 가능하게 하려고, 프롬프트로 답을 정해진 형식(예: 박스 안)에 출력하게 강제합니다. 대표 벤치마크:</p>
+<ul><li><strong>AIME</strong>: 미국 수학 올림피아드 예선 시험. (※자막상 'AIM' → AIME로 보정)</li><li><strong>GSM8K</strong>: 초등(grade school) 수준 수학 문제.</li></ul></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>테스트 케이스<span class="en-term">(test case)</span></dt><dd>코드가 통과해야 하는 검사. 추론 정답을 검증하는 수단.</dd><dt>검증 가능<span class="en-term">(verifiable)</span></dt><dd>답이 맞는지 결정론적으로 확인 가능. 코딩(테스트 통과)·수학(정답 대조).</dd><dt>정답<span class="en-term">(ground truth)</span></dt><dd>비교 기준 정답.</dd><dt>파싱<span class="en-term">(parse)</span></dt><dd>출력에서 답 부분을 추출. 형식을 강제해 쉽게 함.</dd></dl></div>
+</div>
+<div id="block2"><h3><span class="badge">블록 2</span>pass@k 지표와 그 동기</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">32:31</span> pass at K (...) the probability that at least one of K attempts (passes) (...) <span class="ts">33:30</span> you may have use cases where you can afford to spend more time to generate more answers (...) <span class="ts">34:00</span> best of n (...) we do not have a reward model. We have a deterministic verifiable way of checking whether something is (correct).</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>추론에서 자주 보는 지표가 pass@k입니다. 정의상 'K번 시도 중 적어도 한 번 성공할 확률'을 추정합니다. 예를 들어 코딩 문제에서 모델이 K개의 답을 생성하면, pass@k는 그중 적어도 하나가 테스트를 통과할 확률입니다.</p>
+<p>왜 pass@k인가? 더 많은 답을 생성할 여유가 있는 경우가 있습니다. 정답 여부를 확인할 수 있는 코딩 같은 문제라면, 여러 답을 생성해 그중 맞는 게 하나라도 나오면 됩니다 — 시간·연산을 더 써서 정답 확률을 높이는 것이 가치 있을 수 있습니다. (지난 강의의 Best-of-N과 유사하나, 여기선 보상 모델 대신 '결정론적 검증'으로 정답을 확인)</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>pass@k</dt><dd>K번 시도 중 적어도 한 번 성공할 확률(추정).</dd><dt>Best-of-N과의 차이</dt><dd>BoN은 보상 모델로 고름, pass@k는 결정론적 검증으로 정답 확인.</dd></dl></div>
+</div>
+<div id="block3"><h3><span class="badge">블록 3</span>pass@k 추정 공식 유도</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">35:35</span> if you only do this k times your estimate can be very noisy (...) generate not k but n answers (...) c of them (...) successful (...) <span class="ts">37:43</span> the probability that at least one attempt out of k (...) is correct (...) one minus the probability of having all of them being incorrect. (...) <span class="ts">38:53</span> (n minus c) over n (...) sampling without replacement (...) <span class="ts">43:45</span> 1 minus (n minus c choose k) over (n choose k).</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>정확히 추정하려면 어떻게 할까요? K번만 생성해 맞은 수를 세면 추정값이 잡음(noise)이 큽니다. 그래서 K가 아니라 더 많은 N개를 생성합니다. N개 중 c개가 성공, N−c개가 실패라 합시다. 질문: 이 N개에서 K개를 뽑을 때 적어도 하나가 성공일 확률은?</p>
+<p>유도(복원 없는 추출):</p>
+<ul><li>확률 트릭: '적어도 하나 성공' = 1 − '모두 실패'.</li><li>K개를 모두 실패로 뽑을 확률 = (N−c)/N × (N−c−1)/(N−1) × … × (N−c−K+1)/(N−K+1). (실패 N−c개 중 차례로 뽑기)</li><li>이를 조합 기호로 정리하면:</li></ul>
+<p><strong>pass@k ≈ 1 − C(N−c, K) / C(N, K)</strong></p>
+<p>(C(n,k) = n! / [k!(n−k)!]) 이것이 papers에서 보는 pass@k 추정 공식입니다. 형태가 위협적이지만, '복원 없는 추출'만으로 자연스럽게 나옵니다.</p>
+<p>특수 경우 <strong>pass@1</strong>: 한 번 시도가 맞을 확률. K=1을 넣으면 식이 크게 단순해져 '성공 비율(c/N)'이 됩니다 — 직관과도 맞습니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>N과 c</dt><dd>실제로 생성한 응답 수 N, 그중 성공한 수 c.</dd><dt>복원 없는 추출<span class="en-term">(sampling without replacement)</span></dt><dd>뽑은 것을 되돌리지 않고 뽑기. pass@k 유도의 핵심.</dd><dt>pass@1</dt><dd>한 번 시도가 맞을 확률 = c/N.</dd></dl></div>
+</div>
+<div id="block4"><h3><span class="badge">블록 4</span>온도(temperature)와 그 외 지표</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">45:24</span> when you generate (...) solutions multiple times something that will influence your results is how diverse the solutions (...) you use the temperature for. (...) <span class="ts">45:56</span> a very low (temperature) (...) good, but (...) not (...) diverse (...) <span class="ts">46:27</span> increase this temperature too (much) (...) harm the performance. (...) <span class="ts">47:28</span> consensus at K which is the answer (...) coming from the highest number of times (...) self-consistency.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>pass@k는 온도(temperature)에 영향받습니다(이전 질문에 대한 답). 여러 번 생성할 때 답이 얼마나 다양한지가 결과를 좌우하는데, 그 다양성을 온도로 조절합니다.</p>
+<ul><li><strong>온도가 매우 낮으면</strong>: 답이 좋지만 다양하지 않음 → 샘플을 늘려도 pass@k가 안 오름(T=0이면 변화 없음).</li><li><strong>온도가 조금 있으면(예: 0.2)</strong>: 다양성이 생겨 pass@k가 오름.</li><li><strong>온도가 너무 높으면</strong>: 다양해지지만 정확성이 떨어짐(원래 낮던 토큰이 뽑힘).</li></ul>
+<p>그래서 보통 너무 높지도 낮지도 않은 온도(예: 0.4~0.8)가 좋고, 벤치마크 결과에는 늘 사용 온도를 명시합니다.</p>
+<p>그 외 지표:</p>
+<ul><li><strong>consensus@k</strong>: 여러 생성 중 가장 많이 나온 답을 택함. self-consistency(Lecture 3)와 밀접.</li><li>그 외 정확도(accuracy)·정확 일치(exact match) 등 익숙한 지표도 씀.</li></ul></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>온도<span class="en-term">(temperature)</span></dt><dd>생성 다양성 조절. pass@k에 영향(너무 낮으면 다양성↓, 너무 높으면 정확성↓).</dd><dt>consensus@k</dt><dd>최다 등장 답을 택하는 지표. self-consistency와 연결.</dd></dl></div>
+</div></section><section id="glossary"><h2>4. 핵심 용어집</h2><div class="table-wrap"><table><thead><tr><th>영문</th><th>한국어</th><th>발음</th><th>뜻</th></tr></thead><tbody><tr><td>test case</td><td>테스트 케이스</td><td>—</td><td>코드가 통과할 검사</td></tr><tr><td>verifiable</td><td>검증 가능</td><td>—</td><td>정답을 결정론적으로 확인</td></tr><tr><td>ground truth</td><td>정답</td><td>—</td><td>비교 기준</td></tr><tr><td>HumanEval / Codeforces / SWE-bench</td><td>—</td><td>—</td><td>코딩 벤치마크</td></tr><tr><td>AIME / GSM8K</td><td>—</td><td>—</td><td>수학 벤치마크</td></tr><tr><td>pass@k</td><td>패스 앳 k</td><td>—</td><td>K번 중 1회 이상 성공 확률</td></tr><tr><td>pass@1</td><td>패스 앳 1</td><td>—</td><td>1회 성공 확률(=c/N)</td></tr><tr><td>sampling without replacement</td><td>복원 없는 추출</td><td>—</td><td>되돌리지 않고 뽑기</td></tr><tr><td>temperature</td><td>온도</td><td>—</td><td>생성 다양성 조절</td></tr><tr><td>consensus@k</td><td>컨센서스 앳 k</td><td>—</td><td>최다 등장 답</td></tr></tbody></table></div></section><section id="review"><h2>5. 복습 문제</h2><div class="callout review"><div class="c-title">✏️ 스스로 점검</div><ol><li>코딩·수학 추론 벤치마크는 각각 정답을 어떻게 검증하는가?</li><li>pass@k란 무엇이며, 왜 'K번 중 하나만 맞아도 되는' 상황이 의미 있는가? pass@1은 어떻게 단순화되는가?</li><li>온도가 너무 낮을 때와 너무 높을 때 pass@k는 각각 왜 나빠지는가?</li></ol></div></section><section id="appendix"><h2>부록. 실무 적용 포인트 <span style="font-size:14px;font-weight:500;color:var(--muted);">(NLP·LLM 기술 내용 한정)</span></h2><div class="callout practice"><div class="c-title">💡 현장에서 써먹기</div><ul><li><strong>'검증 가능한 정답'이 있는 업무에선 "여러 번 생성해 맞는 걸 고르기"가 강력하다.</strong> 코딩처럼 답이 맞는지 자동 확인되는 일은, 모델을 여러 번 돌려 통과하는 답을 쓰면 정확도가 크게 오른다(pass@k 발상). 행정에서도 '검증 규칙이 명확한' 산출물(서식 검사 등)에 응용할 수 있다.</li><li><strong>온도 조절이 결과의 다양성·정확성을 좌우한다는 점은 실무 손잡이다.</strong> 정답이 하나인 작업엔 낮은 온도, 여러 후보를 보고 싶을 땐 약간 높은 온도. pass@k 원리는 "다양성과 정확성의 균형"을 잡는 감각을 준다.</li><li><strong>벤치마크가 '검증 가능 과제' 중심이라는 점은 평가의 한계를 시사한다.</strong> 수학·코딩은 정답 대조가 쉽지만, 행정 문서 품질처럼 정답이 모호한 일은 이런 벤치마크로 재기 어렵다. AI 추론력 수치를 볼 때 '무엇을 측정한 점수인지'를 따져야 한다.</li></ul></div><div class="next"><strong><strong>다음 섹션 예고</strong>·&lt;/strong&gt; · 추론 모델을 실제로 어떻게 만드나 — 검증 가능한 보상으로 RL을 돌리는 발상과 GRPO. <span class="ts">47:28</span> 이후.</div></section></article></main>
+</div>
+
+<!-- KaTeX 자동 렌더 -->
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}],throwOnError:false});"></script>
+
+<!-- Mermaid -->
+<script type="module">
+  try{
+    const m = await import('https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs');
+    m.default.initialize({startOnLoad:true, theme:'base', themeVariables:{
+      fontFamily:'Pretendard, sans-serif', primaryColor:'#fffdfb', primaryBorderColor:'#d8d0c5',
+      primaryTextColor:'#1a1a1a', lineColor:'#b9554f', fontSize:'14px'
+    }});
+  }catch(e){ /* 오프라인이면 도식은 코드로 표시 */ }
+</script>
+
+<!-- 목차 활성표시 + 모바일 드로어 -->
+<script>
+  // 모바일 드로어
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('overlay');
+  const btn = document.getElementById('menuBtn');
+  const toggle = (on)=>{ sb.classList.toggle('open',on); ov.classList.toggle('show',on); };
+  btn.addEventListener('click',()=>toggle(!sb.classList.contains('open')));
+  ov.addEventListener('click',()=>toggle(false));
+  document.querySelectorAll('.toc a').forEach(a=>a.addEventListener('click',()=>{ if(window.innerWidth<=900) toggle(false); }));
+
+  // 현재 위치 강조
+  const links = [...document.querySelectorAll('.toc a')];
+  const map = {}; links.forEach(a=>{ const id=a.getAttribute('href').slice(1); map[id]=a; });
+  const targets = Object.keys(map).map(id=>document.getElementById(id)).filter(Boolean);
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(en=>{
+      if(en.isIntersecting){
+        links.forEach(l=>l.classList.remove('active'));
+        const a = map[en.target.id]; if(a) a.classList.add('active');
+      }
+    });
+  },{rootMargin:'-15% 0px -75% 0px', threshold:0});
+  targets.forEach(t=>io.observe(t));
+</script>
+
+</body>
+</html>

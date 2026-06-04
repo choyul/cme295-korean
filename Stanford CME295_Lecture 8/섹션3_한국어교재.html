@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CME295 Lecture 8 · 섹션 3. LLM as a judge</title>
+
+<!-- 폰트: Pretendard (CDN, 없으면 시스템 폰트 폴백) -->
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<!-- 수식: KaTeX -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
+
+<style>
+  :root{
+    --bg:#FBF9F6;
+    --paper:#ffffff;
+    --ink:#1a1a1a;
+    --ink-soft:#4a4744;
+    --muted:#7a756f;
+    --accent:#8C1515;          /* Stanford 카디널 */
+    --accent-soft:#b9554f;
+    --tint:#f6ebe9;            /* 카디널 옅은 틴트 */
+    --tint-2:#f3efe9;          /* 따뜻한 회색 */
+    --line:#e7e1d9;
+    --line-strong:#d8d0c5;
+    --radius:10px;
+    --maxw:760px;
+    --sidew:268px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Pretendard","Pretendard Variable",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    line-height:1.78;
+    font-size:16.5px;
+    -webkit-font-smoothing:antialiased;
+    word-break:keep-all;
+  }
+
+  /* ===== 레이아웃 ===== */
+  .layout{display:flex; align-items:flex-start;}
+  .sidebar{
+    width:var(--sidew); flex:0 0 var(--sidew);
+    position:sticky; top:0; height:100vh; overflow-y:auto;
+    padding:28px 18px 40px; border-right:1px solid var(--line);
+    background:rgba(251,249,246,.85); backdrop-filter:saturate(120%) blur(2px);
+  }
+  .content{flex:1 1 auto; min-width:0; display:flex; justify-content:center; padding:0 24px;}
+  .doc{width:100%; max-width:var(--maxw); padding:48px 0 120px;}
+
+  /* ===== 사이드바 목차 ===== */
+  .toc-brand{font-size:12px; letter-spacing:.04em; color:var(--accent); font-weight:700; text-transform:uppercase; margin-bottom:4px;}
+  .toc-title{font-size:15px; font-weight:700; margin:0 0 18px; line-height:1.4; color:var(--ink);}
+  .toc{list-style:none; margin:0; padding:0; font-size:13.5px;}
+  .toc li{margin:1px 0;}
+  .toc a{display:block; padding:5px 10px; border-radius:7px; color:var(--ink-soft); text-decoration:none; border-left:2px solid transparent;}
+  .toc a:hover{background:var(--tint-2); color:var(--ink);}
+  .toc a.sub{padding-left:22px; font-size:13px; color:var(--muted);}
+  .toc a.active{color:var(--accent); background:var(--tint); border-left-color:var(--accent); font-weight:600;}
+
+  /* ===== 타이포 ===== */
+  h1{font-size:27px; line-height:1.32; font-weight:800; letter-spacing:-.01em; margin:0 0 6px;}
+  .subtitle{font-size:18px; font-weight:700; color:var(--accent); margin:0 0 22px;}
+  h2{font-size:21px; font-weight:800; letter-spacing:-.01em; margin:46px 0 14px; padding-bottom:9px; border-bottom:2px solid var(--line-strong);}
+  h3{font-size:17.5px; font-weight:700; margin:34px 0 12px; color:var(--ink);}
+  h3 .badge{display:inline-block; font-size:12px; font-weight:700; color:#fff; background:var(--accent); border-radius:6px; padding:2px 8px; margin-right:8px; vertical-align:middle;}
+  p{margin:12px 0;}
+  strong{font-weight:700;}
+  a{color:var(--accent);}
+  ul,ol{margin:12px 0; padding-left:22px;}
+  li{margin:6px 0;}
+  hr{display:none;}
+
+  /* ===== 출처 배너 ===== */
+  .source-banner{
+    display:flex; gap:10px; align-items:baseline;
+    background:var(--tint); border-left:4px solid var(--accent);
+    border-radius:0 var(--radius) var(--radius) 0;
+    padding:12px 16px; margin:0 0 8px; font-size:13.5px; color:var(--ink-soft);
+  }
+  .source-banner b{color:var(--accent);}
+
+  /* ===== 한국어 번역 카드 ===== */
+  .ko{
+    background:var(--paper); border:1px solid var(--line);
+    border-left:4px solid var(--accent); border-radius:var(--radius);
+    padding:6px 22px; margin:16px 0;
+    box-shadow:0 1px 2px rgba(60,40,20,.04);
+  }
+  .ko > .label, .terms > .label{
+    display:inline-block; font-size:11.5px; font-weight:800; letter-spacing:.06em;
+    color:var(--accent); text-transform:uppercase; margin:14px 0 -4px;
+  }
+
+  /* ===== 영문 원문 토글 ===== */
+  details.en{
+    background:var(--tint-2); border:1px solid var(--line); border-radius:var(--radius);
+    margin:14px 0; overflow:hidden;
+  }
+  details.en > summary{
+    cursor:pointer; list-style:none; padding:11px 16px;
+    font-size:13.5px; font-weight:700; color:var(--muted);
+    display:flex; align-items:center; gap:8px; user-select:none;
+  }
+  details.en > summary::-webkit-details-marker{display:none;}
+  details.en > summary .chev{transition:transform .2s; color:var(--accent-soft);}
+  details.en[open] > summary .chev{transform:rotate(90deg);}
+  details.en[open] > summary{border-bottom:1px solid var(--line);}
+  .en-body{padding:4px 18px 14px; font-size:14px; line-height:1.7; color:#5c574f; font-style:normal;}
+  .en-body p{margin:10px 0;}
+  .ts{
+    display:inline-block; font-family:"SFMono-Regular",ui-monospace,Menlo,Consolas,monospace;
+    font-size:11.5px; font-style:normal; color:var(--accent);
+    background:var(--tint); border:1px solid #e6cfcc; border-radius:5px;
+    padding:0 5px; margin:0 2px; vertical-align:baseline;
+  }
+
+  /* ===== 용어 설명 ===== */
+  .terms{
+    border:1px solid var(--line); border-left:3px solid var(--accent-soft);
+    border-radius:var(--radius); background:#fffdfb; padding:4px 20px 8px; margin:16px 0;
+  }
+  .terms dl{margin:8px 0;}
+  .terms dt{font-weight:700; color:var(--ink); margin-top:8px;}
+  .terms dt .en-term{color:var(--accent); font-weight:600;}
+  .terms dd{margin:1px 0 6px; color:var(--ink-soft); font-size:15px;}
+
+  /* ===== 표 ===== */
+  .table-wrap{overflow-x:auto; margin:16px 0; border:1px solid var(--line); border-radius:var(--radius);}
+  table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:520px;}
+  thead th{background:var(--accent); color:#fff; font-weight:700; text-align:left; padding:11px 14px; white-space:nowrap;}
+  tbody td{padding:9px 14px; border-top:1px solid var(--line);}
+  tbody tr:nth-child(even){background:var(--tint-2);}
+  tbody td:first-child{font-family:ui-monospace,Menlo,monospace; font-size:13px; color:var(--accent);}
+
+  /* ===== 콜아웃 ===== */
+  .callout{border-radius:var(--radius); padding:14px 20px 6px; margin:18px 0;}
+  .callout .c-title{font-weight:800; margin:6px 0 2px; display:flex; align-items:center; gap:8px;}
+  .callout.review{background:#fff; border:1px solid var(--line-strong);}
+  .callout.review ol{counter-reset:none;}
+  .callout.note{background:var(--tint-2); border-left:4px solid var(--muted); border-radius:0 var(--radius) var(--radius) 0; padding-bottom:12px;}
+  .callout.practice{background:var(--tint); border:1px solid #e6cfcc; padding-bottom:14px;}
+  .callout.practice li{margin:12px 0;}
+  .next{margin-top:40px; padding:14px 18px; background:var(--tint-2); border-radius:var(--radius); font-size:14px; color:var(--ink-soft);}
+
+  /* 수식 / 도식 */
+  .katex-display{margin:14px 0; overflow-x:auto; overflow-y:hidden; padding:6px 0;}
+  .diagram{background:#fffdfb; border:1px solid var(--line); border-radius:var(--radius); padding:14px; margin:16px 0; text-align:center;}
+  .diagram .cap{font-size:12.5px; color:var(--muted); margin-top:6px;}
+  .mermaid{display:flex; justify-content:center;}
+
+  /* ===== 모바일 ===== */
+  .menu-btn{display:none;}
+  .overlay{display:none;}
+  @media (max-width:900px){
+    .menu-btn{
+      display:flex; align-items:center; justify-content:center;
+      position:fixed; top:14px; left:14px; z-index:50;
+      width:42px; height:42px; border-radius:10px; border:1px solid var(--line-strong);
+      background:var(--paper); color:var(--accent); font-size:20px; cursor:pointer;
+      box-shadow:0 2px 8px rgba(60,40,20,.12);
+    }
+    .sidebar{
+      position:fixed; left:0; top:0; z-index:60; height:100vh;
+      transform:translateX(-105%); transition:transform .25s ease;
+      box-shadow:4px 0 24px rgba(0,0,0,.12); background:var(--bg);
+    }
+    .sidebar.open{transform:translateX(0);}
+    .overlay.show{display:block; position:fixed; inset:0; background:rgba(0,0,0,.32); z-index:55;}
+    .content{padding:0 16px;}
+    .doc{padding:64px 0 100px;}
+    body{font-size:16px;}
+    h1{font-size:23px;}
+    .ko,.terms{padding-left:16px; padding-right:16px;}
+  }
+
+  /* ===== 인쇄 ===== */
+  @media print{
+    .sidebar,.menu-btn,.overlay{display:none !important;}
+    .content{padding:0;}
+    body{background:#fff; font-size:11pt;}
+    details.en{display:none;}          /* 인쇄본은 한국어 위주 */
+    .ko,.terms,.callout,.table-wrap{break-inside:avoid; box-shadow:none;}
+    a{color:var(--ink);}
+  }
+  .home-btn{position:fixed; top:16px; right:18px; z-index:70;
+    display:inline-flex; align-items:center; gap:6px; text-decoration:none;
+    background:var(--paper); color:var(--accent); border:1px solid var(--line-strong);
+    border-radius:999px; padding:8px 14px; font-size:13.5px; font-weight:700;
+    box-shadow:0 2px 8px rgba(60,40,20,.12); transition:background .12s,color .12s;}
+  .home-btn:hover{background:var(--accent); color:#fff; border-color:var(--accent);}
+  @media (max-width:900px){ .home-btn{top:14px; right:14px; padding:8px 12px; font-size:12.5px;} }
+  @media print{ .home-btn{display:none !important;} }
+</style>
+</head>
+<body>
+<a class="home-btn" href="../index.html" title="전체 목차로 돌아가기">← 전체 목차</a>
+
+<button class="menu-btn" id="menuBtn" aria-label="목차 열기">☰</button>
+<div class="overlay" id="overlay"></div>
+
+<div class="layout">
+  <nav class="sidebar" id="sidebar"><div class="toc-brand">Stanford CME295 · Lecture 8</div><p class="toc-title">섹션 3. LLM as a judge</p><ul class="toc"><li><a href="#overview">1. 강의 개요</a></li><li><a href="#goals">2. 학습 목표</a></li><li><a href="#body">3. 본문</a></li><li><a class="sub" href="#block1">블록 1 · LLM as a judge: 점수와 근거</a></li><li><a class="sub" href="#block2">블록 2 · 형식 보장: structured output</a></li><li><a class="sub" href="#block3">블록 3 · 두 장점과 심판 유형</a></li><li><a class="sub" href="#block4">블록 4 · 세 가지 편향: 위치·장황함·자기선호</a></li><li><a class="sub" href="#block5">블록 5 · 모범 사례</a></li><li><a href="#glossary">4. 핵심 용어집</a></li><li><a href="#review">5. 복습 문제</a></li><li><a href="#appendix">부록. 실무 적용 포인트 (NLP·LLM 기술 내용 한정)</a></li></ul></nav>
+  <main class="content"><article class="doc"><h1>CME295 Transformers &amp; LLMs — Lecture 8 한국어 교재</h1><p class="subtitle">섹션 3. LLM as a judge</p><div class="source-banner"><span>📄</span><span><b>원문 출처</b>: Stanford CME295, Autumn 2025, Lecture 8, 타임스탬프 <span class="ts">28:18</span>~<span class="ts">52:22</span></span></div><section id="overview"><h2>1. 강의 개요</h2><ul><li>참조·사람 평가 없이 LLM으로 LLM 출력을 평가하는 'LLM as a judge'를 다룬다 — 점수 + 근거(rationale)를 출력하는 점이 핵심.</li><li>출력 형식을 보장하는 structured output(가이드 디코딩)과, 심판의 두 유형(단일·쌍 비교)을 본다.</li><li>심판의 세 편향(위치·장황함·자기선호)과 모범 사례(명확한 기준·이진 척도·근거 먼저·사람 평가와 보정·낮은 온도)를 설명한다.</li></ul></section><section id="goals"><h2>2. 학습 목표</h2><ol><li>LLM 심판이 무엇을 입력받아 무엇을(점수+근거) 출력하는지, 두 장점(참조 불필요·해석 가능)을 설명할 수 있다.</li><li>structured output으로 형식을 보장하는 법과, 심판의 단일/쌍 비교 유형을 안다.</li><li>세 편향(위치·장황함·자기선호)과 모범 사례를 설명할 수 있다.</li></ol></section><section id="body"><h2>3. 본문</h2><div id="block1"><h3><span class="badge">블록 1</span>LLM as a judge: 점수와 근거</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">28:18</span> use (...) an LLM (...) for rating purposes (...) LLM as a judge (...) <span class="ts">29:23</span> inputs (...) the prompt (...) the response and the criteria (...) <span class="ts">29:56</span> a score (...) pass or (fail) (...) and (...) a rationale (...) explain why they graded something. (...) <span class="ts">31:30</span> first output the rationale and then the (score) (...) <span class="ts">31:59</span> it allows the model to (...) verbalize its (...) thought process before giving the score.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>앞 7개 강의에서 본 LLM은 방대한 데이터로 학습되고 사람 선호에 맞춰진 모델이라, 사람 지식·선호의 단서를 담고 있습니다. 그래서 한 LLM의 출력을 또 다른 LLM에 입력해 평가하게 합니다 — 이를 LLM as a judge(LLM 심판)라 합니다(2년 전 논문에서 도입).</p>
+<p>입력: 응답을 만든 프롬프트 + 응답 + 평가 기준(criteria). 출력 두 가지:</p>
+<ul><li><strong>점수(score)</strong>: 보통 이진(통과/실패).</li><li><strong>근거(rationale)</strong>: LLM은 텍스트를 이해하므로, 왜 그 점수를 줬는지 설명할 수 있습니다 — 이것이 이전 방법과의 핵심 차이입니다. (규칙 기반은 숫자만 나와 설명이 안 됐음)</li></ul>
+<p>요령: 근거를 먼저 출력하고 점수를 나중에 출력하게 합니다. 경험적으로 결과 품질이 좋아지는데, 이는 추론 모델이 답 전에 사고연쇄를 내는 것과 같은 원리입니다 — 모델이 점수 전에 사고 과정을 말로 풀어, 무엇이 좋고 나쁜지 짚을 기회를 줍니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>LLM as a judge<span class="en-term">(LLM 심판)</span></dt><dd>다른 LLM이 (프롬프트+응답+기준)을 받아 점수·근거를 내는 평가법.</dd><dt>기준<span class="en-term">(criteria)</span></dt><dd>평가 차원(유용성·사실성 등).</dd><dt>근거<span class="en-term">(rationale)</span></dt><dd>점수를 매긴 이유 설명. 해석 가능성의 핵심. 점수보다 먼저 출력.</dd></dl></div>
+</div>
+<div id="block2"><h3><span class="badge">블록 2</span>형식 보장: structured output</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">32:31</span> am I guaranteed to have a rational(e) and a score that I can parse? (...) No. (...) <span class="ts">33:36</span> constrained guided decoding (...) allowing our model to only sample from (...) valid tokens (...) <span class="ts">34:35</span> structured output (...) <span class="ts">35:11</span> text format equal to that representation.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>이 프롬프트를 LLM 심판에 줬을 때, 파싱 가능한 근거·점수가 보장될까요? 아닙니다 — 샘플링의 확률적 성질 때문에 형식을 통제할 수 없습니다.</p>
+<p>이를 보장하는 기법은 Lecture 3의 가이드 디코딩(constrained/guided decoding)입니다 — 모델이 '유효한 토큰'만 샘플링하게 제한해, 원하는 형식(예: JSON)을 강제합니다. OpenAI·Gemini·Anthropic 같은 제공자에서는 이를 structured output(구조화 출력)이라 부릅니다. 응답을 클래스(예: 속성 rationale·score)로 표현하고, <code>text_format</code>(OpenAI 기준) 같은 인자로 그 형식을 지정하면 됩니다. 핵심 키워드는 structured output — 특정 형식 응답을 원하면 이걸 씁니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>structured output<span class="en-term">(구조화 출력)</span></dt><dd>가이드 디코딩으로 응답 형식(JSON 등)을 보장하는 기능. (Lecture 3 섹션 3 가이드 디코딩과 동일 원리)</dd></dl></div>
+</div>
+<div id="block3"><h3><span class="badge">블록 3</span>두 장점과 심판 유형</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">35:42</span> two main benefits (...) we do not need a reference text (...) (or) human ratings to just get started (...) you can interpret the score with the rationale. (...) <span class="ts">36:46</span> two types of L(LM judge) (...) a single (...) response (...) is it good or is it not good (...) pairwise (...) two responses (...) is response A better or is response B better (...) <span class="ts">37:48</span> synthetically generate preference ratings.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>LLM 심판의 두 장점: ① 시작에 참조 텍스트·사람 평가가 필요 없음(LLM이 이미 지식·선호를 담음), ② 근거로 점수를 해석할 수 있음.</p>
+<p>심판 유형 두 가지:</p>
+<ul><li><strong>단일(single/pointwise)</strong>: 응답 하나를 두고 "좋은가/나쁜가"를 판정.</li><li><strong>쌍 비교(pairwise)</strong>: 응답 두 개를 두고 "A가 나은가, B가 나은가"를 판정.</li></ul>
+<p>쌍 비교는 선호 데이터를 합성(synthetic) 생성하는 데도 좋습니다 — 두 응답에 LLM이 선호를 매겨, 그 라벨로 보상 모델을 학습할 수 있습니다(Lecture 5 선호 튜닝과 연결).</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>두 장점</dt><dd>참조·사람 평가 불필요 / 근거로 해석 가능.</dd><dt>단일/쌍 비교<span class="en-term">(single/pairwise)</span> 심판</dt><dd>응답 하나 판정 / 두 응답 비교.</dd><dt>선호 데이터 합성</dt><dd>쌍 비교 심판으로 선호 라벨을 자동 생성.</dd></dl></div>
+</div>
+<div id="block4"><h3><span class="badge">블록 4</span>세 가지 편향: 위치·장황함·자기선호</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">38:55</span> position bias (...) the model responds with response A just because it was the first (...) ask (...) is A or B better and then (...) is B or A better and (...) take the majority voting. (...) <span class="ts">40:30</span> verbosity bias (...) prefer responses that are just more verbose (...) <span class="ts">42:07</span> selfenhancement (bias) (...) prefer responses that are generated by itself (...) <span class="ts">43:43</span> not use the same model that you use for generation and for (evaluation).</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>LLM 심판이 잘못될 수 있는 세 편향:</p>
+<ol><li><strong>위치 편향(position bias)</strong>: "A가 나은가 B가 나은가"에서, 단지 먼저 제시됐다는 이유로 A를 고르는 경향. 완화: A-B 순서와 B-A 순서로 두 번 물어 다수결을 봄(둘이 같으면 OK, 다르면 의심). (위치 임베딩을 손대는 더 고급 기법도 있으나 기본은 순서 바꿔 평균/다수결)</li><li><strong>장황함 편향(verbosity bias)</strong>: 더 정확해서가 아니라 단지 더 길고 자세하다는 이유로 선호하는 경향. 완화: 기준(guideline)에 "길이에 너무 신경 쓰지 말라" 명시, 인컨텍스트 예시 제공, 또는 길이에 벌점.</li><li><strong>자기선호 편향(self-enhancement bias)</strong>: 자기가 생성한 답을 (더 낫지 않아도) 선호하는 경향. 직관 — 자기가 생성했다는 건 확률적으로 그럴듯하다고 '여긴' 시퀀스이기 때문. 완화: 생성용 모델과 평가용 모델을 다르게 씀(단, 요즘은 다들 비슷한 데이터로 학습돼 완전 분리는 어려움).</li></ol>
+<p>(이 셋이 전부는 아닙니다 — 심판이 사람 선호와 어긋나는 정렬 편향 등도 가능)</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>위치 편향<span class="en-term">(position bias)</span></dt><dd>먼저 제시된 응답을 선호. 순서 바꿔 다수결로 완화.</dd><dt>장황함 편향<span class="en-term">(verbosity bias)</span></dt><dd>길다는 이유로 선호. 기준 명시·길이 벌점으로 완화.</dd><dt>자기선호 편향<span class="en-term">(self-enhancement bias)</span></dt><dd>자기 생성 답을 선호. 다른 모델로 평가해 완화.</dd></dl></div>
+</div>
+<div id="block5"><h3><span class="badge">블록 5</span>모범 사례</h3>
+<details class="en"><summary><span class="chev">▸</span> 영문 원문 보기</summary><div class="en-body"><p><span class="ts">47:39</span> crisp guidelines (...) <span class="ts">48:10</span> the binary one (...) makes the job of the LM as a judge easier (...) <span class="ts">48:45</span> output the rational(e) before outputting the (score) (...) <span class="ts">49:45</span> calibrate the responses that the judge is giving with respect to the human ratings (...) run some correlation analysis (...) <span class="ts">50:49</span> for evaluation tasks, people use a low temperature (...) reproducible (...) 0.1 or 0(.)2.</p></div></details>
+<div class="ko"><span class="label">한국어 번역</span><p>LLM 심판 모범 사례:</p>
+<ol><li><strong>명확한 기준(crisp guidelines)</strong>: 원하는 것·원치 않는 것을 분명히 명시.</li><li><strong>이진 척도(binary scale)</strong>: 세분 척도보다 통과/실패 이진이 심판 일도 쉽고, 사람 평가와 맞추기도 쉬움(노이즈↓).</li><li><strong>근거 먼저, 점수 나중</strong>: 추론 모델의 사고연쇄와 같은 원리로 성능↑.</li><li><strong>편향 완화</strong>: 위치·장황함·자기선호 등을 앞의 방법으로 줄임.</li><li><strong>사람 평가와 보정(calibration)</strong>: 사람 평가 없이 시작해도, 심판 점수가 사람 평가와 어긋나지 않는지 상관 분석으로 점검. 결국 근사하려는 대상은 사람 평가이므로, 프록시(심판)에 과적합하지 않게 함.</li><li><strong>낮은 온도</strong>: 평가는 재현성이 중요하므로 낮은 온도(예: 0.1~0.2)를 써 결과가 들쭉날쭉하지 않게 함.</li></ol>
+<p>핵심: 심판 점수는 사람 평가의 근사이므로, 모델을 개선할 때 '심판 점수만' 높이지 말고 그것이 사람 평가(정답)와 정렬돼 있는지 늘 확인해야 합니다.</p></div>
+<div class="terms"><span class="label">용어 설명</span><dl><dt>명확한 기준 / 이진 척도 / 근거 먼저</dt><dd>심판 품질을 높이는 세 기본.</dd><dt>보정<span class="en-term">(calibration)</span></dt><dd>심판 점수와 사람 평가의 상관을 점검·정렬.</dd><dt>낮은 온도</dt><dd>평가의 재현성을 위해.</dd><dt>프록시 과적합 경계</dt><dd>심판(프록시)이 사람 평가(정답)와 어긋나면 안 됨.</dd></dl></div>
+</div></section><section id="glossary"><h2>4. 핵심 용어집</h2><div class="table-wrap"><table><thead><tr><th>영문</th><th>한국어</th><th>발음</th><th>뜻</th></tr></thead><tbody><tr><td>LLM as a judge</td><td>LLM 심판</td><td>—</td><td>다른 LLM이 점수·근거로 평가</td></tr><tr><td>criteria</td><td>기준</td><td>—</td><td>평가 차원</td></tr><tr><td>rationale</td><td>근거</td><td>—</td><td>점수 이유. 점수보다 먼저 출력</td></tr><tr><td>structured output</td><td>구조화 출력</td><td>—</td><td>응답 형식 보장(가이드 디코딩)</td></tr><tr><td>single / pairwise</td><td>단일/쌍 비교</td><td>—</td><td>하나 판정 / 둘 비교</td></tr><tr><td>position bias</td><td>위치 편향</td><td>—</td><td>먼저 제시된 것 선호</td></tr><tr><td>verbosity bias</td><td>장황함 편향</td><td>—</td><td>길다는 이유로 선호</td></tr><tr><td>self-enhancement bias</td><td>자기선호 편향</td><td>—</td><td>자기 생성 답 선호</td></tr><tr><td>calibration</td><td>보정</td><td>—</td><td>심판과 사람 평가 정렬</td></tr></tbody></table></div></section><section id="review"><h2>5. 복습 문제</h2><div class="callout review"><div class="c-title">✏️ 스스로 점검</div><ol><li>LLM 심판은 무엇을 입력받아 무엇을 출력하며, 두 장점은? 근거를 점수보다 먼저 출력하는 이유는?</li><li>structured output은 어떻게 형식을 보장하는가? 심판의 단일/쌍 비교 유형은?</li><li>세 편향(위치·장황함·자기선호)과 각 완화법은? 왜 심판 점수를 사람 평가와 보정해야 하는가?</li></ol></div></section><section id="appendix"><h2>부록. 실무 적용 포인트 <span style="font-size:14px;font-weight:500;color:var(--muted);">(NLP·LLM 기술 내용 한정)</span></h2><div class="callout practice"><div class="c-title">💡 현장에서 써먹기</div><ul><li><strong>LLM 심판은 "AI로 AI 출력을 대량 평가하는" 현실적 방법이다.</strong> 사람이 일일이 평가하기 어려운 대량 출력을, 다른 LLM이 점수+근거로 평가해준다. 근거가 함께 나와 '왜 그 점수인지' 검토할 수 있다는 점이 행정 검수에 특히 유용하다. 단, 다음 한계(편향·사람 평가와의 정렬)를 함께 알아야 한다.</li><li><strong>세 편향은 "AI 평가도 편향될 수 있다"는 경고다.</strong> 위치·장황함·자기선호 편향 때문에, LLM 심판 결과를 맹신하면 안 된다. 순서를 바꿔 보거나, 길다고 좋은 게 아님을 명시하거나, 다른 모델로 교차 평가하는 등의 보완이 필요하다.</li><li><strong>"심판 점수를 사람 평가와 보정하라"는 원칙은 자동 평가의 핵심 안전장치다.</strong> 자동 평가 점수만 올리다 보면 정작 사람이 보는 품질과 어긋날 수 있다(프록시 과적합). 중요한 도입 결정에는 일부라도 사람 평가를 곁들여 자동 평가가 믿을 만한지 확인해야 한다.</li></ul></div><div class="next"><strong><strong>다음 섹션 예고</strong>·&lt;/strong&gt; · 평가의 차원들과, 까다로운 사실성(factuality) 평가 — 사실 분해·사실 확인·가중 집계. <span class="ts">52:22</span> 이후.</div></section></article></main>
+</div>
+
+<!-- KaTeX 자동 렌더 -->
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}],throwOnError:false});"></script>
+
+<!-- Mermaid -->
+<script type="module">
+  try{
+    const m = await import('https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs');
+    m.default.initialize({startOnLoad:true, theme:'base', themeVariables:{
+      fontFamily:'Pretendard, sans-serif', primaryColor:'#fffdfb', primaryBorderColor:'#d8d0c5',
+      primaryTextColor:'#1a1a1a', lineColor:'#b9554f', fontSize:'14px'
+    }});
+  }catch(e){ /* 오프라인이면 도식은 코드로 표시 */ }
+</script>
+
+<!-- 목차 활성표시 + 모바일 드로어 -->
+<script>
+  // 모바일 드로어
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('overlay');
+  const btn = document.getElementById('menuBtn');
+  const toggle = (on)=>{ sb.classList.toggle('open',on); ov.classList.toggle('show',on); };
+  btn.addEventListener('click',()=>toggle(!sb.classList.contains('open')));
+  ov.addEventListener('click',()=>toggle(false));
+  document.querySelectorAll('.toc a').forEach(a=>a.addEventListener('click',()=>{ if(window.innerWidth<=900) toggle(false); }));
+
+  // 현재 위치 강조
+  const links = [...document.querySelectorAll('.toc a')];
+  const map = {}; links.forEach(a=>{ const id=a.getAttribute('href').slice(1); map[id]=a; });
+  const targets = Object.keys(map).map(id=>document.getElementById(id)).filter(Boolean);
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(en=>{
+      if(en.isIntersecting){
+        links.forEach(l=>l.classList.remove('active'));
+        const a = map[en.target.id]; if(a) a.classList.add('active');
+      }
+    });
+  },{rootMargin:'-15% 0px -75% 0px', threshold:0});
+  targets.forEach(t=>io.observe(t));
+</script>
+
+</body>
+</html>
